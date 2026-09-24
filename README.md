@@ -1,16 +1,27 @@
-# tubes_pemob
+# Pelaporan Kerusakan Fasilitas Kampus
 
-A new Flutter project.
+Proyek aplikasi mobile berbasis Flutter untuk pelaporan kerusakan fasilitas di lingkungan kampus.
 
-## Getting Started
+## Kelompok 1
 
-This project is a starting point for a Flutter application.
+| No. | Nama                      | NIM       |
+| --- | ------------------------- | --------- |
+| 1   | Agnes Olivia Ketaren      | 241402066 |
+| 2   | Rahma Sarita Nasution     | 241402043 |
+| 3   | Ahmad Arif Fatahillah     | 241402036 |
+| 4   | Richard Lim               | 241402073 |
+| 5   | Bryan Sullivan Nauli      | 241402108 |
 
-A few resources to get you started if this is your first Flutter project:
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## Topik
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Pelaporan Kerusakan Fasilitas Kampus
+
+## Deskripsi
+
+Aplikasi ini dirancang untuk membantu pengguna melaporkan fasilitas kampus yang rusak agar laporan dapat dicatat dan ditindaklanjuti. Proyek ini masih dalam tahap pengembangan.
+
+## Teknologi
+
+* Flutter
+* Dart

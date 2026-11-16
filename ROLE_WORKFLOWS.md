@@ -192,6 +192,16 @@ Aktor: Petugas Perbaikan Lapangan.
 
    * Pembuatan dokumen notifikasi dilakukan langsung di dalam *method* `ReportService` setiap kali status laporan berubah—tidak perlu memakai Cloud Functions.
 
+5. **Gunakan Enum dari File Model (Jangan Hardcode String):**
+   * `UserRole` (ada di `user_model.dart`): `UserRole.pelapor`, `UserRole.admin`, `UserRole.teknisi`
+   * `ReportStatus` (ada di `report_model.dart`): `ReportStatus.reported`, `ReportStatus.verified`, `ReportStatus.assigned`, `ReportStatus.inProgress`, `ReportStatus.resolved`, `ReportStatus.rejected`
+   * `ReportPriority` (ada di `report_model.dart`): `ReportPriority.tinggi`, `ReportPriority.sedang`, `ReportPriority.rendah`
+   * *Tips UI:* Untuk menampilkan teks Bahasa Indonesia ke layar, langsung panggil `.label` (contoh: `report.status.label` otomatis menghasilkan `"Sedang Dikerjakan"`).
+
+6. **ID Dokumen Firestore (`doc.id` Murni):**
+   * Koleksi `users` dan `assets` tidak menyimpan ulang field `uid`/`id` di dalam dokumen. Saat menyimpan data baru di `services/`, wajib gunakan `.doc(id).set(...)` (bukan `.add(...)`).
+   * Kode QR Aset (`asset.id`) **dilarang mengandung karakter garis miring (`/`)** karena akan terbaca sebagai jalur *subcollection* oleh Firestore (gunakan tanda hubung `-`, misal: `AC-R204`).
+
 ## 6. Checklist Pengerjaan Tim (Paralel & Anti-Blocking)
 
 Agar seluruh anggota tim bisa mengerjakan tugas secara bersamaan tanpa saling menunggu (*blocking*), pengerjaan dibagi menjadi **Tahap Fondasi** (kontrak data) dan **Jalur Independen** yang bebas diambil oleh siapa saja sesuai kapasitas tim.
@@ -210,13 +220,13 @@ Agar seluruh anggota tim bisa mengerjakan tugas secara bersamaan tanpa saling me
 
 * [ ] Buat `constants/app_colors.dart` & `constants/app_constants.dart` (konstanta status, prioritas, durasi SLA)
 
-* [ ] Buat `models/user_model.dart`
+* [ x ] Buat `models/user_model.dart`
 
-* [ ] Buat `models/asset_model.dart`
+* [ x ] Buat `models/asset_model.dart`
 
-* [ ] Buat `models/report_model.dart`
+* [ x ] Buat `models/report_model.dart`
 
-* [ ] Buat `models/notification_model.dart`
+* [ x ] Buat `models/notification_model.dart`
 
 * [ ] Isi data sampel awal di Firebase Console (akun uji untuk `pelapor`, `admin`, `teknisi`, serta dummy `assets` & `reports`)
 

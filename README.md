@@ -1,6 +1,6 @@
 # Pelaporan Kerusakan Fasilitas Kampus
 
-Proyek aplikasi mobile berbasis Flutter untuk pelaporan kerusakan fasilitas di lingkungan kampus.
+Proyek aplikasi mobile berbasis Flutter untuk pelaporan dan pemantauan perbaikan kerusakan fasilitas di lingkungan kampus (mendukung 3 *role*: **Pelapor**, **Admin**, dan **Teknisi**).
 
 ## Kelompok 1
 
@@ -12,19 +12,25 @@ Proyek aplikasi mobile berbasis Flutter untuk pelaporan kerusakan fasilitas di l
 | 4   | Richard Lim               | 241402073 |
 | 5   | Bryan Sullivan Nauli      | 241402108 |
 
-
 ## Topik
 
 Pelaporan Kerusakan Fasilitas Kampus
 
 ## Deskripsi
 
-Aplikasi ini dirancang untuk membantu pengguna melaporkan fasilitas kampus yang rusak agar laporan dapat dicatat dan ditindaklanjuti. Proyek ini masih dalam tahap pengembangan.
+Aplikasi ini dirancang untuk membantu sivitas akademika melaporkan kerusakan fasilitas kampus (baik melalui pemindaian QR Code ruangan/aset maupun input manual) agar laporan dapat diverifikasi oleh Admin, ditugaskan kepada Teknisi sesuai target SLA, serta dipantau hingga selesai diperbaiki.
 
 ## Teknologi
 
-* Flutter
-* Dart
+* **Framework:** Flutter & Dart
+* **Backend & Database:** Firebase Authentication (Email & Google Sign-In) & Cloud Firestore
+* **Media & Utilitas:** Image Picker, Flutter Image Compress (Base64 Storage), Mobile Scanner, QR Flutter, Intl
+
+## 📚 Dokumentasi Teknis Tim
+
+Sebelum mulai mengerjakan fitur, seluruh anggota tim wajib membaca dua panduan berikut:
+* **[Struktur Folder & Aturan Kode (`FOLDER_STRUCTURE.md`)](./FOLDER_STRUCTURE.md)** — Penjelasan fungsi tiap folder, skema koleksi Firestore, dan aturan penamaan file.
+* **[Detail Alur Fitur & Checklist Tim (`ALUR_FITUR_ROLE.md`)](./ALUR_FITUR_ROLE.md)** — Rincian fungsionalitas per *role*, siklus status tiket (`reported` hingga `resolved`), serta pembagian tugas paralel.
 
 ## 📁 Struktur Proyek (`lib/`)
 
@@ -34,13 +40,12 @@ Proyek ini menggunakan pola **Layer-First** dengan pemisahan halaman berdasarkan
 lib/
 ├── main.dart               # Entry point aplikasi & inisialisasi Firebase
 ├── constants/              # Nilai tetap (palet warna, tema, ukuran, teks konstan)
-├── models/                 # Blueprint data & konversi dari/ke Firestore (UserModel, LaporanModel)
-├── services/               # Logika backend (Firebase Auth, Cloud Firestore, Firebase Storage)
+├── models/                 # Blueprint data & konversi Firestore (User, Asset, Report, Notification)
+├── services/               # Logika backend (Auth, Firestore CRUD/Stream, Kompresi Foto Base64)
 ├── widgets/                # Komponen UI reusable yang dipakai di banyak halaman
 └── screens/                # Seluruh halaman aplikasi (Scaffold)
     ├── auth/               # Halaman sebelum login (Splash, Login, Register, AuthWrapper)
-    ├── shared/             # Halaman lintas role (Detail Laporan, Profil, Notifikasi)
-    ├── pelapor/            # Halaman khusus pelapor (Beranda, Buat Laporan, Riwayat)
-    ├── admin/              # Halaman khusus pengelola (Dashboard, Validasi Laporan, Kelola Teknisi)
-    └── teknisi/            # Halaman khusus petugas lapangan (Daftar Tugas, Update Perbaikan)
-```
+    ├── shared/             # Halaman lintas role (Detail Laporan, History Aset, Profil, Notifikasi)
+    ├── pelapor/            # Halaman khusus pelapor (Beranda, Scan QR, Form Pengaduan, Riwayat)
+    ├── admin/              # Halaman khusus pengelola (Dashboard SLA, Kelola Laporan, Aset & QR, Teknisi)
+    └── teknisi/            # Halaman khusus petugas lapangan (Beranda, Daftar Tugas, Selesaikan Tugas)

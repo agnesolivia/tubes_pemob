@@ -40,6 +40,7 @@ lib/
 └── screens/                # Seluruh halaman aplikasi (Scaffold)
     ├── auth/               # Halaman sebelum login (Splash, Login, Register, AuthWrapper)
     ├── shared/             # Halaman lintas role (Detail Laporan, Profil, Notifikasi)
-    ├── user/               # Halaman khusus pelapor (Beranda, Buat Laporan, Riwayat)
+    ├── pelapor/            # Halaman khusus pelapor (Beranda, Buat Laporan, Riwayat)
     ├── admin/              # Halaman khusus pengelola (Dashboard, Validasi Laporan, Kelola Teknisi)
     └── teknisi/            # Halaman khusus petugas lapangan (Daftar Tugas, Update Perbaikan)
+```

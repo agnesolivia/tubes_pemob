@@ -25,3 +25,21 @@ Aplikasi ini dirancang untuk membantu pengguna melaporkan fasilitas kampus yang 
 
 * Flutter
 * Dart
+
+## 📁 Struktur Proyek (`lib/`)
+
+Proyek ini menggunakan pola **Layer-First** dengan pemisahan halaman berdasarkan *role* pengguna di dalam folder `screens/`:
+
+```text
+lib/
+├── main.dart               # Entry point aplikasi & inisialisasi Firebase
+├── constants/              # Nilai tetap (palet warna, tema, ukuran, teks konstan)
+├── models/                 # Blueprint data & konversi dari/ke Firestore (UserModel, LaporanModel)
+├── services/               # Logika backend (Firebase Auth, Cloud Firestore, Firebase Storage)
+├── widgets/                # Komponen UI reusable yang dipakai di banyak halaman
+└── screens/                # Seluruh halaman aplikasi (Scaffold)
+    ├── auth/               # Halaman sebelum login (Splash, Login, Register, AuthWrapper)
+    ├── shared/             # Halaman lintas role (Detail Laporan, Profil, Notifikasi)
+    ├── user/               # Halaman khusus pelapor (Beranda, Buat Laporan, Riwayat)
+    ├── admin/              # Halaman khusus pengelola (Dashboard, Validasi Laporan, Kelola Teknisi)
+    └── teknisi/            # Halaman khusus petugas lapangan (Daftar Tugas, Update Perbaikan)

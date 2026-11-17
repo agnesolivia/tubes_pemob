@@ -236,11 +236,13 @@ Agar seluruh anggota tim bisa mengerjakan tugas secara bersamaan tanpa saling me
 
 ### Jalur A — Layanan Backend (`services/`)
 
-* [ ] `services/auth_service.dart` (Login, Register, Logout, & ambil `UserModel`)
+* [x] `services/auth_service.dart` (Login, Register, Logout, & ambil `UserModel`)
 
-* [ ] `services/storage_service.dart` (Ambil gambar, kompres < 250 KB, & encode/decode Base64)
+* [x] `services/storage_service.dart` (Ambil gambar, kompres < 250 KB, & encode/decode Base64)
 
 * [ ] `services/asset_service.dart` (CRUD data aset/ruangan & pencarian berdasarkan ID QR)
+
+* [ ] `services/notification_service.dart` (Stream notifikasi real-time, hitung belum dibaca, & tandai sudah dibaca)
 
 * [ ] `services/report_service.dart` (CRUD laporan, transisi status, hitung SLA, & pemicu notifikasi)
 

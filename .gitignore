@@ -47,3 +47,5 @@ app.*.map.json
 **/generated_plugin_registrant.*
 **/generated_plugins.cmake
 **/GeneratedPluginRegistrant.*
+# Widget Preview related
+.widget_preview/

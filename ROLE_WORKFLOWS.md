@@ -240,11 +240,11 @@ Agar seluruh anggota tim bisa mengerjakan tugas secara bersamaan tanpa saling me
 
 * [x] `services/storage_service.dart` (Ambil gambar, kompres < 250 KB, & encode/decode Base64)
 
-* [ ] `services/asset_service.dart` (CRUD data aset/ruangan & pencarian berdasarkan ID QR)
+* [x] `services/asset_service.dart` (CRUD data aset/ruangan & pencarian berdasarkan ID QR)
 
-* [ ] `services/notification_service.dart` (Stream notifikasi real-time, hitung belum dibaca, & tandai sudah dibaca)
+* [x] `services/notification_service.dart` (Stream notifikasi real-time, hitung belum dibaca, & tandai sudah dibaca)
 
-* [ ] `services/report_service.dart` (CRUD laporan, transisi status, hitung SLA, & pemicu notifikasi)
+* [x] `services/report_service.dart` (CRUD laporan, transisi status, hitung SLA, & pemicu notifikasi)
 
 ### Jalur B — Komponen UI Reusable (`widgets/`)
 

@@ -1,9 +1,48 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+enum ReportStatus {
+  reported('reported', 'Dilaporkan'),
+  verified('verified', 'Diverifikasi'),
+  assigned('assigned', 'Ditugaskan'),
+  inProgress('in progress', 'Sedang Dikerjakan'),
+  resolved('resolved', 'Selesai'),
+  rejected('rejected', 'Ditolak');
+
+  final String value;
+  final String label;
+  const ReportStatus(this.value, this.label);
+
+  static ReportStatus fromString(String? val) {
+    return ReportStatus.values.firstWhere(
+      (e) => e.value == val,
+      orElse: () => ReportStatus.reported,
+    );
+  }
+}
+
+enum ReportPriority {
+  tinggi('tinggi', 'Tinggi', 24),
+  sedang('sedang', 'Sedang', 72),
+  rendah('rendah', 'Rendah', 168);
+
+  final String value;
+  final String label;
+  final int slaHours;
+  const ReportPriority(this.value, this.label, this.slaHours);
+
+  static ReportPriority? fromString(String? val) {
+    if (val == null || val.isEmpty) return null;
+    for (final item in ReportPriority.values) {
+      if (item.value == val) return item;
+    }
+    return null;
+  }
+}
+
 class StatusHistoryItem {
-  final String status;
+  final ReportStatus status;
   final String catatan;
-  final String updatedBy; // Nama atau role aktor yang mengubah status
+  final String updatedBy;
   final DateTime timestamp;
 
   const StatusHistoryItem({
@@ -15,7 +54,7 @@ class StatusHistoryItem {
 
   factory StatusHistoryItem.fromMap(Map<String, dynamic> map) {
     return StatusHistoryItem(
-      status: map['status'] as String? ?? '',
+      status: ReportStatus.fromString(map['status'] as String?),
       catatan: map['catatan'] as String? ?? '',
       updatedBy: map['updatedBy'] as String? ?? '',
       timestamp: (map['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
@@ -24,7 +63,7 @@ class StatusHistoryItem {
 
   Map<String, dynamic> toMap() {
     return {
-      'status': status,
+      'status': status.value,
       'catatan': catatan,
       'updatedBy': updatedBy,
       'timestamp': Timestamp.fromDate(timestamp),
@@ -33,23 +72,23 @@ class StatusHistoryItem {
 }
 
 class ReportModel {
-  final String id; // Diambil langsung dari doc.id Firestore
+  final String id;
   final String assetId;
-  final String assetNama; // Denormalisasi agar daftar kartu tidak perlu query ulang ke assets
-  final String assetLokasi; // Contoh: 'Gedung A - Ruang 204'
+  final String assetNama;
+  final String assetLokasi;
   final String pelaporId;
   final String pelaporNama;
   final String? teknisiId;
   final String? teknisiNama;
   final String deskripsi;
-  final String fotoSebelum; // String Base64 hasil kompresi
-  final String? fotoSesudah; // String Base64 hasil kompresi (diisi teknisi saat selesai)
-  final String status; // 'reported' | 'verified' | 'assigned' | 'in progress' | 'resolved' | 'rejected'
-  final String? prioritas; // 'tinggi' | 'sedang' | 'rendah'
-  final DateTime? deadlineAt; // Batas waktu SLA setelah diverifikasi Admin
-  final String? rejectionReason; // Diisi jika status == 'rejected'
-  final String? catatanTeknisi; // Diisi saat teknisi menyelesaikan tugas
-  final bool isConfirmed; // True jika pelapor sudah menekan tombol konfirmasi selesai
+  final String fotoSebelum;
+  final String? fotoSesudah;
+  final ReportStatus status;
+  final ReportPriority? prioritas;
+  final DateTime? deadlineAt;
+  final String? rejectionReason;
+  final String? catatanTeknisi;
+  final bool isConfirmed;
   final DateTime createdAt;
   final DateTime? resolvedAt;
   final List<StatusHistoryItem> riwayatStatus;
@@ -66,7 +105,7 @@ class ReportModel {
     required this.deskripsi,
     required this.fotoSebelum,
     this.fotoSesudah,
-    this.status = 'reported',
+    this.status = ReportStatus.reported,
     this.prioritas,
     this.deadlineAt,
     this.rejectionReason,
@@ -77,17 +116,15 @@ class ReportModel {
     this.riwayatStatus = const [],
   });
 
-  /// Cek apakah tiket aktif sudah melewati tenggat SLA
   bool get isOverdue {
     if (deadlineAt == null) return false;
-    if (status == 'resolved' || status == 'rejected') return false;
+    if (isClosed) return false;
     return DateTime.now().isAfter(deadlineAt!);
   }
 
-  /// Cek apakah tiket sudah ditutup (selesai atau ditolak)
-  bool get isClosed => status == 'resolved' || status == 'rejected';
+  bool get isClosed =>
+      status == ReportStatus.resolved || status == ReportStatus.rejected;
 
-  /// Konversi dokumen Firestore menjadi objek ReportModel
   factory ReportModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>? ?? {};
     final rawHistory = data['riwayatStatus'] as List<dynamic>? ?? [];
@@ -104,8 +141,8 @@ class ReportModel {
       deskripsi: data['deskripsi'] as String? ?? '',
       fotoSebelum: data['fotoSebelum'] as String? ?? '',
       fotoSesudah: data['fotoSesudah'] as String?,
-      status: data['status'] as String? ?? 'reported',
-      prioritas: data['prioritas'] as String?,
+      status: ReportStatus.fromString(data['status'] as String?),
+      prioritas: ReportPriority.fromString(data['prioritas'] as String?),
       deadlineAt: (data['deadlineAt'] as Timestamp?)?.toDate(),
       rejectionReason: data['rejectionReason'] as String?,
       catatanTeknisi: data['catatanTeknisi'] as String?,
@@ -118,7 +155,6 @@ class ReportModel {
     );
   }
 
-  /// Konversi objek ReportModel menjadi Map untuk disimpan ke Firestore
   Map<String, dynamic> toMap() {
     return {
       'assetId': assetId,
@@ -131,8 +167,8 @@ class ReportModel {
       'deskripsi': deskripsi,
       'fotoSebelum': fotoSebelum,
       'fotoSesudah': fotoSesudah,
-      'status': status,
-      'prioritas': prioritas,
+      'status': status.value,
+      'prioritas': prioritas?.value,
       'deadlineAt': deadlineAt != null ? Timestamp.fromDate(deadlineAt!) : null,
       'rejectionReason': rejectionReason,
       'catatanTeknisi': catatanTeknisi,
@@ -143,7 +179,6 @@ class ReportModel {
     };
   }
 
-  /// Membuat salinan objek dengan field tertentu yang diperbarui
   ReportModel copyWith({
     String? id,
     String? assetId,
@@ -156,8 +191,8 @@ class ReportModel {
     String? deskripsi,
     String? fotoSebelum,
     String? fotoSesudah,
-    String? status,
-    String? prioritas,
+    ReportStatus? status,
+    ReportPriority? prioritas,
     DateTime? deadlineAt,
     String? rejectionReason,
     String? catatanTeknisi,

@@ -6,15 +6,15 @@ Dokumen ini berisi rincian **apa saja yang bisa dilakukan oleh masing-masing akt
 
 ### A. Autentikasi (`login_screen.dart`, `register_screen.dart`, `auth_wrapper.dart`)
 
-* **Registrasi Mandiri:** Pengguna baru mendaftar menggunakan Email/Password (atau Google Sign-In) dengan mengisi Nama dan NIM/NIP. Sistem otomatis menyimpan profil ke koleksi `users` dengan nilai default `role: 'pelapor'`.
+* **Registrasi Mandiri:** Pengguna baru mendaftar menggunakan Email/Password (atau Google Sign-In) dengan mengisi Nama. Sistem otomatis menyimpan profil ke koleksi `users` dengan nilai default `role: UserRole.pelapor`.
 
 * **Auto-Routing Berbasis Role:** `AuthWrapper` memantau status login Firebase Auth, lalu membaca dokumen profil di koleksi `users` untuk mengarahkan pengguna secara otomatis ke:
 
-  * `PelaporHomeScreen` jika `role == 'pelapor'`
+  * `PelaporHomeScreen` jika `user.isPelapor`
 
-  * `AdminDashboardScreen` jika `role == 'admin'`
+  * `AdminDashboardScreen` jika `user.isAdmin`
 
-  * `TeknisiHomeScreen` jika `role == 'teknisi'`
+  * `TeknisiHomeScreen` jika `user.isTeknisi`
 
 * **Catatan Akun Admin & Teknisi:** Tidak ada opsi memilih role saat registrasi mandiri. Akun `admin` pertama diatur manual di Firebase Console, sedangkan akun `teknisi` diaktifkan oleh Admin melalui menu kelola teknisi.
 
@@ -26,11 +26,11 @@ Satu halaman bersama untuk melihat detail tiket (`ReportModel`), berisi informas
 
 ### C. Riwayat Aset / Ruangan (`history_asset_screen.dart`)
 
-* Menampilkan detail fasilitas (`namaAset`, `kategori`, `gedung`, `ruangan`) dan daftar seluruh laporan kerusakan yang pernah terjadi pada `assetId` tersebut.
+* Menampilkan detail fasilitas (`nama`, `kategori`, `gedung`, `ruangan`) dan daftar seluruh laporan kerusakan yang pernah terjadi pada `assetId` tersebut.
 
-* **Aturan Data:** Laporan berstatus `rejected` **tidak ditampilkan** di halaman ini agar rekam jejak kerusakan aset tetap valid.
+* **Aturan Data:** Laporan berstatus `ReportStatus.rejected` **tidak ditampilkan** di halaman ini agar rekam jejak kerusakan aset tetap valid.
 
-* **Pencegahan Laporan Ganda:** Jika di aset tersebut masih ada tiket aktif (`reported`, `verified`, `assigned`, atau `in progress`), sistem memberi penanda bahwa kerusakan sedang ditangani.
+* **Pencegahan Laporan Ganda:** Jika di aset tersebut masih ada tiket aktif (`reported`, `verified`, `assigned`, atau `inProgress`), sistem memberi penanda bahwa kerusakan sedang ditangani.
 
 ### D. Notifikasi Dalam Aplikasi (`notification_screen.dart`)
 
@@ -44,13 +44,11 @@ Satu halaman bersama untuk melihat detail tiket (`ReportModel`), berisi informas
 
 ### E. Profil Pengguna (`profile_screen.dart`)
 
-* **Semua Role:** Melihat informasi akun (Nama, Email, NIM/NIP, Role), edit nama/nomor induk, dan tombol **Logout**.
-
-* **Khusus Teknisi:** Terdapat *switch/toggle* **Status Ketersediaan (`isAvailable`)** untuk menandai apakah teknisi sedang siap menerima tugas baru atau sedang penuh/libur.
+* **Semua Role:** Melihat informasi akun (Nama, Email, Role), mengubah nama tampilan, dan tombol **Logout**.
 
 ## 2. Alur Role: Pelapor (`screens/pelapor/`)
 
-Aktor: Mahasiswa, Dosen, dan Staf Kampus.
+Aktor: Sivitas Akademika dan Pengunjung/Tamu Kampus.
 
 ### Alur Utama Pelaporan (Fleksibel: QR vs. Manual)
 
@@ -78,7 +76,7 @@ Aktor: Mahasiswa, Dosen, dan Staf Kampus.
 
    * Saat dikirim:
 
-     * Dokumen baru tersimpan di `reports` dengan `status: 'reported'`.
+     * Dokumen baru tersimpan di `reports` dengan `status: ReportStatus.reported`.
 
      * Sistem mengirim notifikasi ke Admin bahwa ada laporan baru masuk.
 
@@ -90,7 +88,7 @@ Aktor: Mahasiswa, Dosen, dan Staf Kampus.
 
    * **Jika status `rejected`:** Pelapor dapat membaca alasan penolakan (`rejectionReason`) dari Admin.
 
-   * **Jika status `resolved`:** Pelapor melihat perbandingan foto sebelum & sesudah perbaikan, serta dapat menekan tombol **Konfirmasi Selesai** (opsional: memberi rating/ulasan singkat).
+   * **Jika status `resolved`:** Pelapor melihat perbandingan foto sebelum & sesudah perbaikan, serta dapat menekan tombol **Konfirmasi Selesai**.
 
 ## 3. Alur Role: Admin (`screens/admin/`)
 
@@ -100,9 +98,9 @@ Aktor: Pengelola Sarana & Prasarana Kampus.
 
 1. **Dashboard Pantauan (`admin_dashboard_screen.dart`):**
 
-   * Melihat statistik tiket berdasarkan status (`reported`, `verified`/`assigned`/`in progress`, `resolved`).
+   * Melihat statistik tiket berdasarkan status (`reported`, `verified`/`assigned`/`inProgress`, `resolved`).
 
-   * Melihat daftar peringatan tiket **Overdue SLA** (tiket belum `resolved` dan waktu sekarang sudah melewati `deadlineAt`).
+   * Melihat daftar peringatan tiket **Overdue SLA** (tiket belum `resolved` dan waktu sekarang sudah melewati `deadlineAt` / `report.isOverdue`).
 
 2. **Verifikasi, Penolakan & Penugasan (`kelola_laporan_screen.dart` & `detail_laporan_screen.dart`):**
 
@@ -114,9 +112,9 @@ Aktor: Pengelola Sarana & Prasarana Kampus.
 
      * **Tolak Laporan:** Admin wajib mengisi alasan penolakan (`rejectionReason`). Status berubah menjadi `rejected` (final).
 
-   * **Aksi pada tiket `verified`:** Admin memilih teknisi yang tersedia untuk mengubah status menjadi `assigned`.
+   * **Aksi pada tiket `verified`:** Admin memilih teknisi untuk mengubah status menjadi `assigned`.
 
-   * **Aksi pada tiket `assigned` / `in progress`:** Admin dapat mengalihkan tugas ke teknisi lain jika terjadi kendala di lapangan.
+   * **Aksi pada tiket `assigned` / `inProgress`:** Admin dapat mengalihkan tugas ke teknisi lain jika terjadi kendala di lapangan.
 
    * *Catatan:* Setiap perubahan status otomatis mengirim notifikasi ke Pelapor (dan Teknisi jika ditugaskan).
 
@@ -128,9 +126,9 @@ Aktor: Pengelola Sarana & Prasarana Kampus.
 
 4. **Kelola Teknisi (`kelola_teknisi_screen.dart`):**
 
-   * Melihat daftar seluruh teknisi, status ketersediaan (`isAvailable`), serta jumlah tiket aktif (`assigned` + `in progress`) yang sedang ditangani masing-masing teknisi.
+   * Melihat daftar seluruh teknisi beserta **jumlah tiket aktif** (`assigned` + `inProgress`) yang sedang ditangani masing-masing teknisi sebagai acuan pembagian tugas.
 
-   * Mengubah peran (`role`) pengguna terdaftar dari `pelapor` menjadi `teknisi` berdasarkan pencarian email/NIM.
+   * Mengubah peran (`role`) pengguna terdaftar dari `pelapor` menjadi `teknisi` berdasarkan pencarian email atau nama.
 
 ## 4. Alur Role: Teknisi (`screens/teknisi/`)
 
@@ -148,13 +146,13 @@ Aktor: Petugas Perbaikan Lapangan.
 
    * Menampilkan seluruh laporan dengan `teknisiId == currentUser.uid`.
 
-   * Mendukung filter berdasarkan **Status** (`assigned`, `in progress`, `resolved`) dan **Gedung** (memudahkan teknisi mengerjakan beberapa tugas dalam satu gedung sekaligus).
+   * Mendukung filter berdasarkan **Status** (`assigned`, `inProgress`, `resolved`) dan **Gedung** (memudahkan teknisi mengerjakan beberapa tugas dalam satu gedung sekaligus).
 
 3. **Eksekusi Perbaikan (`detail_laporan_screen.dart` & `selesaikan_tugas_screen.dart`):**
 
-   * **Jika status `assigned`:** Teknisi membuka detail tiket (bisa mengecek `HistoryAssetScreen` untuk melihat riwayat servis alat sebelumnya), lalu menekan tombol **Mulai Kerjakan** saat tiba di lokasi. Status berubah menjadi `in progress` dan notifikasi terkirim ke Pelapor.
+   * **Jika status `assigned`:** Teknisi membuka detail tiket (bisa mengecek `HistoryAssetScreen` untuk melihat riwayat servis alat sebelumnya), lalu menekan tombol **Mulai Kerjakan** saat tiba di lokasi. Status berubah menjadi `inProgress` dan notifikasi terkirim ke Pelapor.
 
-   * **Jika status `in progress`:** Teknisi menekan tombol **Selesaikan Tugas** untuk membuka `SelesaikanTugasScreen`.
+   * **Jika status `inProgress`:** Teknisi menekan tombol **Selesaikan Tugas** untuk membuka `SelesaikanTugasScreen`.
 
    * **Form Penyelesaian (`selesaikan_tugas_screen.dart`):**
 
@@ -166,15 +164,15 @@ Aktor: Petugas Perbaikan Lapangan.
 
 1. **Kompresi Foto & Batas 1 MB Dokumen Firestore:**
 
-   * Karena penyimpanan foto menggunakan **string Base64 di dalam Firestore** (tanpa Firebase Storage), setiap foto **wajib dikompres** di `StorageService` (resolusi maksimal `800x800`, kualitas `~60%`) agar ukurannya berada di kisaran **80–150 KB** (batas keras maksimal **250 KB per foto**).
+   * Karena penyimpanan foto menggunakan **string Base64 di dalam Firestore** (tanpa Firebase Storage), setiap foto **wajib dikompres** di `StorageService` (resolusi maksimal `800x800`, kualitas `~65%`) agar ukurannya berada di bawah **250 KB per foto**.
 
    * Satu dokumen `reports` menampung 2 foto (`fotoSebelum` dan `fotoSesudah`). Menjaga ukuran tiap foto di bawah 250 KB memastikan total dokumen tetap aman di bawah batas maksimal Firestore (1 MiB).
 
-   * Untuk menampilkan gambar di UI, decode string Base64 menggunakan `Image.memory(base64Decode(base64String))`.
+   * Untuk menampilkan gambar di UI, decode string Base64 menggunakan `StorageService.instance.base64ToBytes(base64String)`.
 
 2. **Rumus Perhitungan SLA (`deadlineAt`):**
 
-   * Dihitung otomatis saat Admin memverifikasi laporan berdasarkan prioritas yang dipilih:
+   * Dihitung otomatis saat Admin memverifikasi laporan berdasarkan prioritas yang dipilih (`ReportPriority.slaHours`):
 
      * **`tinggi`:** `verifiedAt + 24 jam`
 
@@ -182,24 +180,30 @@ Aktor: Petugas Perbaikan Lapangan.
 
      * **`rendah`:** `verifiedAt + 168 jam` (7 hari)
 
-   * Tiket dianggap **Overdue (Melewati SLA)** jika `status != 'resolved'` dan `DateTime.now().isAfter(deadlineAt)`.
+   * Tiket dianggap **Overdue (Melewati SLA)** jika `report.isOverdue == true`.
 
 3. **Denormalisasi Data pada Koleksi `reports`:**
 
-   * Saat membuat atau memperbarui tiket di `ReportService`, wajib ikut menyimpan `namaAset`, `lokasiLengkap`, `pelaporNama`, dan `teknisiNama` langsung di dokumen `reports`. Tujuannya agar halaman daftar tiket dapat menampilkan nama aset dan pelapor dalam satu kali *query* tanpa melakukan pembacaan ulang ke koleksi `assets` dan `users`.
+   * Saat membuat atau memperbarui tiket di `ReportService`, wajib ikut menyimpan `assetNama`, `assetLokasi`, `pelaporNama`, dan `teknisiNama` langsung di dokumen `reports`. Tujuannya agar halaman daftar tiket dapat menampilkan nama aset dan pelapor dalam satu kali *query* tanpa melakukan pembacaan ulang ke koleksi `assets` dan `users`.
 
 4. **Pemicu Notifikasi (`NotificationModel`):**
 
    * Pembuatan dokumen notifikasi dilakukan langsung di dalam *method* `ReportService` setiap kali status laporan berubah—tidak perlu memakai Cloud Functions.
 
 5. **Gunakan Enum dari File Model (Jangan Hardcode String):**
+
    * `UserRole` (ada di `user_model.dart`): `UserRole.pelapor`, `UserRole.admin`, `UserRole.teknisi`
+
    * `ReportStatus` (ada di `report_model.dart`): `ReportStatus.reported`, `ReportStatus.verified`, `ReportStatus.assigned`, `ReportStatus.inProgress`, `ReportStatus.resolved`, `ReportStatus.rejected`
+
    * `ReportPriority` (ada di `report_model.dart`): `ReportPriority.tinggi`, `ReportPriority.sedang`, `ReportPriority.rendah`
+
    * *Tips UI:* Untuk menampilkan teks Bahasa Indonesia ke layar, langsung panggil `.label` (contoh: `report.status.label` otomatis menghasilkan `"Sedang Dikerjakan"`).
 
 6. **ID Dokumen Firestore (`doc.id` Murni):**
+
    * Koleksi `users` dan `assets` tidak menyimpan ulang field `uid`/`id` di dalam dokumen. Saat menyimpan data baru di `services/`, wajib gunakan `.doc(id).set(...)` (bukan `.add(...)`).
+
    * Kode QR Aset (`asset.id`) **dilarang mengandung karakter garis miring (`/`)** karena akan terbaca sebagai jalur *subcollection* oleh Firestore (gunakan tanda hubung `-`, misal: `AC-R204`).
 
 ## 6. Checklist Pengerjaan Tim (Paralel & Anti-Blocking)
@@ -218,15 +222,15 @@ Agar seluruh anggota tim bisa mengerjakan tugas secara bersamaan tanpa saling me
 
 *Selesaikan tahap ini lebih dulu dan merge ke `main` agar semua jalur di bawah memiliki acuan tipe data yang sama.*
 
-* [ ] Buat `constants/app_colors.dart` & `constants/app_constants.dart` (konstanta status, prioritas, durasi SLA)
+* [ ] Buat `constants/app_colors.dart` & `constants/app_constants.dart` (konstanta warna & teks umum)
 
-* [ x ] Buat `models/user_model.dart`
+* [x] Buat `models/user_model.dart`
 
-* [ x ] Buat `models/asset_model.dart`
+* [x] Buat `models/asset_model.dart`
 
-* [ x ] Buat `models/report_model.dart`
+* [x] Buat `models/report_model.dart`
 
-* [ x ] Buat `models/notification_model.dart`
+* [x] Buat `models/notification_model.dart`
 
 * [ ] Isi data sampel awal di Firebase Console (akun uji untuk `pelapor`, `admin`, `teknisi`, serta dummy `assets` & `reports`)
 
@@ -264,7 +268,7 @@ Agar seluruh anggota tim bisa mengerjakan tugas secara bersamaan tanpa saling me
 
 * [ ] `screens/shared/notification_screen.dart` (Daftar notifikasi *real-time* & tandai sudah dibaca)
 
-* [ ] `screens/shared/profile_screen.dart` (Info profil, edit nama/NIM, toggle status teknisi, & logout)
+* [ ] `screens/shared/profile_screen.dart` (Info profil, edit nama, & logout)
 
 ### Jalur D — Modul Pelapor (`screens/pelapor/`)
 

@@ -138,6 +138,16 @@ class AuthService {
     await _firebaseAuth.currentUser?.updateDisplayName(nama.trim());
   }
 
+  /// Stream seluruh pengguna terdaftar (untuk Admin mencari calon teknisi)
+  Stream<List<UserModel>> streamAllUsers() {
+    return _usersRef.snapshots().map((snapshot) {
+      final users =
+          snapshot.docs.map((doc) => UserModel.fromFirestore(doc)).toList();
+      users.sort((a, b) => a.nama.toLowerCase().compareTo(b.nama.toLowerCase()));
+      return users;
+    });
+  }
+
   /// Stream daftar seluruh Teknisi (untuk Admin saat menugaskan tiket)
   Stream<List<UserModel>> streamTechnicians() {
     return _usersRef
@@ -145,6 +155,16 @@ class AuthService {
         .snapshots()
         .map((snapshot) =>
             snapshot.docs.map((doc) => UserModel.fromFirestore(doc)).toList());
+  }
+
+  /// Ubah role pengguna (misal: Admin mengangkat pelapor menjadi teknisi)
+  Future<void> updateUserRole({
+    required String uid,
+    required UserRole newRole,
+  }) async {
+    await _usersRef.doc(uid).update({
+      'role': newRole.value,
+    });
   }
 
   /// Logout dari Google & Firebase Auth

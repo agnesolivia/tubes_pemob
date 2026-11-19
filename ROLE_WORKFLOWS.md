@@ -148,13 +148,13 @@ Aktor: Petugas Perbaikan Lapangan.
 
    * Mendukung filter berdasarkan **Status** (`assigned`, `inProgress`, `resolved`) dan **Gedung** (memudahkan teknisi mengerjakan beberapa tugas dalam satu gedung sekaligus).
 
-3. **Eksekusi Perbaikan (`detail_laporan_screen.dart` & `selesaikan_tugas_screen.dart`):**
+3. **Eksekusi Perbaikan (`detail_laporan_screen.dart` & `form_penyelesaian_screen.dart`):**
 
    * **Jika status `assigned`:** Teknisi membuka detail tiket (bisa mengecek `HistoryAssetScreen` untuk melihat riwayat servis alat sebelumnya), lalu menekan tombol **Mulai Kerjakan** saat tiba di lokasi. Status berubah menjadi `inProgress` dan notifikasi terkirim ke Pelapor.
 
-   * **Jika status `inProgress`:** Teknisi menekan tombol **Selesaikan Tugas** untuk membuka `SelesaikanTugasScreen`.
+   * **Jika status `inProgress`:** Teknisi menekan tombol **Selesaikan Tugas** untuk membuka `FormPenyelesaianScreen`.
 
-   * **Form Penyelesaian (`selesaikan_tugas_screen.dart`):**
+   * **Form Penyelesaian (`form_penyelesaian_screen.dart`):**
 
      * Teknisi wajib mengunggah foto hasil perbaikan (`fotoSesudah`) dan mengisi catatan tindakan perbaikan (`catatanTeknisi`).
 
@@ -236,7 +236,7 @@ Agar seluruh anggota tim bisa mengerjakan tugas secara bersamaan tanpa saling me
 
 ### Jalur A — Layanan Backend (`services/`)
 
-* [x] `services/auth_service.dart` (Login, Register, Logout, & ambil `UserModel`)
+* [x] `services/auth_service.dart` (Login, Register, Google Sign-In, kelola role, & ambil `UserModel`)
 
 * [x] `services/storage_service.dart` (Ambil gambar, kompres < 250 KB, & encode/decode Base64)
 
@@ -298,4 +298,4 @@ Agar seluruh anggota tim bisa mengerjakan tugas secara bersamaan tanpa saling me
 
 * [ ] `screens/teknisi/daftar_tugas_screen.dart` (Daftar tugas teknisi + filter status & gedung)
 
-* [ ] `screens/teknisi/selesaikan_tugas_screen.dart` (Form unggah foto sesudah perbaikan & catatan tindakan)
+* [ ] `screens/teknisi/form_penyelesaian_screen.dart` (Form unggah foto sesudah perbaikan & catatan tindakan)

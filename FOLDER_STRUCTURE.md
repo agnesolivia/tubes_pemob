@@ -1,12 +1,12 @@
 # 📐 Panduan Struktur Folder & Arsitektur Proyek
 
-Dokumen ini menjadi acuan teknis bagi seluruh anggota tim dalam mengembangkan **Aplikasi Pengaduan Fasilitas Kampus** (Flutter + Firebase). Tujuannya agar pembagian tugas antar-anggota tetap rapi, konsisten, dan minim *merge conflict*.
+Dokumen ini menjadi acuan teknis bagi seluruh anggota tim dalam mengembangkan **Aplikasi Pengaduan Fasilitas Kampus** (Flutter + Firebase). Tujuannya agar struktur kode antar-anggota tetap rapi, konsisten, dan minim *merge conflict* selama kolaborasi Git.
 
 ## 1. Peta Lengkap Direktori `lib/`
 
 Proyek ini menggunakan pola **Layer-First** yang dikombinasikan dengan pemisahan halaman berdasarkan *role* (`pelapor`, `admin`, `teknisi`) di dalam `screens/`. Seluruh file halaman di dalam `screens/` wajib menggunakan akhiran `_screen.dart`.
 
-```text
+```
 lib/
 ├── main.dart                             # Entry point aplikasi, inisialisasi Firebase, & routing awal
 │
@@ -21,11 +21,11 @@ lib/
 │   └── notification_model.dart           # NotificationModel (notifikasi perubahan status tiket antar-role)
 │
 ├── services/                             # Seluruh komunikasi backend (Firebase Auth & Cloud Firestore)
-│   ├── auth_service.dart               # Login, register, Google Sign-In, logout, & stream UserModel
-│   ├── storage_service.dart            # Kompresi foto lokal (< 250 KB) & konversi Base64 dua arah
-│   ├── asset_service.dart              # CRUD master data ruangan/aset & lookup berdasarkan ID QR
-│   ├── report_service.dart             # CRUD laporan, transisi status, hitung SLA, & log riwayat
-│   └── notification_service.dart       # Stream notifikasi real-time & tandai notifikasi sudah dibaca
+│   ├── auth_service.dart                 # Login, register, Google Sign-In, kelola role, & stream UserModel
+│   ├── storage_service.dart              # Kompresi foto lokal (< 250 KB) & konversi Base64 dua arah
+│   ├── asset_service.dart                # CRUD master data ruangan/aset & lookup berdasarkan ID QR
+│   ├── report_service.dart               # CRUD laporan, transisi status, hitung SLA, & log riwayat
+│   └── notification_service.dart         # Stream notifikasi real-time & tandai notifikasi sudah dibaca
 │
 ├── widgets/                              # Komponen UI kecil yang dipakai berulang di banyak halaman
 │   ├── status_badge.dart                 # Label warna otomatis sesuai ReportStatus
@@ -60,7 +60,7 @@ lib/
     └── teknisi/                          # Khusus Petugas Perbaikan Lapangan
         ├── teknisi_home_screen.dart      # Ringkasan tugas aktif & daftar prioritas SLA terdekat
         ├── daftar_tugas_screen.dart      # Daftar lengkap tugas yang ditugaskan ke teknisi terkait
-        └── form_penyelesaian_screen.dart  # Form upload foto sesudah perbaikan & catatan tindakan
+        └── form_penyelesaian_screen.dart # Form upload foto sesudah perbaikan & catatan tindakan
 ```
 
 ## 2. Tanggung Jawab Tiap Folder
@@ -77,7 +77,7 @@ Berfungsi sebagai penerjemah antara dokumen mentah Cloud Firestore (`Map<String,
 
 ### `services/`
 Satu-satunya lapisan yang boleh memanggil `FirebaseFirestore`, `FirebaseAuth`, atau utilitas pemrosesan gambar.
-* File di `screens/` cukup memanggil *singleton instance* dari `services/` (misalnya `ReportService.instance.streamMyReports(uid)`) dan menerima data yang sudah berbentuk `Model` atau `List<Model>`.
+* File di `screens/` cukup memanggil *singleton instance* dari `services/` (misalnya `ReportService.instance.streamReportsByPelapor(uid)`) dan menerima data yang sudah berbentuk `Model` atau `List<Model>`.
 
 ### `widgets/`
 Berisi komponen UI tanpa `Scaffold` yang digunakan di lebih dari satu halaman—contohnya `ReportCard` yang dipakai di beranda Pelapor, daftar Admin, maupun daftar tugas Teknisi, serta `Base64ImageViewer` untuk menampilkan foto laporan.
@@ -89,7 +89,7 @@ Berisi tampilan halaman penuh (`Scaffold`). Dikelompokkan berdasarkan aktor peng
 
 ### A. Siklus Hidup Tiket (6 Status)
 
-```text
+```
                   ┌──► rejected (Ditolak Admin + wajib alasan penolakan)
                   │
 reported ─────────┴──► verified ──► assigned ──► in progress ──► resolved
@@ -111,7 +111,7 @@ Saat Admin memverifikasi tiket dan memilih prioritas, sistem otomatis mengisi fi
 
 ### C. Alur Fleksibel QR Code vs. Manual
 
-```text
+```
 pelapor_home_screen
   ├──► [Scan QR]      ──► scan_qr_screen ──► history_asset_screen ──► form_pengaduan_screen (aset terisi)
   └──► [Lapor Manual] ──────────────────────────────────────────────► form_pengaduan_screen (pilih dropdown)

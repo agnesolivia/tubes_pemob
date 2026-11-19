@@ -30,7 +30,7 @@ Aplikasi ini dirancang untuk membantu sivitas akademika melaporkan kerusakan fas
 
 Sebelum mulai mengerjakan fitur, seluruh anggota tim wajib membaca dua panduan berikut:
 * **[Struktur Folder & Aturan Kode (`FOLDER_STRUCTURE.md`)](./FOLDER_STRUCTURE.md)** — Penjelasan fungsi tiap folder, skema koleksi Firestore, dan aturan penamaan file.
-* **[Detail Alur Fitur & Checklist Tim (`ALUR_FITUR_ROLE.md`)](./ALUR_FITUR_ROLE.md)** — Rincian fungsionalitas per *role*, siklus status tiket (`reported` hingga `resolved`), serta pembagian tugas paralel.
+* **[Detail Alur Fitur & Checklist Tim (`ROLE_WORKFLOWS.md`)](./ROLE_WORKFLOWS.md)** — Rincian fungsionalitas per *role*, siklus status tiket (`reported` hingga `resolved`), serta pembagian tugas paralel.
 
 ## 📁 Struktur Proyek (`lib/`)
 

@@ -44,6 +44,7 @@ dependencies:
   qr_flutter: ^4.1.0
   intl: ^0.20.3
   google_fonts: ^9.0.0
+  flutter_svg: ^2.5.0
 
 dev_dependencies:
   flutter_test:

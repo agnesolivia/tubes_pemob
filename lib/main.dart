@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,11 +24,11 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       // Placeholder sementara sampai AuthWrapper & halaman login selesai dibuat
-      home: const Scaffold(
-        body: Center(
-          child: Text('Firebase Terhubung'),
-        ),
-      ),
+       initialRoute: '/',
+      routes: {
+        '/': (context) => const SplashScreen(),
+        
+      },
     );
   }
 }

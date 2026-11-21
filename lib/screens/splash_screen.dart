@@ -2,9 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:tubes_pemob/constants/app_colors.dart';
+import 'package:tubes_pemob/screens/onboarding_screen.dart';
 
-class SplashScreen extends StatelessWidget {
+class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const OnboardingScreen()),
+        );
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -18,7 +36,7 @@ class SplashScreen extends StatelessWidget {
         backgroundColor: AppColors.primaryBlue,
         body: Stack(
           children: [
-            // 1. Gambar Gelombang Atas 
+            // 1. Gambar Gelombang Atas
             Positioned(
               top: 0,
               left: 0,
@@ -34,7 +52,7 @@ class SplashScreen extends StatelessWidget {
               ),
             ),
 
-            // 2. Gambar Gelombang Bawah 
+            // 2. Gambar Gelombang Bawah
             Positioned(
               bottom: 0,
               left: 0,

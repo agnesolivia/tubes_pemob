@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:tubes_pemob/constants/app_colors.dart';
 import 'package:tubes_pemob/screens/auth/register_screen.dart';
+import 'package:tubes_pemob/screens/pelapor/pelapor_home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -23,11 +24,13 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _onLoginPressed() {
-    // Tambahkan logika autentikasi Firebase / navigasi ke HomeScreen di sini
-    debugPrint('Login dengan email: ${_emailController.text}');
-  }
-
+void _onLoginPressed() {
+  Navigator.of(context).pushReplacement(
+    MaterialPageRoute(
+      builder: (context) => const PelaporHomeScreen(),
+    ),
+  );
+}
   void _onGoogleLoginPressed() {
     // Tambahkan logika Google Sign-In di sini
     debugPrint('Lanjutkan dengan Google');

@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:tubes_pemob/constants/app_colors.dart';
 import 'package:tubes_pemob/screens/onboarding_screen.dart';
+import 'package:tubes_pemob/screens/auth/auth_wrapper.dart';
+import 'package:tubes_pemob/services/auth_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -16,11 +18,14 @@ class _SplashScreenState extends State<SplashScreen> {
   void initState() {
     super.initState();
     Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const OnboardingScreen()),
-        );
-      }
+      if (!mounted) return;
+      final isLoggedIn = AuthService.instance.currentUser != null;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) =>
+              isLoggedIn ? const AuthWrapper() : const OnboardingScreen(),
+        ),
+      );
     });
   }
 

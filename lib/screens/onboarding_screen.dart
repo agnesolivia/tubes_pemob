@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:tubes_pemob/constants/app_colors.dart';
-import 'package:tubes_pemob/screens/auth/login_screen.dart';
+import 'package:tubes_pemob/screens/auth/auth_wrapper.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -29,7 +29,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ),
   ];
 
-void _onNextPressed() {
+  void _onNextPressed() {
     if (_currentPage < _pages.length - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 350),
@@ -37,7 +37,7 @@ void _onNextPressed() {
       );
     } else {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        MaterialPageRoute(builder: (context) => const AuthWrapper()),
       );
     }
   }

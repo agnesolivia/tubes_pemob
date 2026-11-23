@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import '../constants/app_constants.dart';
 import '../models/user_model.dart';
 
 class AuthService {
@@ -22,7 +24,9 @@ class AuthService {
 
   Future<void> initialize() async {
     if (_isInitialized) return;
-    await _googleSignIn.initialize();
+    await _googleSignIn.initialize(
+      serverClientId: kIsWeb ? null : AppConstants.googleWebClientId,
+    );
     _isInitialized = true;
   }
 
@@ -73,8 +77,17 @@ class AuthService {
           await _googleSignIn.authenticate();
       final GoogleSignInAuthentication googleAuth = googleUser.authentication;
 
+      final String? idToken = googleAuth.idToken;
+      if (idToken == null || idToken.isEmpty) {
+        throw FirebaseAuthException(
+          code: 'missing-google-id-token',
+          message:
+              'Token autentikasi Google tidak ditemukan. Periksa SHA-1 dan Web Client ID di Firebase.',
+        );
+      }
+
       final AuthCredential credential = GoogleAuthProvider.credential(
-        idToken: googleAuth.idToken,
+        idToken: idToken,
       );
 
       final userCredential =

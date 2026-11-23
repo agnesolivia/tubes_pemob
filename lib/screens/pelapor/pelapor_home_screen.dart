@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:tubes_pemob/constants/app_colors.dart';
+import 'package:tubes_pemob/screens/pelapor/form_pengaduan_screen.dart';
 
 class PelaporHomeScreen extends StatefulWidget {
   const PelaporHomeScreen({super.key});
@@ -14,8 +15,11 @@ class _PelaporHomeScreenState extends State<PelaporHomeScreen> {
   int _selectedNavIndex = 0;
 
   void _onCreateReportPressed() {
-    // Hubungkan ke halaman Buat Laporan / Scan QR di sini
-    debugPrint('Navigasi ke Buat Laporan Baru');
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const CreateReportScreen(),
+      ),
+    );
   }
 
   void _onViewAllReportsPressed() {
@@ -69,24 +73,39 @@ class _PelaporHomeScreenState extends State<PelaporHomeScreen> {
                               width: size.width * 0.28,
                               fit: BoxFit.contain,
                             ),
-                            Container(
-                              width: 42,
-                              height: 42,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF5B5CE6),
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: AppColors.white.withValues(alpha: 0.35),
-                                  width: 1.5,
+                            GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _selectedNavIndex = 3;
+                                });
+                              },
+                              child: Container(
+                                width: 42,
+                                height: 42,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF5B5CE6),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color:
+                                        AppColors.white.withValues(alpha: 0.4),
+                                    width: 1.5,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.12),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                              alignment: Alignment.center,
-                              child: Text(
-                                'R',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.white,
+                                alignment: Alignment.center,
+                                child: Text(
+                                  'R',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.white,
+                                  ),
                                 ),
                               ),
                             ),
@@ -158,21 +177,34 @@ class _PelaporHomeScreenState extends State<PelaporHomeScreen> {
                         topRight: Radius.circular(32),
                       ),
                     ),
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Tombol Pill "+ Buat Laporan Baru"
-                          Center(
+                    child: Column(
+                      children: [
+                        // Area Fixed Atas: Tombol "+ Buat Laporan Baru"
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFFAFBFD),
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(32),
+                              topRight: Radius.circular(32),
+                            ),
+                            border: Border(
+                              bottom: BorderSide(
+                                color: Color(0xFFEEF2F7),
+                                width: 1,
+                              ),
+                            ),
+                          ),
+                          child: Center(
                             child: Container(
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(30),
                                 boxShadow: [
                                   BoxShadow(
                                     color: AppColors.primaryBlue
-                                        .withValues(alpha: 0.22),
-                                    blurRadius: 12,
+                                        .withValues(alpha: 0.24),
+                                    blurRadius: 14,
                                     offset: const Offset(0, 5),
                                   ),
                                 ],
@@ -184,8 +216,8 @@ class _PelaporHomeScreenState extends State<PelaporHomeScreen> {
                                   foregroundColor: AppColors.white,
                                   elevation: 0,
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 24,
-                                    vertical: 12,
+                                    horizontal: 26,
+                                    vertical: 12.5,
                                   ),
                                   side: const BorderSide(
                                     color: Color(0xFFFFB800),
@@ -206,114 +238,131 @@ class _PelaporHomeScreenState extends State<PelaporHomeScreen> {
                               ),
                             ),
                           ),
+                        ),
 
-                          const SizedBox(height: 22),
+                        // Area Scrollable: Ringkasan & Pantau Laporan Aktif
+                        Expanded(
+                          child: SingleChildScrollView(
+                            physics: const BouncingScrollPhysics(),
+                            padding: const EdgeInsets.fromLTRB(20, 16, 20, 105),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Header Section: Ringkasan Laporan Kamu
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Ringkasan Laporan Kamu',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 15.5,
+                                        fontWeight: FontWeight.w800,
+                                        color: const Color(0xFF0A0D14),
+                                      ),
+                                    ),
+                                    GestureDetector(
+                                      onTap: _onViewAllReportsPressed,
+                                      child: Text(
+                                        'Total 7 Laporan',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppColors.primaryBlue,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
 
-                          // Header Section: Ringkasan Laporan Kamu
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Ringkasan Laporan Kamu',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 15.5,
-                                  fontWeight: FontWeight.w800,
-                                  color: const Color(0xFF0A0D14),
+                                const SizedBox(height: 12),
+
+                                // 3 Kartu Ringkasan Status
+                                Row(
+                                  children: const [
+                                    Expanded(
+                                      child: _SummaryStatusCard(
+                                        badgeText: 'Menunggu',
+                                        badgeBgColor: Color(0xFFFEF3C7),
+                                        badgeTextColor: Color(0xFFA16207),
+                                        count: '1',
+                                        subtitle: 'Menunggu verifikasi',
+                                      ),
+                                    ),
+                                    SizedBox(width: 10),
+                                    Expanded(
+                                      child: _SummaryStatusCard(
+                                        badgeText: 'Diproses',
+                                        badgeBgColor: Color(0xFFDCFCE7),
+                                        badgeTextColor: Color(0xFF15803D),
+                                        count: '2',
+                                        subtitle: 'Sedang jalan',
+                                      ),
+                                    ),
+                                    SizedBox(width: 10),
+                                    Expanded(
+                                      child: _SummaryStatusCard(
+                                        badgeText: 'Selesai',
+                                        badgeBgColor: Color(0xFFDBEAFE),
+                                        badgeTextColor: Color(0xFF1D4ED8),
+                                        count: '4',
+                                        subtitle: 'Telah diperbaiki',
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                              Text(
-                                'Total 7 Laporan',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.primaryBlue,
+
+                                const SizedBox(height: 22),
+
+                                // Header Section: Pantau Laporan Aktif
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Pantau Laporan Aktif',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 15.5,
+                                        fontWeight: FontWeight.w800,
+                                        color: const Color(0xFF0A0D14),
+                                      ),
+                                    ),
+                                    GestureDetector(
+                                      onTap: _onViewAllReportsPressed,
+                                      child: Text(
+                                        'Lihat Semua',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppColors.primaryBlue,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                            ],
+
+                                const SizedBox(height: 12),
+
+                                // Kartu Laporan Aktif
+                                const _ActiveReportCard(
+                                  ticketId: '#SNF-2026-089',
+                                  statusText: 'Sedang Diperbaiki',
+                                  title: 'AC Ruang Kelas D-104 Bocor',
+                                  location:
+                                      'Fakultas Ilmu Komputer dan Teknologi Informasi • Lantai 1 (R. D-104)',
+                                  stageText:
+                                      'Tahap 4/5: Teknisi sedang memperbaiki',
+                                  progressPercent: '80%',
+                                  completedSegments: 4,
+                                  totalSegments: 5,
+                                  feedbackText:
+                                      'Teknisi sedang memperbaiki pipa pembuangan AC di Ruang D-104.',
+                                ),
+                              ],
+                            ),
                           ),
-
-                          const SizedBox(height: 12),
-
-                          // 3 Kartu Ringkasan Status
-                          Row(
-                            children: const [
-                              Expanded(
-                                child: _SummaryStatusCard(
-                                  badgeText: 'Menunggu',
-                                  badgeBgColor: Color(0xFFFEF3C7),
-                                  badgeTextColor: Color(0xFFA16207),
-                                  count: '1',
-                                  subtitle: 'Menunggu verifikasi',
-                                ),
-                              ),
-                              SizedBox(width: 10),
-                              Expanded(
-                                child: _SummaryStatusCard(
-                                  badgeText: 'Diproses',
-                                  badgeBgColor: Color(0xFFDCFCE7),
-                                  badgeTextColor: Color(0xFF15803D),
-                                  count: '1',
-                                  subtitle: 'Sedang jalan',
-                                ),
-                              ),
-                              SizedBox(width: 10),
-                              Expanded(
-                                child: _SummaryStatusCard(
-                                  badgeText: 'Selesai',
-                                  badgeBgColor: Color(0xFFDBEAFE),
-                                  badgeTextColor: Color(0xFF1D4ED8),
-                                  count: '4',
-                                  subtitle: 'Telah diperbaiki',
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 22),
-
-                          // Header Section: Pantau Laporan Aktif
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Pantau Laporan Aktif',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 15.5,
-                                  fontWeight: FontWeight.w800,
-                                  color: const Color(0xFF0A0D14),
-                                ),
-                              ),
-                              GestureDetector(
-                                onTap: _onViewAllReportsPressed,
-                                child: Text(
-                                  'Lihat Semua',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 12.5,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.primaryBlue,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 12),
-
-                          // Kartu Laporan Aktif
-                          const _ActiveReportCard(
-                            ticketId: '#SNF-2026-089',
-                            statusText: 'Sedang Diperbaiki',
-                            title: 'AC Ruang Kelas D-204 Bocor',
-                            location: 'Gedung D • Lantai 1 (R. D-104)',
-                            stageText: 'Tahap 4/5: Teknisi sedang memperbaiki',
-                            progressPercent: '80%',
-                            completedSegments: 3,
-                            totalSegments: 4,
-                            feedbackText:
-                                'Teknisi sedang memperbaiki pipa pembuangan AC di Ruang D-204.',
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -396,15 +445,17 @@ class _SummaryStatusCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          Text(
-            subtitle,
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 10.5,
-              fontWeight: FontWeight.w500,
-              color: const Color(0xFF7B8798),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF7B8798),
+              ),
             ),
           ),
         ],
@@ -514,7 +565,7 @@ class _ActiveReportCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 5),
                     Text(
                       title,
                       style: GoogleFonts.plusJakartaSans(
@@ -523,24 +574,29 @@ class _ActiveReportCard extends StatelessWidget {
                         color: const Color(0xFF0A0D14),
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 5),
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(
-                          Icons.push_pin_rounded,
-                          size: 13,
-                          color: Color(0xFFEF4444),
+                        const Padding(
+                          padding: EdgeInsets.only(top: 2),
+                          child: Icon(
+                            Icons.push_pin_rounded,
+                            size: 13,
+                            color: Color(0xFFEF4444),
+                          ),
                         ),
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(
                             location,
-                            maxLines: 1,
+                            maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 11.5,
                               fontWeight: FontWeight.w500,
                               color: const Color(0xFF64748B),
+                              height: 1.35,
                             ),
                           ),
                         ),
@@ -558,14 +614,19 @@ class _ActiveReportCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                stageText,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w500,
-                  color: const Color(0xFF475569),
+              Expanded(
+                child: Text(
+                  stageText,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF475569),
+                  ),
                 ),
               ),
+              const SizedBox(width: 8),
               Text(
                 progressPercent,
                 style: GoogleFonts.plusJakartaSans(
@@ -579,7 +640,7 @@ class _ActiveReportCard extends StatelessWidget {
 
           const SizedBox(height: 8),
 
-          // Progress Bar 4 Segmen
+          // Progress Bar 5 Segmen
           Row(
             children: List.generate(totalSegments, (index) {
               final bool isDone = index < completedSegments;
@@ -587,7 +648,7 @@ class _ActiveReportCard extends StatelessWidget {
                 child: Container(
                   height: 5,
                   margin: EdgeInsets.only(
-                    right: index == totalSegments - 1 ? 0 : 6,
+                    right: index == totalSegments - 1 ? 0 : 5,
                   ),
                   decoration: BoxDecoration(
                     color: isDone
@@ -685,7 +746,7 @@ class _AcIconPainter extends CustomPainter {
 
     // Garis kisi ventilasi
     canvas.drawLine(
-      Offset(5, 11),
+      const Offset(5, 11),
       Offset(size.width - 5, 11),
       paint,
     );
@@ -774,30 +835,35 @@ class _PelaporBottomNavBar extends StatelessWidget {
           // Tombol Kamera Bulat Biru dengan Border Kuning di Tengah
           Positioned(
             top: 0,
-            child: GestureDetector(
-              onTap: onCameraPressed,
-              child: Container(
-                width: 58,
-                height: 58,
-                decoration: BoxDecoration(
-                  color: AppColors.primaryBlue,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: const Color(0xFFFFB800),
-                    width: 2.2,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primaryBlue.withValues(alpha: 0.30),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
+            child: Material(
+              color: Colors.transparent,
+              shape: const CircleBorder(),
+              child: InkWell(
+                onTap: onCameraPressed,
+                customBorder: const CircleBorder(),
+                child: Container(
+                  width: 58,
+                  height: 58,
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryBlue,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: const Color(0xFFFFB800),
+                      width: 2.2,
                     ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.camera_alt_outlined,
-                  color: AppColors.white,
-                  size: 26,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primaryBlue.withValues(alpha: 0.30),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.camera_alt_outlined,
+                    color: AppColors.white,
+                    size: 26,
+                  ),
                 ),
               ),
             ),

@@ -45,6 +45,9 @@ dependencies:
   intl: ^0.20.3
   google_fonts: ^9.0.0
   flutter_svg: ^2.5.0
+  gal: 2.3.3
+  share_plus: 10.1.4
+  cross_file: ^0.3.5+5
 
 dev_dependencies:
   flutter_test:

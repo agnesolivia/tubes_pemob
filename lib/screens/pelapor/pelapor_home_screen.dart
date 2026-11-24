@@ -3,6 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:tubes_pemob/constants/app_colors.dart';
 import 'package:tubes_pemob/screens/pelapor/form_pengaduan_screen.dart';
+import 'package:tubes_pemob/screens/shared/profile_screen.dart';
+import 'package:tubes_pemob/models/user_model.dart';
+import 'package:tubes_pemob/services/auth_service.dart';
 
 class PelaporHomeScreen extends StatefulWidget {
   const PelaporHomeScreen({super.key});
@@ -27,6 +30,14 @@ class _PelaporHomeScreenState extends State<PelaporHomeScreen> {
     setState(() {
       _selectedNavIndex = 1;
     });
+  }
+
+  void _openProfileScreen() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const ProfileScreen()
+      ),
+    );
   }
 
   @override
@@ -74,11 +85,7 @@ class _PelaporHomeScreenState extends State<PelaporHomeScreen> {
                               fit: BoxFit.contain,
                             ),
                             GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  _selectedNavIndex = 3;
-                                });
-                              },
+                              onTap: _openProfileScreen,
                               child: Container(
                                 width: 42,
                                 height: 42,
@@ -99,13 +106,29 @@ class _PelaporHomeScreenState extends State<PelaporHomeScreen> {
                                   ],
                                 ),
                                 alignment: Alignment.center,
-                                child: Text(
-                                  'R',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.white,
-                                  ),
+                                child: StreamBuilder<UserModel?>(
+                                  stream: AuthService.instance.currentUser == null
+                                      ? null
+                                      : AuthService.instance.streamUserData(
+                                          AuthService.instance.currentUser!.uid,
+                                        ),
+                                  builder: (context, snapshot) {
+                                    final nama = snapshot.data?.nama ??
+                                        AuthService
+                                            .instance.currentUser?.displayName ??
+                                        'U';
+                                    final initial = nama.trim().isEmpty
+                                        ? 'U'
+                                        : nama.trim()[0].toUpperCase();
+                                    return Text(
+                                      initial,
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.white,
+                                      ),
+                                    );
+                                  },
                                 ),
                               ),
                             ),
@@ -375,6 +398,10 @@ class _PelaporHomeScreenState extends State<PelaporHomeScreen> {
         bottomNavigationBar: _PelaporBottomNavBar(
           selectedIndex: _selectedNavIndex,
           onItemTapped: (index) {
+            if (index == 3) {
+              _openProfileScreen();
+              return;
+            }
             setState(() {
               _selectedNavIndex = index;
             });

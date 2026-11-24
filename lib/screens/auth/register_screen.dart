@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:tubes_pemob/constants/app_colors.dart';
 import 'package:tubes_pemob/screens/auth/login_screen.dart';
+import 'package:tubes_pemob/services/auth_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -20,6 +21,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool _isGoogleLoading = false;
 
   @override
   void dispose() {
@@ -35,9 +37,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
     debugPrint('Daftar akun: ${_nameController.text} (${_emailController.text})');
   }
 
-  void _onGoogleRegisterPressed() {
-    // Tambahkan logika Google Sign-In di sini
-    debugPrint('Lanjutkan dengan Google');
+  Future<void> _onGoogleRegisterPressed() async {
+    setState(() => _isGoogleLoading = true);
+    try {
+      final credential = await AuthService.instance.signInWithGoogle();
+      if (credential == null) return;
+      if (mounted && Navigator.of(context).canPop()) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Login Google gagal: $e'),
+          backgroundColor: AppColors.statusRejectedText,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isGoogleLoading = false);
+    }
   }
 
   void _navigateToLogin() {
@@ -305,7 +324,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               width: double.infinity,
                               height: 52,
                               child: OutlinedButton(
-                                onPressed: _onGoogleRegisterPressed,
+                                onPressed: _isGoogleLoading
+                                    ? null
+                                    : _onGoogleRegisterPressed,
                                 style: OutlinedButton.styleFrom(
                                   backgroundColor: AppColors.white,
                                   foregroundColor: const Color(0xFF0A0D14),
@@ -317,26 +338,36 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     borderRadius: BorderRadius.circular(30),
                                   ),
                                 ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Image.asset(
-                                      'assets/images/google_logo.png',
-                                      width: 20,
-                                      height: 20,
-                                      fit: BoxFit.contain,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Text(
-                                      'Lanjutkan dengan Google',
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w700,
-                                        color: const Color(0xFF0A0D14),
+                                child: _isGoogleLoading
+                                    ? const SizedBox(
+                                        width: 22,
+                                        height: 22,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2.5,
+                                          color: AppColors.primaryBlue,
+                                        ),
+                                      )
+                                    : Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Image.asset(
+                                            'assets/images/google_logo.png',
+                                            width: 20,
+                                            height: 20,
+                                            fit: BoxFit.contain,
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Text(
+                                            'Lanjutkan dengan Google',
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w700,
+                                              color: const Color(0xFF0A0D14),
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                    ),
-                                  ],
-                                ),
                               ),
                             ),
 

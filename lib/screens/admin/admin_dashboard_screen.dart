@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:tubes_pemob/constants/app_colors.dart';
 import 'package:tubes_pemob/screens/admin/kelola_laporan_screen.dart';
+import 'package:tubes_pemob/screens/admin/kelola_aset_screen.dart';
 
 // ============================================================
 // ADMIN DASHBOARD SCREEN
@@ -56,6 +57,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   void _onCameraPressed() {
     _showMessage('Fitur pemindaian belum tersedia.');
   }
+
+  void _onManageAssetsPressed() {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => const KelolaAsetScreen(),
+    ),
+  );
+}
 
   void _onViewAllTicketsPressed() {
     setState(() {
@@ -321,6 +331,25 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           _buildSummarySection(),
 
                           const SizedBox(height: 24),
+
+                          // Tombol Kelola Aset
+                          Align(
+  alignment: Alignment.centerRight,
+  child: TextButton.icon(
+    onPressed: _onManageAssetsPressed,
+    icon: const Icon(
+      Icons.inventory_2_outlined,
+      size: 18,
+    ),
+    label: Text(
+      'Kelola Aset',
+      style: GoogleFonts.plusJakartaSans(
+        fontSize: 12,
+        fontWeight: FontWeight.w700,
+      ),
+    ),
+  ),
+),
 
                           // Peringatan Overdue SLA
                           _buildOverdueSection(),

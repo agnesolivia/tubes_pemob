@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:google_sign_in/google_sign_in.dart';
 import '../constants/app_constants.dart';
 import '../models/user_model.dart';
 
@@ -41,7 +41,7 @@ class AuthService {
     );
   }
 
-  /// Registrasi akun baru (Email & Password) + simpan profil ke Firestore
+  /// Registrasi akun baru (Email & Password) + simpan profil ke Firestore + kirim email verifikasi
   Future<UserModel> registerWithEmail({
     required String nama,
     required String email,
@@ -65,7 +65,24 @@ class AuthService {
     );
 
     await _usersRef.doc(user.uid).set(newUser.toMap());
+    await user.sendEmailVerification();
     return newUser;
+  }
+
+  /// Kirim ulang email verifikasi untuk akun Email/Password
+  Future<void> sendVerificationEmail() async {
+    final user = _firebaseAuth.currentUser;
+    if (user != null && !user.emailVerified) {
+      await user.sendEmailVerification();
+    }
+  }
+
+  /// Muat ulang status user dari server Firebase & cek apakah email sudah diverifikasi
+  Future<bool> reloadAndCheckEmailVerified() async {
+    final user = _firebaseAuth.currentUser;
+    if (user == null) return false;
+    await user.reload();
+    return _firebaseAuth.currentUser?.emailVerified ?? false;
   }
 
   /// Login dengan Google + otomatis buat dokumen user jika pertama kali masuk

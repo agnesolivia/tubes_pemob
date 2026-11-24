@@ -180,6 +180,11 @@ class AuthService {
     });
   }
 
+  /// Kirim email reset kata sandi
+  Future<void> sendPasswordResetEmail(String email) async {
+    await _firebaseAuth.sendPasswordResetEmail(email: email.trim());
+  }
+
   /// Logout dari Google & Firebase Auth
   Future<void> signOut() async {
     await initialize();

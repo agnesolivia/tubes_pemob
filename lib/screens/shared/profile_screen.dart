@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:tubes_pemob/models/report_model.dart';
+import 'package:tubes_pemob/models/user_model.dart';
+import 'package:tubes_pemob/services/auth_service.dart';
+import 'package:tubes_pemob/services/report_service.dart';
 
 class _ProfileColors {
   static const primary = Color(0xFF0B63F6);
@@ -19,52 +23,214 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _notifAktif = true;
+  bool _isLoggingOut = false;
   int _currentIndex = 3;
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: _ProfileColors.primary,
-      body: Column(
-        children: [
-          _buildHeader(),
-          Expanded(
-            child: Container(
-              decoration: const BoxDecoration(
-                color: _ProfileColors.background,
-                borderRadius: BorderRadius.vertical(
-                  top: Radius.circular(28),
+  String _getInitial(String nama) {
+    final trimmed = nama.trim();
+    if (trimmed.isEmpty) return '?';
+    return trimmed[0].toUpperCase();
+  }
+
+  void _showSnackBar(String message, {bool isError = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor:
+            isError ? _ProfileColors.danger : _ProfileColors.primary,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<void> _showEditNameDialog(UserModel user) async {
+    final controller = TextEditingController(text: user.nama);
+    bool isSaving = false;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Edit Nama Profil'),
+              content: TextField(
+                controller: controller,
+                autofocus: true,
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(
+                  hintText: 'Masukkan nama lengkap',
                 ),
               ),
-              child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(28),
+              actions: [
+                TextButton(
+                  onPressed: isSaving
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Batal'),
                 ),
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
-                  children: [
-                    _buildProfileCard(),
-                    const SizedBox(height: 18),
-                    _buildSummarySection(),
-                    const SizedBox(height: 18),
-                    _buildAccountInfo(),
-                    const SizedBox(height: 18),
-                    _buildSettings(),
-                    const SizedBox(height: 22),
-                    _buildLogoutButton(),
-                  ],
+                ElevatedButton(
+                  onPressed: isSaving
+                      ? null
+                      : () async {
+                          final newName = controller.text.trim();
+                          if (newName.length < 3) {
+                            _showSnackBar('Nama minimal 3 karakter.',
+                                isError: true);
+                            return;
+                          }
+                          setDialogState(() => isSaving = true);
+                          try {
+                            await AuthService.instance.updateProfile(
+                              uid: user.uid,
+                              nama: newName,
+                            );
+                            if (dialogContext.mounted) {
+                              Navigator.of(dialogContext).pop();
+                            }
+                            _showSnackBar('Nama berhasil diperbarui.');
+                          } catch (e) {
+                            setDialogState(() => isSaving = false);
+                            _showSnackBar('Gagal memperbarui nama: $e',
+                                isError: true);
+                          }
+                        },
+                  child: isSaving
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Simpan'),
                 ),
-              ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    controller.dispose();
+  }
+
+  Future<void> _sendResetPassword(String email) async {
+    if (email.trim().isEmpty) {
+      _showSnackBar('Email akun tidak ditemukan.', isError: true);
+      return;
+    }
+    try {
+      await AuthService.instance.sendPasswordResetEmail(email);
+      _showSnackBar('Tautan ubah kata sandi telah dikirim ke $email.');
+    } catch (e) {
+      _showSnackBar('Gagal mengirim email reset: $e', isError: true);
+    }
+  }
+
+  Future<void> _confirmAndLogout() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Keluar dari Akun?'),
+        content: const Text('Anda perlu masuk kembali untuk mengakses aplikasi.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _ProfileColors.danger,
+              foregroundColor: Colors.white,
             ),
+            child: const Text('Keluar'),
           ),
         ],
       ),
-      bottomNavigationBar: _buildBottomNav(),
+    );
+
+    if (confirm != true) return;
+
+    setState(() => _isLoggingOut = true);
+    try {
+      await AuthService.instance.signOut();
+      if (mounted && Navigator.of(context).canPop()) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+    } catch (e) {
+      _showSnackBar('Gagal logout: $e', isError: true);
+    } finally {
+      if (mounted) setState(() => _isLoggingOut = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currentUser = AuthService.instance.currentUser;
+
+    if (currentUser == null) {
+      return const Scaffold(
+        body: Center(child: Text('Pengguna belum masuk.')),
+      );
+    }
+
+    return StreamBuilder<UserModel?>(
+      stream: AuthService.instance.streamUserData(currentUser.uid),
+      builder: (context, snapshot) {
+        final user = snapshot.data ??
+            UserModel(
+              uid: currentUser.uid,
+              nama: currentUser.displayName ?? 'Pengguna Kampus',
+              email: currentUser.email ?? '-',
+              role: UserRole.pelapor,
+              createdAt: DateTime.now(),
+            );
+
+        return Scaffold(
+          backgroundColor: _ProfileColors.primary,
+          body: Column(
+            children: [
+              _buildHeader(user),
+              Expanded(
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: _ProfileColors.background,
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(28),
+                    ),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(28),
+                    ),
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+                      children: [
+                        _buildProfileCard(user),
+                        const SizedBox(height: 18),
+                        _buildSummarySection(user.uid),
+                        const SizedBox(height: 18),
+                        _buildAccountInfo(user),
+                        const SizedBox(height: 18),
+                        _buildSettings(user),
+                        const SizedBox(height: 22),
+                        _buildLogoutButton(),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          bottomNavigationBar: _buildBottomNav(),
+        );
+      },
     );
   }
 
   // HEADER
-  Widget _buildHeader() {
+  Widget _buildHeader(UserModel user) {
     return SafeArea(
       bottom: false,
       child: Padding(
@@ -95,7 +261,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             InkWell(
-              onTap: () {},
+              onTap: () => _showEditNameDialog(user),
               child: Container(
                 width: 40,
                 height: 40,
@@ -117,7 +283,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   // PROFILE CARD
-  Widget _buildProfileCard() {
+  Widget _buildProfileCard(UserModel user) {
     return _card(
       padding: const EdgeInsets.all(16),
       child: Row(
@@ -136,11 +302,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     width: 2,
                   ),
                 ),
-                child: const Icon(
-                  Icons.person,
-                  size: 48,
-                  color: _ProfileColors.primary,
-                ),
+                alignment: Alignment.center,
+                child: () {
+                  final photoUrl = AuthService.instance.currentUser?.photoURL;
+                  if (photoUrl != null && photoUrl.isNotEmpty) {
+                    return ClipOval(
+                      child: Image.network(
+                        photoUrl,
+                        width: 76,
+                        height: 76,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Text(
+                          _getInitial(user.nama),
+                          style: const TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.w800,
+                            color: _ProfileColors.primary,
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+                  return Text(
+                    _getInitial(user.nama),
+                    style: const TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w800,
+                      color: _ProfileColors.primary,
+                    ),
+                  );
+                }(),
               ),
               Positioned(
                 right: -2,
@@ -167,35 +358,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Haya',
-                  style: TextStyle(
+                Text(
+                  user.nama,
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
                     color: _ProfileColors.textDark,
                   ),
                 ),
                 const SizedBox(height: 2),
-                const Text(
-                  'NIM: 2*****030',
-                  style: TextStyle(
+                Text(
+                  user.email,
+                  style: const TextStyle(
                     fontSize: 13,
                     color: _ProfileColors.textGrey,
                   ),
                 ),
                 const SizedBox(height: 8),
                 _chip(
-                  'Mahasiswa Aktif',
+                  user.role.label,
                   const Color(0xFFE3EEFF),
                   _ProfileColors.primary,
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Teknologi Informasi • Fasilkom-TI',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: _ProfileColors.textDark,
-                  ),
                 ),
               ],
             ),
@@ -206,54 +389,71 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   // RINGKASAN LAPORAN
-  Widget _buildSummarySection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
-              Text(
-                'Ringkasan Laporan Kamu',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: _ProfileColors.textDark,
-                ),
-              ),
-              Text(
-                'Total 7 Laporan',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: _ProfileColors.primary,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 10),
-        Row(
+  Widget _buildSummarySection(String uid) {
+    return StreamBuilder<List<ReportModel>>(
+      stream: ReportService.instance.streamReportsByPelapor(uid),
+      builder: (context, snapshot) {
+        final reports = snapshot.data ?? [];
+        final menunggu =
+            reports.where((r) => r.status == ReportStatus.reported).length;
+        final diproses = reports
+            .where((r) =>
+                r.status == ReportStatus.verified ||
+                r.status == ReportStatus.assigned ||
+                r.status == ReportStatus.inProgress)
+            .length;
+        final selesai =
+            reports.where((r) => r.status == ReportStatus.resolved).length;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _summaryCard(
-              'Menunggu', '1', 'Menunggu verifikasi',
-              const Color(0xFFFFF3D6), const Color(0xFFB7791F),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Ringkasan Laporan Kamu',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: _ProfileColors.textDark,
+                    ),
+                  ),
+                  Text(
+                    'Total ${reports.length} Laporan',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: _ProfileColors.primary,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(width: 10),
-            _summaryCard(
-              'Diproses', '1', 'Sedang jalan',
-              const Color(0xFFD9F7E4), const Color(0xFF1E9E55),
-            ),
-            const SizedBox(width: 10),
-            _summaryCard(
-              'Selesai', '4', 'Telah diperbaiki',
-              const Color(0xFFDDEBFF), _ProfileColors.primary,
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                _summaryCard(
+                  'Menunggu', '$menunggu', 'Menunggu verifikasi',
+                  const Color(0xFFFFF3D6), const Color(0xFFB7791F),
+                ),
+                const SizedBox(width: 10),
+                _summaryCard(
+                  'Diproses', '$diproses', 'Sedang jalan',
+                  const Color(0xFFD9F7E4), const Color(0xFF1E9E55),
+                ),
+                const SizedBox(width: 10),
+                _summaryCard(
+                  'Selesai', '$selesai', 'Telah diperbaiki',
+                  const Color(0xFFDDEBFF), _ProfileColors.primary,
+                ),
+              ],
             ),
           ],
-        ),
-      ],
+        );
+      },
     );
   }
 
@@ -298,7 +498,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   // INFORMASI AKUN
-  Widget _buildAccountInfo() {
+  Widget _buildAccountInfo(UserModel user) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -311,11 +511,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           child: Column(
             children: [
-              _infoRow('Nama lengkap', 'Haya'),
+              _infoRow('Nama lengkap', user.nama),
               const Divider(height: 1, color: _ProfileColors.border),
-              _infoRow('NIM', '2*****030'),
+              _infoRow('Peran (Role)', user.role.label),
               const Divider(height: 1, color: _ProfileColors.border),
-              _infoRow('Email', 'Haya@gmail.com'),
+              _infoRow('Email', user.email),
             ],
           ),
         ),
@@ -353,7 +553,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   // PENGATURAN
-  Widget _buildSettings() {
+  Widget _buildSettings(UserModel user) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -367,14 +567,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 icon: Icons.person_outline,
                 title: 'Edit Profil',
                 subtitle: 'Perbarui nama, foto, dan kontak',
-                onTap: () {},
+                onTap: () => _showEditNameDialog(user),
               ),
               const Divider(height: 1, color: _ProfileColors.border),
               _settingTile(
                 icon: Icons.lock_outline,
                 title: 'Ubah Kata Sandi',
                 subtitle: 'Keamanan akun SnaFix kamu',
-                onTap: () {},
+                onTap: () => _sendResetPassword(user.email),
               ),
               const Divider(height: 1, color: _ProfileColors.border),
               _settingTile(
@@ -473,7 +673,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return SizedBox(
       height: 48,
       child: OutlinedButton.icon(
-        onPressed: () {},
+        onPressed: _isLoggingOut ? null : _confirmAndLogout,
         icon: const Icon(
           Icons.logout,
           size: 18,
@@ -533,7 +733,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Positioned(
                 top: -28,
                 child: GestureDetector(
-                  onTap: () {},
+                  onTap: () {
+                  },
                   child: Container(
                     width: 64,
                     height: 64,
@@ -576,6 +777,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Expanded(
       child: InkWell(
         onTap: () {
+          if (index == 0 && Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+            return;
+          }
           setState(() => _currentIndex = index);
         },
         child: Column(

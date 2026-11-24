@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'package:tubes_pemob/constants/app_colors.dart';
 import 'package:tubes_pemob/models/report_model.dart';
+import 'package:tubes_pemob/screens/teknisi/daftar_tugas_screen.dart';
 
 // ============================================================
 // MODEL TAMPILAN TUGAS TEKNISI
@@ -181,13 +182,16 @@ class _TeknisiHomeScreenState extends State<TeknisiHomeScreen> {
   // ==========================================================
 
   void _onViewAllTasksPressed() {
-    if (widget.onViewAllTasksPressed != null) {
-      widget.onViewAllTasksPressed!();
-      return;
-    }
-
-    _onNavigationTapped(1);
-  }
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => DaftarTugasScreen(
+        currentUserUid: widget.currentUserUid,
+        tasks: widget.tasks,
+      ),
+    ),
+  );
+}
 
   // ==========================================================
   // NOTIFICATION

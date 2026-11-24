@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:tubes_pemob/constants/app_colors.dart';
-import 'package:tubes_pemob/screens/admin/kelola_laporan_screen.dart';
 import 'package:tubes_pemob/screens/admin/kelola_aset_screen.dart';
 import 'package:tubes_pemob/screens/admin/kelola_teknisi_screen.dart';
 
@@ -22,11 +21,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   int _selectedNavIndex = 0;
 
   // Statistik akan diisi ketika backend sudah terintegrasi.
-  int _totalTickets = 0;
-  int _reportedCount = 0;
-  int _processingCount = 0;
-  int _resolvedCount = 0;
-  int _overdueCount = 0;
+  final int _totalTickets = 0;
+  final int _reportedCount = 0;
+  final int _processingCount = 0;
+  final int _resolvedCount = 0;
+  final int _overdueCount = 0;
 
   // ==========================================================
   // NAVIGATION HANDLER

@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -9,7 +8,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:gal/gal.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:cross_file/cross_file.dart';
 
 import 'package:tubes_pemob/constants/app_colors.dart';
 
@@ -1397,7 +1395,7 @@ class _AssetFormSheetState extends State<_AssetFormSheet> {
     required ValueChanged<String?> onChanged,
   }) {
     return DropdownButtonFormField<String>(
-      value: value,
+      initialValue: value,
 
       isExpanded: true,
 

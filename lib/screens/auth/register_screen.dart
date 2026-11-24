@@ -52,7 +52,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final nama = _nameController.text.trim();
     final email = _emailController.text.trim();
     final password = _passwordController.text;
-    final confirmPassword = _confirmPasswordController.text;
 
     if (!_formKey.currentState!.validate()) return;
 

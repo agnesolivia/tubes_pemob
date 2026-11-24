@@ -271,7 +271,7 @@ class _TeknisiHomeScreenState extends State<TeknisiHomeScreen> {
                     width: double.infinity,
 
                     decoration: const BoxDecoration(
-                      color: const Color(0xFFFAFBFD),
+                      color:  Color(0xFFFAFBFD),
                       borderRadius: BorderRadius.only(
                         topLeft: Radius.circular(32),
                         topRight: Radius.circular(32),

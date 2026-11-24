@@ -183,22 +183,22 @@ class _DaftarTugasScreenState extends State<DaftarTugasScreen> {
   // SHOW MESSAGE
   // ==========================================================
 
-  void _showMessage(String message) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(
-            message,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 12,
-            ),
-          ),
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 2),
-        ),
-      );
-  }
+  // void _showMessage(String message) {
+  //   ScaffoldMessenger.of(context)
+  //     ..hideCurrentSnackBar()
+  //     ..showSnackBar(
+  //       SnackBar(
+  //         content: Text(
+  //           message,
+  //           style: GoogleFonts.plusJakartaSans(
+  //             fontSize: 12,
+  //           ),
+  //         ),
+  //         behavior: SnackBarBehavior.floating,
+  //         duration: const Duration(seconds: 2),
+  //       ),
+  //     );
+  // }
 
   // ==========================================================
   // OPEN TASK DETAIL
@@ -871,7 +871,7 @@ class _DaftarTugasScreenState extends State<DaftarTugasScreen> {
                           const SizedBox(height: 12),
 
                           DropdownButtonFormField<String>(
-                            value: temporaryBuilding,
+                            initialValue: temporaryBuilding,
 
                             isExpanded: true,
 

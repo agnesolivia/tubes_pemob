@@ -28,7 +28,7 @@ Dokumen ini berisi rincian **apa saja yang bisa dilakukan oleh masing-masing akt
 
     * `TeknisiHomeScreen` jika `user.isTeknisi`
 
-* **Catatan Akun Admin & Teknisi:** Tidak ada opsi memilih role saat registrasi mandiri. Akun `admin` pertama diatur manual di Firebase Console, sedangkan akun `teknisi` diaktifkan oleh Admin melalui menu kelola teknisi.
+* **Catatan Akun Admin & Teknisi:** Tidak ada opsi memilih role saat registrasi mandiri. Akun `admin` pertama diatur manual di Firebase Console, sedangkan akun `teknisi` (petugas internal kampus) diaktifkan oleh Admin melalui menu kelola teknisi.
 
 ### B. Detail Laporan (`detail_laporan_screen.dart`)
 
@@ -56,7 +56,7 @@ Satu halaman bersama untuk melihat detail tiket (`ReportModel`), berisi informas
 
 ### E. Profil Pengguna (`profile_screen.dart`)
 
-* **Semua Role:** Melihat informasi akun (Nama, Email, Role), mengubah nama tampilan, dan tombol **Logout**.
+* **Semua Role:** Melihat informasi akun (Nama, Email, Role), mengubah nama tampilan, menampilkan **QR Code Profil Akun** (`USER:${user.uid}` untuk keperluan aktivasi teknisi oleh Admin), dan tombol **Logout**.
 
 ## 2. Alur Role: Pelapor (`screens/pelapor/`)
 
@@ -74,7 +74,9 @@ Aktor: Sivitas Akademika dan Pengunjung/Tamu Kampus.
 
 2. **Jalur 1 — Scan QR (`scan_qr_screen.dart`):**
 
-   * Kamera memindai QR Code pada stiker ruangan/aset untuk membaca teks `assetId` (misal: `AC-R204`).
+   * Kamera memindai QR Code pada stiker ruangan/aset dengan format `ASSET:<assetId>` (misal: `ASSET:AC-R204`).
+
+   * **Validasi Prefix:** Sistem memastikan teks QR diawali `ASSET:` (jika berawalan `USER:` atau format tidak dikenal, tampilkan pesan error yang sesuai). Setelah valid, awalan `ASSET:` dilepas untuk mendapatkan `assetId` murni (`AC-R204`).
 
    * Sistem mencocokkan `assetId` ke koleksi `assets`. Jika ditemukan, pengguna diarahkan ke `HistoryAssetScreen` untuk melihat riwayat aset tersebut, lalu menekan tombol **Buat Laporan** menuju `FormPengaduanScreen` dengan data aset sudah terisi otomatis.
 
@@ -134,17 +136,25 @@ Aktor: Pengelola Sarana & Prasarana Kampus.
 
    * Menambah, mengubah, atau menghapus master data fasilitas di koleksi `assets` (ID Aset, Nama Aset, Kategori, Gedung, Ruangan).
 
-   * Menghasilkan tampilan **QR Code** dari `asset.id` (menggunakan `qr_flutter`) beserta opsi simpan/bagikan gambar QR untuk dicetak.
+   * Menghasilkan tampilan **QR Code** dengan format `ASSET:${asset.id}` (contoh: `ASSET:AC-R204`) menggunakan `qr_flutter` beserta opsi simpan/bagikan gambar QR untuk dicetak.
 
 4. **Kelola Teknisi (`kelola_teknisi_screen.dart`):**
 
    * Melihat daftar seluruh teknisi beserta **jumlah tiket aktif** (`assigned` + `inProgress`) yang sedang ditangani masing-masing teknisi sebagai acuan pembagian tugas.
 
-   * Mengubah peran (`role`) pengguna terdaftar dari `pelapor` menjadi `teknisi` berdasarkan pencarian email atau nama.
+   * **Mengaktifkan Akun Teknisi (`pelapor` $\rightarrow$ `teknisi`):** Admin dapat mengangkat pengguna terdaftar (yang masih berstatus `UserRole.pelapor`) menjadi `UserRole.teknisi` melalui **2 cara**:
+
+     1. **Pencarian Email / Nama (Jarak Jauh):** Filter kandidat hanya untuk `role == pelapor`, serta wajib menampilkan **Email** secara jelas di bawah nama sebagai pembeda unik agar tidak tertukar jika terdapat nama yang sama.
+
+     2. **Scan QR Profil Akun (Tatap Muka / Screenshot):** Memindai QR Code dari `ProfileScreen` pengguna yang berawalan `USER:<uid>` (dapat menggunakan ulang `ScanQrScreen` dengan mode pemindaian user).
+
+     * *Dialog Konfirmasi Wajib:* Sebelum mengubah role, tampilkan dialog konfirmasi yang mencantumkan **Nama dan Email** lengkap pengguna tersebut.
+
+   * **Cabut Akses / Kembalikan ke Pelapor (`teknisi` $\rightarrow$ `pelapor`):** Admin dapat mengembalikan role teknisi menjadi `pelapor` (sebagai pengaman jika salah pilih orang atau petugas tidak lagi bertugas), **dengan syarat jumlah tiket aktif (`assigned` + `inProgress`) milik teknisi tersebut adalah `0`**.
 
 ## 4. Alur Role: Teknisi (`screens/teknisi/`)
 
-Aktor: Petugas Perbaikan Lapangan.
+Aktor: Petugas Perbaikan Lapangan (Staf Internal Kampus).
 
 ### Alur Kerja Teknisi
 
@@ -212,11 +222,15 @@ Aktor: Petugas Perbaikan Lapangan.
 
    * *Tips UI:* Untuk menampilkan teks Bahasa Indonesia ke layar, langsung panggil `.label` (contoh: `report.status.label` otomatis menghasilkan `"Sedang Dikerjakan"`).
 
-6. **ID Dokumen Firestore (`doc.id` Murni):**
+6. **ID Dokumen Firestore (`doc.id` Murni) & Standar Prefix QR Code:**
 
    * Koleksi `users` dan `assets` tidak menyimpan ulang field `uid`/`id` di dalam dokumen. Saat menyimpan data baru di `services/`, wajib gunakan `.doc(id).set(...)` (bukan `.add(...)`).
 
-   * Kode QR Aset (`asset.id`) **dilarang mengandung karakter garis miring (`/`)** karena akan terbaca sebagai jalur *subcollection* oleh Firestore (gunakan tanda hubung `-`, misal: `AC-R204`).
+   * ID Aset (`asset.id`) **dilarang mengandung karakter garis miring (`/`)** karena akan terbaca sebagai jalur *subcollection* oleh Firestore (gunakan tanda hubung `-`, misal: `AC-R204`).
+
+   * **Standar Payload QR Code:** Meskipun `doc.id` di Firestore disimpan murni tanpa awalan, teks di dalam QR Code wajib memakai awalan agar pemindai bisa memvalidasi tipe QR secara otomatis:
+     * QR Fasilitas / Aset: **`ASSET:<asset.id>`** (contoh: `ASSET:AC-R204`)
+     * QR Profil Pengguna: **`USER:<user.uid>`** (contoh: `USER:x9K2mP7qL1vB8nR4`)
 
 ## 6. Checklist Pengerjaan Tim (Paralel & Anti-Blocking)
 
@@ -244,7 +258,7 @@ Agar seluruh anggota tim bisa mengerjakan tugas secara bersamaan tanpa saling me
 
 * [x] Buat `models/notification_model.dart`
 
-* [ ] Isi data sampel awal di Firebase Console (akun uji untuk `pelapor`, `admin`, `teknisi`, serta dummy `assets` & `reports`)
+* [x] Isi data sampel awal di Firebase Console (akun uji untuk `pelapor`, `admin`, `teknisi`, serta dummy `assets` & `reports`)
 
 ### Jalur A — Layanan Backend (`services/`)
 
@@ -284,13 +298,13 @@ Agar seluruh anggota tim bisa mengerjakan tugas secara bersamaan tanpa saling me
 
 * [ ] `screens/shared/notification_screen.dart` (Daftar notifikasi *real-time* & tandai sudah dibaca)
 
-* [ ] `screens/shared/profile_screen.dart` (Info profil, edit nama, & logout)
+* [ ] `screens/shared/profile_screen.dart` (Info profil, edit nama, QR Code profil `USER:<uid>`, & logout)
 
 ### Jalur D — Modul Pelapor (`screens/pelapor/`)
 
 * [ ] `screens/pelapor/pelapor_home_screen.dart` (Ringkasan status pribadi, laporan kampus terkini, & tombol QR/Manual)
 
-* [ ] `screens/pelapor/scan_qr_screen.dart` (Pemindai kamera QR & validasi `assetId`)
+* [ ] `screens/pelapor/scan_qr_screen.dart` (Pemindai kamera QR & validasi prefix `ASSET:` / `USER:`)
 
 * [ ] `screens/pelapor/form_pengaduan_screen.dart` (Form dual-mode: otomatis dari QR & *dropdown* manual + unggah foto)
 
@@ -302,9 +316,9 @@ Agar seluruh anggota tim bisa mengerjakan tugas secara bersamaan tanpa saling me
 
 * [ ] `screens/admin/kelola_laporan_screen.dart` (Filter semua laporan & modal verifikasi/tolak/tugaskan teknisi)
 
-* [ ] `screens/admin/kelola_aset_screen.dart` (CRUD master aset & generator tampilan/simpan QR Code)
+* [ ] `screens/admin/kelola_aset_screen.dart` (CRUD master aset & generator tampilan/simpan QR Code `ASSET:<id>`)
 
-* [ ] `screens/admin/kelola_teknisi_screen.dart` (Daftar teknisi, beban tugas aktif, & ubah role user ke teknisi)
+* [ ] `screens/admin/kelola_teknisi_screen.dart` (Daftar teknisi, beban tugas aktif, & ubah role `pelapor` $\leftrightarrow$ `teknisi` via Search Email/Nama atau Scan QR Profil)
 
 ### Jalur F — Modul Teknisi (`screens/teknisi/`)
 

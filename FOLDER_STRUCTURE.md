@@ -6,7 +6,7 @@ Dokumen ini menjadi acuan teknis bagi seluruh anggota tim dalam mengembangkan **
 
 Proyek ini menggunakan pola **Layer-First** yang dikombinasikan dengan pemisahan halaman berdasarkan *role* (`pelapor`, `admin`, `teknisi`) di dalam `screens/`. Seluruh file halaman di dalam `screens/` wajib menggunakan akhiran `_screen.dart`.
 
-```
+```text
 lib/
 ├── main.dart                             # Entry point aplikasi, inisialisasi Firebase, & routing awal
 │
@@ -44,19 +44,19 @@ lib/
     │   ├── detail_laporan_screen.dart    # Detail tiket lengkap + tombol aksi dinamis sesuai role
     │   ├── history_asset_screen.dart     # Info aset/ruangan & rekam jejak seluruh kerusakannya
     │   ├── notification_screen.dart      # Daftar notifikasi real-time lintas role
-    │   └── profile_screen.dart           # Profil akun, edit nama tampilan, & tombol logout
+    │   └── profile_screen.dart           # Profil akun, edit nama, QR Code profil (USER:<uid>), & logout
     │
     ├── pelapor/                          # Khusus Sivitas Akademika & Pengunjung Kampus
     │   ├── pelapor_home_screen.dart      # Beranda pelapor, ringkasan status, & tombol Scan QR / Lapor
-    │   ├── scan_qr_screen.dart           # Pemindai kamera QR Code stiker ruangan/aset
+    │   ├── scan_qr_screen.dart           # Pemindai kamera QR Code (mode aset ASSET:<id>)
     │   ├── form_pengaduan_screen.dart    # Form buat laporan (otomatis dari QR atau pilih dropdown)
     │   └── history_pelaporan_screen.dart # Daftar riwayat laporan milik pelapor + filter status
     │
     ├── admin/                            # Khusus Pengelola Fasilitas Kampus
     │   ├── admin_dashboard_screen.dart   # Statistik tiket, monitoring kepatuhan SLA, & menu kelola
     │   ├── kelola_laporan_screen.dart    # Daftar laporan masuk untuk verifikasi, tolak, & pilih teknisi
-    │   ├── kelola_aset_screen.dart       # Tambah/edit ruangan & aset + generate & cetak QR Code
-    │   └── kelola_teknisi_screen.dart    # Daftar teknisi, beban tugas aktif, & ubah role user ke teknisi
+    │   ├── kelola_aset_screen.dart       # Tambah/edit ruangan & aset + generate & cetak QR Code (ASSET:<id>)
+    │   └── kelola_teknisi_screen.dart    # Daftar teknisi, beban tugas aktif, & kelola role via Search/Scan QR
     │
     └── teknisi/                          # Khusus Petugas Perbaikan Lapangan
         ├── teknisi_home_screen.dart      # Ringkasan tugas aktif & daftar prioritas SLA terdekat
@@ -90,7 +90,7 @@ Berisi tampilan halaman penuh (`Scaffold`). Dikelompokkan berdasarkan aktor peng
 
 ### A. Siklus Hidup Tiket (6 Status)
 
-```
+```text
                   ┌──► rejected (Ditolak Admin + wajib alasan penolakan)
                   │
 reported ─────────┴──► verified ──► assigned ──► in progress ──► resolved
@@ -112,11 +112,15 @@ Saat Admin memverifikasi tiket dan memilih prioritas, sistem otomatis mengisi fi
 
 ### C. Alur Fleksibel QR Code vs. Manual
 
-```
+```text
 pelapor_home_screen
   ├──► [Scan QR]      ──► scan_qr_screen ──► history_asset_screen ──► form_pengaduan_screen (aset terisi)
   └──► [Lapor Manual] ──────────────────────────────────────────────► form_pengaduan_screen (pilih dropdown)
 ```
+
+* **Standar Prefix QR Code:** Seluruh QR Code menggunakan awalan tipe agar pemindai langsung bisa membedakan jenis QR secara otomatis:
+  * **QR Fasilitas / Aset:** `ASSET:<assetId>` (contoh: `ASSET:AC-R204`).
+  * **QR Profil Akun:** `USER:<uid>` (ditampilkan di `profile_screen.dart` untuk dipindai Admin di `kelola_teknisi_screen.dart`).
 
 ### D. Sistem Notifikasi Dalam Aplikasi (*In-App Notification*)
 Notifikasi dibangun menggunakan koleksi Firestore `notifications` secara *real-time* (tanpa memerlukan Cloud Functions atau Firebase Storage):
@@ -133,7 +137,7 @@ Proyek ini menggunakan **4 koleksi sejajar (*root collections*)** tanpa *subcoll
 
 1. **`users`** *(Document ID = `uid` dari Firebase Auth)*
    * `nama`, `email`, `role` (`'pelapor'` | `'admin'` | `'teknisi'`), `createdAt`.
-2. **`assets`** *(Document ID = Kode QR Aset, misal `'AC-R204'`, tanpa tanda `/`)*
+2. **`assets`** *(Document ID = ID Aset murni, misal `'AC-R204'`, tanpa tanda `/`; QR di-generate dengan prefix `'ASSET:AC-R204'`)*
    * `nama`, `kategori`, `gedung`, `ruangan`, `createdAt`.
 3. **`reports`** *(Document ID = Auto-generated)*
    * `assetId`, `assetNama`, `assetLokasi`, `pelaporId`, `pelaporNama`, `teknisiId`, `teknisiNama`, `deskripsi`, `fotoSebelum` *(Base64)*, `fotoSesudah` *(Base64)*, `status`, `prioritas`, `deadlineAt`, `rejectionReason`, `catatanTeknisi`, `isConfirmed`, `createdAt`, `resolvedAt`, `riwayatStatus`.

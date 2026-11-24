@@ -4,9 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'package:tubes_pemob/constants/app_colors.dart';
 import 'package:tubes_pemob/models/report_model.dart';
-
-import 'package:tubes_pemob/screens/teknisi/teknisi_home_screen.dart'
-    show TechnicianTaskItem;
+import 'package:tubes_pemob/models/technician_task_item.dart';
+import 'package:tubes_pemob/screens/teknisi/detail_laporan_screen.dart';
 
 // ============================================================
 // DAFTAR TUGAS SCREEN
@@ -206,14 +205,20 @@ class _DaftarTugasScreenState extends State<DaftarTugasScreen> {
   // ==========================================================
 
   void _onTaskPressed(TechnicianTaskItem task) {
-    if (widget.onTaskPressed != null) {
-      widget.onTaskPressed!(task);
-    } else {
-      _showMessage(
-        'Halaman Detail Laporan belum dihubungkan.',
-      );
-    }
+  if (widget.onTaskPressed != null) {
+    widget.onTaskPressed!(task);
+    return;
   }
+
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => DetailLaporanScreen(
+        task: task,
+      ),
+    ),
+  );
+}
 
   // ==========================================================
   // BUILD

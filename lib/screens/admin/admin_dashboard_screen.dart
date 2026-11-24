@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:tubes_pemob/constants/app_colors.dart';
 import 'package:tubes_pemob/screens/admin/kelola_laporan_screen.dart';
 import 'package:tubes_pemob/screens/admin/kelola_aset_screen.dart';
+import 'package:tubes_pemob/screens/admin/kelola_teknisi_screen.dart';
 
 // ============================================================
 // ADMIN DASHBOARD SCREEN
@@ -63,6 +64,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     context,
     MaterialPageRoute(
       builder: (context) => const KelolaAsetScreen(),
+    ),
+  );
+}
+
+void _onManageTechniciansPressed() {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => const KelolaTeknisiScreen(),
     ),
   );
 }
@@ -331,6 +341,25 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           _buildSummarySection(),
 
                           const SizedBox(height: 24),
+
+                          //Tombol Kelola Teknisi
+                          Align(
+  alignment: Alignment.centerRight,
+  child: TextButton.icon(
+    onPressed: _onManageTechniciansPressed,
+    icon: const Icon(
+      Icons.engineering_rounded,
+      size: 18,
+    ),
+    label: Text(
+      'Kelola Teknisi',
+      style: GoogleFonts.plusJakartaSans(
+        fontSize: 12,
+        fontWeight: FontWeight.w700,
+      ),
+    ),
+  ),
+),
 
                           // Tombol Kelola Aset
                           Align(

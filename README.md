@@ -11,6 +11,7 @@ Proyek aplikasi mobile berbasis Flutter untuk pelaporan dan pemantauan perbaikan
 | 3   | Ahmad Arif Fatahillah     | 241402036 |
 | 4   | Richard Lim               | 241402073 |
 | 5   | Bryan Sullivan Nauli      | 241402108 |
+| 6   | Rohaya Hasibuan           | 241402030 |
 
 ## Topik
 

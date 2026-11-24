@@ -4,17 +4,29 @@ Dokumen ini berisi rincian **apa saja yang bisa dilakukan oleh masing-masing akt
 
 ## 1. Alur Autentikasi & Modul Bersama (`auth/` & `shared/`)
 
-### A. Autentikasi (`login_screen.dart`, `register_screen.dart`, `auth_wrapper.dart`)
+### A. Autentikasi (`login_screen.dart`, `register_screen.dart`, `verify_email_screen.dart`, `auth_wrapper.dart`)
 
-* **Registrasi Mandiri:** Pengguna baru mendaftar menggunakan Email/Password (atau Google Sign-In) dengan mengisi Nama. Sistem otomatis menyimpan profil ke koleksi `users` dengan nilai default `role: UserRole.pelapor`.
+* **Registrasi Mandiri & Verifikasi Email:**
 
-* **Auto-Routing Berbasis Role:** `AuthWrapper` memantau status login Firebase Auth, lalu membaca dokumen profil di koleksi `users` untuk mengarahkan pengguna secara otomatis ke:
+  * Pengguna baru yang mendaftar via **Email/Password** mengisi Nama, Email, dan Password. Sistem otomatis menyimpan profil ke koleksi `users` dengan nilai default `role: UserRole.pelapor` sekaligus mengirim email verifikasi (`sendEmailVerification()`).
 
-  * `PelaporHomeScreen` jika `user.isPelapor`
+  * Pengguna yang masuk via **Google Sign-In** otomatis terverifikasi emailnya dan langsung masuk ke beranda tanpa melalui halaman verifikasi.
 
-  * `AdminDashboardScreen` jika `user.isAdmin`
+* **Lupa Kata Sandi (`login_screen.dart`):**
 
-  * `TeknisiHomeScreen` jika `user.isTeknisi`
+  * Tersedia tombol **"Lupa Kata Sandi?"** yang memunculkan *pop-up dialog* input email untuk mengirimkan tautan reset password resmi dari Firebase Auth (`sendPasswordResetEmail()`).
+
+* **Auto-Routing Berbasis Verifikasi & Role (`auth_wrapper.dart`):**
+
+  * Memantau status login Firebase Auth. Jika akun menggunakan Email/Password dan `emailVerified == false`, arahkan pengguna ke `VerifyEmailScreen` (berisi tombol cek ulang status verifikasi, kirim ulang email, dan logout).
+
+  * Jika email sudah terverifikasi, sistem membaca dokumen profil di koleksi `users` untuk mengarahkan pengguna secara otomatis ke:
+
+    * `PelaporHomeScreen` jika `user.isPelapor`
+
+    * `AdminDashboardScreen` jika `user.isAdmin`
+
+    * `TeknisiHomeScreen` jika `user.isTeknisi`
 
 * **Catatan Akun Admin & Teknisi:** Tidak ada opsi memilih role saat registrasi mandiri. Akun `admin` pertama diatur manual di Firebase Console, sedangkan akun `teknisi` diaktifkan oleh Admin melalui menu kelola teknisi.
 
@@ -236,7 +248,7 @@ Agar seluruh anggota tim bisa mengerjakan tugas secara bersamaan tanpa saling me
 
 ### Jalur A — Layanan Backend (`services/`)
 
-* [x] `services/auth_service.dart` (Login, Register, Google Sign-In, kelola role, & ambil `UserModel`)
+* [x] `services/auth_service.dart` (Login, Register, Google Sign-In, verifikasi email, reset password, & kelola role)
 
 * [x] `services/storage_service.dart` (Ambil gambar, kompres < 250 KB, & encode/decode Base64)
 
@@ -260,9 +272,11 @@ Agar seluruh anggota tim bisa mengerjakan tugas secara bersamaan tanpa saling me
 
 ### Jalur C — Modul Autentikasi & Lintas Role (`screens/auth/` & `screens/shared/`)
 
-* [ ] `screens/auth/login_screen.dart` & `register_screen.dart`
+* [ ] `screens/auth/login_screen.dart` (termasuk pop-up Lupa Kata Sandi) & `register_screen.dart`
 
-* [ ] `screens/auth/auth_wrapper.dart` (*Auto-routing* sesuai `user.role`)
+* [ ] `screens/auth/verify_email_screen.dart` (Halaman tunggu verifikasi email & kirim ulang tautan)
+
+* [ ] `screens/auth/auth_wrapper.dart` (*Auto-routing* sesuai verifikasi email & `user.role`)
 
 * [ ] `screens/shared/detail_laporan_screen.dart` (Detail tiket + tombol aksi kondisional per kombinasi role & status)
 

@@ -21,7 +21,7 @@ lib/
 │   └── notification_model.dart           # NotificationModel (notifikasi perubahan status tiket antar-role)
 │
 ├── services/                             # Seluruh komunikasi backend (Firebase Auth & Cloud Firestore)
-│   ├── auth_service.dart                 # Login, register, Google Sign-In, kelola role, & stream UserModel
+│   ├── auth_service.dart                 # Login, register, Google Sign-In, verifikasi email, reset password, & role
 │   ├── storage_service.dart              # Kompresi foto lokal (< 250 KB) & konversi Base64 dua arah
 │   ├── asset_service.dart                # CRUD master data ruangan/aset & lookup berdasarkan ID QR
 │   ├── report_service.dart               # CRUD laporan, transisi status, hitung SLA, & log riwayat
@@ -35,9 +35,10 @@ lib/
 │
 └── screens/                              # Seluruh halaman penuh (Scaffold)
     ├── auth/                             # Alur sebelum masuk ke beranda role
-    │   ├── auth_wrapper.dart             # Pengecek status login & pengarah otomatis sesuai role
-    │   ├── login_screen.dart             # Halaman masuk (Email/Password & Google Sign-In)
-    │   └── register_screen.dart          # Halaman daftar akun baru (default role: UserRole.pelapor)
+    │   ├── auth_wrapper.dart             # Pengecek status login, verifikasi email, & routing sesuai role
+    │   ├── login_screen.dart             # Halaman masuk (Email/Password, Google Sign-In, & pop-up Lupa Password)
+    │   ├── register_screen.dart          # Halaman daftar akun baru (default role: UserRole.pelapor)
+    │   └── verify_email_screen.dart      # Halaman tunggu verifikasi email & kirim ulang tautan verifikasi
     │
     ├── shared/                           # Halaman lintas role (dipakai 2 atau 3 role sekaligus)
     │   ├── detail_laporan_screen.dart    # Detail tiket lengkap + tombol aksi dinamis sesuai role

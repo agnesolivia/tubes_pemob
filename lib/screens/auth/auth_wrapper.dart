@@ -48,9 +48,12 @@ class AuthWrapper extends StatelessWidget {
             if (user.isAdmin) {
               return const AdminDashboardScreen();
             }
-            if (user.isTeknisi) {
-              return const TeknisiHomeScreen();
-            }
+           if (user.isTeknisi) {
+  return TeknisiHomeScreen(
+    currentUserUid: user.uid,
+    technicianName: user.nama,
+  );
+}
             return const PelaporHomeScreen();
           },
         );

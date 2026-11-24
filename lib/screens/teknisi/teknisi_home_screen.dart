@@ -5,41 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:tubes_pemob/constants/app_colors.dart';
 import 'package:tubes_pemob/models/report_model.dart';
 import 'package:tubes_pemob/screens/teknisi/daftar_tugas_screen.dart';
-
-// ============================================================
-// MODEL TAMPILAN TUGAS TEKNISI
-// ============================================================
-
-class TechnicianTaskItem {
-  final String id;
-  final String teknisiId;
-
-  final String assetNama;
-  final String assetLokasi;
-  final String pelaporNama;
-
-  final DateTime deadlineAt;
-
-  final ReportStatus status;
-  final ReportPriority priority;
-
-  final bool isOverdue;
-
-  final IconData assetIcon;
-
-  const TechnicianTaskItem({
-    required this.id,
-    required this.teknisiId,
-    required this.assetNama,
-    required this.assetLokasi,
-    required this.pelaporNama,
-    required this.deadlineAt,
-    required this.status,
-    required this.priority,
-    required this.isOverdue,
-    this.assetIcon = Icons.build_outlined,
-  });
-}
+import 'package:tubes_pemob/models/technician_task_item.dart';
+import 'package:tubes_pemob/screens/teknisi/detail_laporan_screen.dart';
 
 // ============================================================
 // TEKNISI HOME SCREEN
@@ -210,12 +177,20 @@ class _TeknisiHomeScreenState extends State<TeknisiHomeScreen> {
   // ==========================================================
 
   void _onTaskPressed(TechnicianTaskItem task) {
-    if (widget.onTaskPressed != null) {
-      widget.onTaskPressed!(task);
-    } else {
-      _showMessage('Halaman detail tugas belum dihubungkan.');
-    }
+  if (widget.onTaskPressed != null) {
+    widget.onTaskPressed!(task);
+    return;
   }
+
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => DetailLaporanScreen(
+        task: task,
+      ),
+    ),
+  );
+}
 
   // ==========================================================
   // SNACKBAR

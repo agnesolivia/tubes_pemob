@@ -1,13 +1,11 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:tubes_pemob/constants/app_colors.dart';
-import 'package:tubes_pemob/models/report_model.dart';
 import 'package:tubes_pemob/models/user_model.dart';
 import 'package:tubes_pemob/services/auth_service.dart';
-import 'package:tubes_pemob/services/report_service.dart';
+import 'package:tubes_pemob/services/storage_service.dart';
 
 class _ProfileColors {
   static const primary = AppColors.primaryBlue;
@@ -26,9 +24,6 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final ImagePicker _picker = ImagePicker();
-  XFile? _pickedPhoto;
-
   bool _notifAktif = true;
   bool _isLoggingOut = false;
 
@@ -42,37 +37,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          message,
-          style: GoogleFonts.plusJakartaSans(),
-        ),
-        backgroundColor:
-            isError ? _ProfileColors.danger : _ProfileColors.primary,
+        content: Text(message, style: GoogleFonts.plusJakartaSans()),
+        backgroundColor: isError
+            ? _ProfileColors.danger
+            : _ProfileColors.primary,
         behavior: SnackBarBehavior.floating,
       ),
     );
   }
 
   Future<void> _pickPhoto(ImageSource source) async {
-    try {
-      final XFile? pickedFile = await _picker.pickImage(
-        source: source,
-        maxWidth: 800,
-        imageQuality: 85,
-      );
+    final uid = AuthService.instance.currentUser?.uid;
+    if (uid == null) return;
 
-      if (pickedFile != null) {
-        setState(() {
-          _pickedPhoto = pickedFile;
-        });
-        _showSnackBar('Foto profil berhasil diperbarui.');
-      }
+    try {
+      final base64Photo = await StorageService.instance.pickAndCompressImage(
+        source: source,
+      );
+      if (base64Photo == null) return;
+
+      await AuthService.instance.updateProfilePhoto(
+        uid: uid,
+        photoBase64: base64Photo,
+      );
+      _showSnackBar('Foto profil berhasil diperbarui.');
     } catch (e) {
-      _showSnackBar('Gagal mengambil gambar: $e', isError: true);
+      _showSnackBar('Gagal memperbarui foto: $e', isError: true);
     }
   }
 
-  void _showPhotoPicker() {
+  void _showPhotoPicker(UserModel user) {
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.white,
@@ -164,38 +158,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     _pickPhoto(ImageSource.camera);
                   },
                 ),
-                if (_pickedPhoto != null) ...[
-                  const Divider(height: 1, color: Color(0xFFF1F5F9)),
-                  ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-                    leading: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFEBEE),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.delete_outline_rounded,
-                        color: _ProfileColors.danger,
-                        size: 20,
-                      ),
+                if ((user.photoBase64?.isNotEmpty ?? false) ||
+                  (AuthService.instance.currentUser?.photoURL?.isNotEmpty ??
+                      false)) ...[
+                const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                  leading: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFEBEE),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    title: Text(
-                      'Hapus Foto',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: _ProfileColors.danger,
-                      ),
+                    child: const Icon(
+                      Icons.delete_outline_rounded,
+                      color: _ProfileColors.danger,
+                      size: 20,
                     ),
-                    onTap: () {
-                      Navigator.pop(sheetContext);
-                      setState(() => _pickedPhoto = null);
-                      _showSnackBar('Foto profil dihapus.');
-                    },
                   ),
-                ],
+                  title: Text(
+                    'Hapus Foto',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: _ProfileColors.danger,
+                    ),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(sheetContext);
+                    try {
+                      await AuthService.instance.updateProfilePhoto(
+                        uid: user.uid,
+                        photoBase64: null,
+                      );
+                      _showSnackBar('Foto profil dihapus.');
+                    } catch (e) {
+                      _showSnackBar('Gagal menghapus foto: $e',
+                          isError: true);
+                    }
+                  },
+                ),
+              ],
               ],
             ),
           ),
@@ -293,7 +297,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   onTap: () {
                     Navigator.pop(sheetContext);
-                    _showPhotoPicker();
+                    _showPhotoPicker(user);
                   },
                 ),
               ],
@@ -313,10 +317,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (newName == null || !mounted) return;
 
     try {
-      await AuthService.instance.updateProfile(
-        uid: user.uid,
-        nama: newName,
-      );
+      await AuthService.instance.updateProfile(uid: user.uid, nama: newName);
       _showSnackBar('Nama berhasil diperbarui.');
     } catch (e) {
       _showSnackBar('Gagal memperbarui nama: $e', isError: true);
@@ -351,10 +352,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(
-              'Batal',
-              style: GoogleFonts.plusJakartaSans(),
-            ),
+            child: Text('Batal', style: GoogleFonts.plusJakartaSans()),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
@@ -404,7 +402,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return StreamBuilder<UserModel?>(
       stream: AuthService.instance.streamUserData(currentUser.uid),
       builder: (context, snapshot) {
-        final user = snapshot.data ??
+        final user =
+            snapshot.data ??
             UserModel(
               uid: currentUser.uid,
               nama: currentUser.displayName ?? 'Pengguna Kampus',
@@ -457,10 +456,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             children: [
                               _buildProfileCard(user),
                               const SizedBox(height: 18),
-                              if (user.role == UserRole.pelapor) ...[
-                                _buildSummarySection(user.uid),
-                                const SizedBox(height: 18),
-                              ],
+                              _buildAccountInfo(user),
+                              const SizedBox(height: 18),
                               _buildSettings(user),
                               const SizedBox(height: 22),
                               _buildLogoutButton(),
@@ -482,7 +479,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // HEADER
   Widget _buildHeader(UserModel user) {
     final subtitle = switch (user.role) {
-      UserRole.pelapor => 'Informasi akun & ringkasan laporanmu',
+      UserRole.pelapor => 'Informasi akun',
       UserRole.admin => 'Informasi akun & pengaturan admin',
       UserRole.teknisi => 'Informasi akun & pengaturan teknisi',
     };
@@ -550,7 +547,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Row(
         children: [
           GestureDetector(
-            onTap: _showPhotoPicker,
+            onTap: () => _showPhotoPicker(user),
             child: Stack(
               clipBehavior: Clip.none,
               children: [
@@ -560,17 +557,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   decoration: BoxDecoration(
                     color: const Color(0xFFE6EFFF),
                     shape: BoxShape.circle,
-                    border: Border.all(
-                      color: _ProfileColors.primary,
-                      width: 2,
-                    ),
+                    border: Border.all(color: _ProfileColors.primary, width: 2),
                   ),
                   alignment: Alignment.center,
                   child: () {
-                    if (_pickedPhoto != null) {
+                    final bytes =
+                        StorageService.instance.base64ToBytes(user.photoBase64);
+                    if (bytes != null) {
                       return ClipOval(
-                        child: Image.file(
-                          File(_pickedPhoto!.path),
+                        child: Image.memory(
+                          bytes,
                           width: 76,
                           height: 76,
                           fit: BoxFit.cover,
@@ -607,7 +603,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     );
                   }(),
-                ),
+                  ),
                 Positioned(
                   right: -2,
                   bottom: -2,
@@ -664,125 +660,54 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // RINGKASAN LAPORAN (KHUSUS PELAPOR)
-  Widget _buildSummarySection(String uid) {
-    return StreamBuilder<List<ReportModel>>(
-      stream: ReportService.instance.streamReportsByPelapor(uid),
-      builder: (context, snapshot) {
-        final reports = snapshot.data ?? [];
-        final menunggu =
-            reports.where((r) => r.status == ReportStatus.reported).length;
-        final diproses = reports
-            .where((r) =>
-                r.status == ReportStatus.verified ||
-                r.status == ReportStatus.assigned ||
-                r.status == ReportStatus.inProgress)
-            .length;
-        final selesai =
-            reports.where((r) => r.status == ReportStatus.resolved).length;
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Ringkasan Laporan Kamu',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: _ProfileColors.textDark,
-                    ),
-                  ),
-                  Text(
-                    'Total ${reports.length} Laporan',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: _ProfileColors.primary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                _summaryCard(
-                  'Menunggu',
-                  '$menunggu',
-                  'Menunggu verifikasi',
-                  const Color(0xFFFFF3D6),
-                  const Color(0xFFB7791F),
-                ),
-                const SizedBox(width: 10),
-                _summaryCard(
-                  'Diproses',
-                  '$diproses',
-                  'Sedang jalan',
-                  const Color(0xFFD9F7E4),
-                  const Color(0xFF1E9E55),
-                ),
-                const SizedBox(width: 10),
-                _summaryCard(
-                  'Selesai',
-                  '$selesai',
-                  'Telah diperbaiki',
-                  const Color(0xFFDDEBFF),
-                  _ProfileColors.primary,
-                ),
-              ],
-            ),
-          ],
-        );
-      },
+  // INFORMASI AKUN
+  Widget _buildAccountInfo(UserModel user) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _sectionTitle('Informasi Akun'),
+        const SizedBox(height: 10),
+        _card(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: Column(
+            children: [
+              _infoRow('Nama lengkap', user.nama),
+              const Divider(height: 1, color: _ProfileColors.border),
+              _infoRow('Peran (Role)', user.role.label),
+              const Divider(height: 1, color: _ProfileColors.border),
+              _infoRow('Email', user.email),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _summaryCard(
-    String status,
-    String count,
-    String caption,
-    Color chipBg,
-    Color chipText,
-  ) {
-    return Expanded(
-      child: _card(
-        padding: const EdgeInsets.symmetric(
-          vertical: 12,
-          horizontal: 6,
-        ),
-        child: Column(
-          children: [
-            _chip(status, chipBg, chipText),
-            const SizedBox(height: 8),
-            Text(
-              count,
+  Widget _infoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 13,
+              color: _ProfileColors.textGrey,
+            ),
+          ),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
               style: GoogleFonts.plusJakartaSans(
-                fontSize: 26,
-                fontWeight: FontWeight.w800,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
                 color: _ProfileColors.textDark,
               ),
             ),
-            const SizedBox(height: 4),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                caption,
-                maxLines: 1,
-                softWrap: false,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 10,
-                  color: _ProfileColors.textGrey,
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -791,17 +716,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildSettings(UserModel user) {
     final (notifTitle, notifSubtitle) = switch (user.role) {
       UserRole.pelapor => (
-          'Notifikasi Status Laporan',
-          'Update progres & feedback Admin'
-        ),
+        'Notifikasi Status Laporan',
+        'Update progres & feedback Admin',
+      ),
       UserRole.teknisi => (
-          'Notifikasi Tugas Perbaikan',
-          'Update penugasan tiket baru'
-        ),
+        'Notifikasi Tugas Perbaikan',
+        'Update penugasan tiket baru',
+      ),
       UserRole.admin => (
-          'Notifikasi Laporan Masuk',
-          'Update laporan baru & peringatan SLA'
-        ),
+        'Notifikasi Laporan Masuk',
+        'Update laporan baru & peringatan SLA',
+      ),
     };
 
     return Column(
@@ -866,10 +791,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: 12,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Row(
           children: [
             Container(
@@ -879,11 +801,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 color: const Color(0xFFE6EFFF),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(
-                icon,
-                size: 18,
-                color: _ProfileColors.primary,
-              ),
+              child: Icon(icon, size: 18, color: _ProfileColors.primary),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -910,10 +828,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             trailing ??
-                const Icon(
-                  Icons.chevron_right,
-                  color: _ProfileColors.textGrey,
-                ),
+                const Icon(Icons.chevron_right, color: _ProfileColors.textGrey),
           ],
         ),
       ),
@@ -926,11 +841,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       height: 48,
       child: OutlinedButton.icon(
         onPressed: _isLoggingOut ? null : _confirmAndLogout,
-        icon: const Icon(
-          Icons.logout,
-          size: 18,
-          color: _ProfileColors.danger,
-        ),
+        icon: const Icon(Icons.logout, size: 18, color: _ProfileColors.danger),
         label: Text(
           'Keluar',
           style: GoogleFonts.plusJakartaSans(
@@ -940,10 +851,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         style: OutlinedButton.styleFrom(
           backgroundColor: AppColors.white,
-          side: const BorderSide(
-            color: _ProfileColors.danger,
-            width: 1.2,
-          ),
+          side: const BorderSide(color: _ProfileColors.danger, width: 1.2),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
@@ -969,10 +877,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _chip(String text, Color bg, Color fg) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 3,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(20),
@@ -988,10 +893,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _card({
-    required Widget child,
-    EdgeInsetsGeometry? padding,
-  }) {
+  Widget _card({required Widget child, EdgeInsetsGeometry? padding}) {
     return Container(
       width: double.infinity,
       padding: padding,

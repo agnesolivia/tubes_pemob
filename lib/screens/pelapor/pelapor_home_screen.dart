@@ -9,6 +9,7 @@ import 'package:tubes_pemob/screens/shared/profile_screen.dart';
 import 'package:tubes_pemob/services/auth_service.dart';
 import 'package:tubes_pemob/models/report_model.dart';
 import 'package:tubes_pemob/services/report_service.dart';
+import 'package:tubes_pemob/services/storage_service.dart';
 
 class PelaporHomeScreen extends StatelessWidget {
   final ValueChanged<int>? onSwitchTab;
@@ -167,14 +168,52 @@ class PelaporHomeScreen extends StatelessWidget {
                                               AuthService
                                                   .instance.currentUser!.uid,
                                             ),
+                                            
                                   builder: (context, snapshot) {
-                                    final nama = snapshot.data?.nama ??
+                                    final user = snapshot.data;
+                                    final nama = user?.nama ??
                                         AuthService.instance.currentUser
                                             ?.displayName ??
                                         'U';
                                     final initial = nama.trim().isEmpty
                                         ? 'U'
                                         : nama.trim()[0].toUpperCase();
+
+                                    final bytes = StorageService.instance
+                                        .base64ToBytes(user?.photoBase64);
+                                    if (bytes != null) {
+                                      return ClipOval(
+                                        child: Image.memory(
+                                          bytes,
+                                          width: 42,
+                                          height: 42,
+                                          fit: BoxFit.cover,
+                                        ),
+                                      );
+                                    }
+
+                                    final photoUrl = AuthService
+                                        .instance.currentUser?.photoURL;
+                                    if (photoUrl != null &&
+                                        photoUrl.isNotEmpty) {
+                                      return ClipOval(
+                                        child: Image.network(
+                                          photoUrl,
+                                          width: 42,
+                                          height: 42,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (_, __, ___) => Text(
+                                            initial,
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w700,
+                                              color: AppColors.white,
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    }
+
                                     return Text(
                                       initial,
                                       style: GoogleFonts.plusJakartaSans(

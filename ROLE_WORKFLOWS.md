@@ -323,7 +323,7 @@ Agar seluruh anggota tim bisa mengerjakan tugas secara bersamaan tanpa saling me
 
 *Dapat dikerjakan sepenuhnya secara paralel tanpa menunggu koneksi Firebase.*
 
-* [ ] `widgets/bottom_navbar.dart` (Navigasi bawah reusable lintas role dengan tombol aksi tengah)
+* [x] `widgets/bottom_navbar.dart` (Navigasi bawah reusable lintas role dengan tombol aksi tengah)
 
 * [ ] `widgets/status_badge.dart` (Label warna otomatis per status tiket)
 
@@ -335,11 +335,11 @@ Agar seluruh anggota tim bisa mengerjakan tugas secara bersamaan tanpa saling me
 
 ### Jalur C — Modul Autentikasi & Lintas Role (`screens/auth/` & `screens/shared/`)
 
-* [ ] `screens/auth/login_screen.dart` (termasuk pop-up Lupa Kata Sandi) & `register_screen.dart`
+* [x] `screens/auth/login_screen.dart` (termasuk pop-up Lupa Kata Sandi) & `register_screen.dart`
 
-* [ ] `screens/auth/verify_email_screen.dart` (Halaman tunggu verifikasi email & kirim ulang tautan)
+* [x] `screens/auth/email_verification_screen.dart` (Halaman tunggu verifikasi email & kirim ulang tautan)
 
-* [ ] `screens/auth/auth_wrapper.dart` (*Auto-routing* sesuai verifikasi email & `user.role`)
+* [x] `screens/auth/auth_wrapper.dart` (*Auto-routing* sesuai verifikasi email & `user.role`)
 
 * [ ] `screens/shared/detail_laporan_screen.dart` (Detail tiket + tombol aksi kondisional per kombinasi role & status, termasuk konfirmasi & *re-open*)
 

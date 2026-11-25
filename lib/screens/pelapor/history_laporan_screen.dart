@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:tubes_pemob/constants/app_colors.dart';
 import 'package:tubes_pemob/models/report_model.dart';
+import 'package:tubes_pemob/models/user_model.dart';
 import 'package:tubes_pemob/services/auth_service.dart';
 import 'package:tubes_pemob/services/report_service.dart';
 import 'package:tubes_pemob/services/storage_service.dart';
@@ -369,6 +370,49 @@ class _LaporanCard extends StatelessWidget {
         );
     }
   }
+  UserModel? _currentActor() {
+    final firebaseUser = AuthService.instance.currentUser;
+    if (firebaseUser == null) return null;
+    return UserModel(
+      uid: firebaseUser.uid,
+      nama: report.pelaporNama,
+      email: firebaseUser.email ?? '',
+      role: UserRole.pelapor,
+      createdAt: report.createdAt,
+    );
+  }
+
+  Future<String?> _askReopenReason(BuildContext context) {
+    var alasan = '';
+    return showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Belum Beres?'),
+        content: TextField(
+          autofocus: true,
+          maxLines: 3,
+          onChanged: (v) => alasan = v,
+          decoration: const InputDecoration(
+            hintText: 'Jelaskan apa yang masih bermasalah',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final text = alasan.trim();
+              if (text.isEmpty) return;
+              Navigator.pop(dialogContext, text);
+            },
+            child: const Text('Ajukan Ulang'),
+          ),
+        ],
+      ),
+    );
+  }
 
   void _showActionSheet(BuildContext context) {
     showModalBottomSheet(
@@ -456,10 +500,12 @@ class _LaporanCard extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: () async {
                       Navigator.of(sheetContext).pop();
+                      final actor = _currentActor();
+                      if (actor == null) return;
                       try {
                         await ReportService.instance.confirmResolution(
                           report: report,
-                          pelaporNama: report.pelaporNama,
+                          actor: actor,
                         );
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -480,6 +526,45 @@ class _LaporanCard extends StatelessWidget {
                       foregroundColor: Colors.white,
                     ),
                     child: const Text('Konfirmasi Selesai'),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () async {
+                      Navigator.of(sheetContext).pop();
+                      final actor = _currentActor();
+                      if (actor == null || !context.mounted) return;
+
+                      final alasan = await _askReopenReason(context);
+                      if (alasan == null || !context.mounted) return;
+
+                      try {
+                        await ReportService.instance.reopenReport(
+                          report: report,
+                          actor: actor,
+                          alasan: alasan,
+                        );
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text('Laporan diajukan ulang ke teknisi.')),
+                          );
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Gagal mengajukan ulang: $e')),
+                          );
+                        }
+                      }
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: HistoryColors.primary,
+                      side: const BorderSide(color: HistoryColors.primary),
+                    ),
+                    child: const Text('Belum Beres / Ajukan Ulang'),
                   ),
                 ),
             ],

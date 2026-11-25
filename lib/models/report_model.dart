@@ -73,7 +73,9 @@ class StatusHistoryItem {
 
 class ReportModel {
   final String id;
-  final String assetId;
+
+  /// `null` jika Pelapor memilih opsi "Fasilitas Lainnya / Tidak Terdaftar".
+  final String? assetId;
   final String assetNama;
   final String assetLokasi;
   final String pelaporId;
@@ -95,7 +97,7 @@ class ReportModel {
 
   const ReportModel({
     required this.id,
-    required this.assetId,
+    this.assetId,
     required this.assetNama,
     required this.assetLokasi,
     required this.pelaporId,
@@ -116,22 +118,43 @@ class ReportModel {
     this.riwayatStatus = const [],
   });
 
+  /// Tiket sudah terdaftar di koleksi `assets` (bukan "Fasilitas Lainnya").
+  bool get hasRegisteredAsset => assetId != null;
+
   bool get isOverdue {
     if (deadlineAt == null) return false;
     if (isClosed) return false;
     return DateTime.now().isAfter(deadlineAt!);
   }
 
+  /// Tidak lagi memerlukan tindakan Teknisi (selesai atau ditolak).
+  /// Catatan: tiket `resolved` yang belum dikonfirmasi tetap bisa di-re-open,
+  /// gunakan [isAwaitingConfirmation] untuk membedakannya.
   bool get isClosed =>
       status == ReportStatus.resolved || status == ReportStatus.rejected;
+
+  /// Tiket masih dalam proses penanganan:
+  /// reported, verified, assigned, atau inProgress.
+  bool get isActive =>
+      status == ReportStatus.reported ||
+      status == ReportStatus.verified ||
+      status == ReportStatus.assigned ||
+      status == ReportStatus.inProgress;
+
+  /// Sudah `resolved` oleh Teknisi, menunggu Konfirmasi Selesai / Belum Beres
+  /// dari Pelapor pembuat laporan (atau Admin sebagai supervisor override).
+  bool get isAwaitingConfirmation =>
+      status == ReportStatus.resolved && !isConfirmed;
 
   factory ReportModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>? ?? {};
     final rawHistory = data['riwayatStatus'] as List<dynamic>? ?? [];
+    final rawAssetId = data['assetId'] as String?;
 
     return ReportModel(
       id: doc.id,
-      assetId: data['assetId'] as String? ?? '',
+      // String kosong (data lama) diperlakukan sama seperti null.
+      assetId: (rawAssetId == null || rawAssetId.isEmpty) ? null : rawAssetId,
       assetNama: data['assetNama'] as String? ?? '',
       assetLokasi: data['assetLokasi'] as String? ?? '',
       pelaporId: data['pelaporId'] as String? ?? '',
@@ -179,6 +202,9 @@ class ReportModel {
     };
   }
 
+  /// Catatan: seperti umumnya pola `copyWith`, field nullable (assetId,
+  /// teknisiId, resolvedAt, dst.) tidak bisa dikosongkan lewat method ini
+  /// karena `null` berarti "pakai nilai lama".
   ReportModel copyWith({
     String? id,
     String? assetId,

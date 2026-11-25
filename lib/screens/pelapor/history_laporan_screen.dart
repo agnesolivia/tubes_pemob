@@ -1,77 +1,20 @@
+import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:tubes_pemob/constants/app_colors.dart';
-
-// --------------------------------------------------------------- COLORS
+import 'package:tubes_pemob/models/report_model.dart';
+import 'package:tubes_pemob/services/auth_service.dart';
+import 'package:tubes_pemob/services/report_service.dart';
+import 'package:tubes_pemob/services/storage_service.dart';
 
 class HistoryColors {
-  static const primary = AppColors.primaryBlue;
+  static const primary = Color(0xFF0B63F6);
   static const background = Color(0xFFF7F9FC);
   static const textDark = Color(0xFF1B1F2A);
   static const textGrey = Color(0xFF8A92A3);
   static const border = Color(0xFFE8ECF3);
   static const orange = Color(0xFFF5A623);
 }
-
-// --------------------------------------------------------------- MODEL
-
-enum StatusLaporan { diproses, selesai, ditolak }
-
-class Laporan {
-  final String id;
-  final String tanggal;
-  final String judul;
-  final String lokasi;
-  final StatusLaporan status;
-  final bool adaFeedback;
-  final String? gambar;
-  final String? catatanAdmin;
-
-  const Laporan({
-    required this.id,
-    required this.tanggal,
-    required this.judul,
-    required this.lokasi,
-    required this.status,
-    this.adaFeedback = false,
-    this.gambar,
-    this.catatanAdmin,
-  });
-}
-
-// Data sementara untuk pengujian tampilan
-const List<Laporan> dataLaporan = [
-  Laporan(
-    id: '#SNF-2026-089',
-    tanggal: '16 Nov 2026',
-    judul: 'AC Ruang Kelas D-204 Bocor',
-    lokasi: 'Gedung D • Lantai 2',
-    status: StatusLaporan.selesai,
-    adaFeedback: true,
-    catatanAdmin:
-        'Saluran pembuangan AC telah dibersihkan dan unit sudah berfungsi normal kembali.',
-  ),
-  Laporan(
-    id: '#SNF-2026-085',
-    tanggal: '15 Nov 2026',
-    judul: 'Proyektor Lab Komputer 1 Mati',
-    lokasi: 'Gedung B • Lantai 1',
-    status: StatusLaporan.ditolak,
-    adaFeedback: true,
-    catatanAdmin:
-        'Laporan duplikat dengan tiket #SNF-2026-082 yang sedang ditangani teknisi.',
-  ),
-  Laporan(
-    id: '#SNF-2026-090',
-    tanggal: 'Baru Saja',
-    judul: 'Kursi Lipat Mahasiswa Patah',
-    lokasi: 'Gedung C • Ruang C-102',
-    status: StatusLaporan.diproses,
-  ),
-];
-
-// --------------------------------------------------------------- PAGE
 
 class RiwayatLaporanPage extends StatefulWidget {
   final VoidCallback? onBackToHome;
@@ -104,195 +47,88 @@ class _RiwayatLaporanPageState extends State<RiwayatLaporanPage> {
     super.dispose();
   }
 
-  List<Laporan> get _hasil {
-    return dataLaporan.where((laporan) {
+  List<ReportModel> _filterReports(List<ReportModel> reports) {
+    return reports.where((report) {
       final cocokFilter = switch (_filterIndex) {
-        1 => laporan.status == StatusLaporan.diproses,
-        2 => laporan.status == StatusLaporan.selesai,
-        3 => laporan.status == StatusLaporan.ditolak,
+        1 => report.status == ReportStatus.reported ||
+            report.status == ReportStatus.verified ||
+            report.status == ReportStatus.assigned ||
+            report.status == ReportStatus.inProgress,
+        2 => report.status == ReportStatus.resolved,
+        3 => report.status == ReportStatus.rejected,
         _ => true,
       };
 
       final q = _query.trim().toLowerCase();
-
       final cocokCari = q.isEmpty ||
-          laporan.judul.toLowerCase().contains(q) ||
-          laporan.lokasi.toLowerCase().contains(q) ||
-          laporan.id.toLowerCase().contains(q);
+          report.assetNama.toLowerCase().contains(q) ||
+          report.assetLokasi.toLowerCase().contains(q) ||
+          report.deskripsi.toLowerCase().contains(q) ||
+          report.id.toLowerCase().contains(q);
 
       return cocokFilter && cocokCari;
     }).toList();
   }
 
-  void _showDetailSheet(Laporan laporan) {
-    final badge = _badgeStyle(laporan.status);
+  @override
+  Widget build(BuildContext context) {
+    final uid = AuthService.instance.currentUser?.uid;
 
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (sheetContext) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 22),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFCBD5E1),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
+    return Scaffold(
+      backgroundColor: HistoryColors.primary,
+      body: Column(
+        children: [
+          _buildHeader(),
+          Expanded(
+            child: Container(
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(
+                  top: Radius.circular(28),
                 ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      laporan.id,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: HistoryColors.textGrey,
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: badge.bg,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        badge.label,
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: badge.fg,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  laporan.judul,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: HistoryColors.textDark,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: HistoryColors.background,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: HistoryColors.border),
-                  ),
-                  child: Column(
-                    children: [
-                      _detailRow('Lokasi', laporan.lokasi),
-                      const Divider(height: 1, color: HistoryColors.border),
-                      _detailRow('Waktu Lapor', laporan.tanggal),
-                    ],
-                  ),
-                ),
-                if (laporan.adaFeedback) ...[
-                  const SizedBox(height: 14),
-                  Text(
-                    'Feedback Admin',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: HistoryColors.textDark,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF1F6FE),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0xFFDCE7FA)),
-                    ),
-                    child: Text(
-                      laporan.catatanAdmin ??
-                          'Laporan telah ditinjau oleh Admin SnaFix.',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 12.5,
-                        color: const Color(0xFF334155),
-                        height: 1.45,
-                      ),
-                    ),
+              ),
+              child: Column(
+                children: [
+                  const SizedBox(height: 16),
+                  _buildFilterChips(),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: uid == null
+                        ? const Center(child: Text('Silakan masuk terlebih dahulu.'))
+                        : StreamBuilder<List<ReportModel>>(
+                            stream: ReportService.instance
+                                .streamReportsByPelapor(uid),
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState ==
+                                  ConnectionState.waiting) {
+                                return const Center(
+                                  child: CircularProgressIndicator(),
+                                );
+                              }
+
+                              final data = _filterReports(snapshot.data ?? []);
+                              if (data.isEmpty) {
+                                return _buildEmptyState();
+                              }
+
+                              return ListView.separated(
+                                padding: const EdgeInsets.fromLTRB(
+                                  16,
+                                  4,
+                                  16,
+                                  105,
+                                ),
+                                itemCount: data.length,
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(height: 12),
+                                itemBuilder: (_, i) =>
+                                    _LaporanCard(report: data[i]),
+                              );
+                            },
+                          ),
                   ),
                 ],
-                const SizedBox(height: 18),
-                SizedBox(
-                  width: double.infinity,
-                  height: 46,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.pop(sheetContext),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: HistoryColors.primary,
-                      foregroundColor: AppColors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                    ),
-                    child: Text(
-                      'Tutup',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _detailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 11),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 12.5,
-              color: HistoryColors.textGrey,
-            ),
-          ),
-          Flexible(
-            child: Text(
-              value,
-              textAlign: TextAlign.right,
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w700,
-                color: HistoryColors.textDark,
               ),
             ),
           ),
@@ -300,89 +136,6 @@ class _RiwayatLaporanPageState extends State<RiwayatLaporanPage> {
       ),
     );
   }
-
-  @override
-  Widget build(BuildContext context) {
-    final data = _hasil;
-
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light.copyWith(
-        statusBarColor: Colors.transparent,
-      ),
-      child: Scaffold(
-        backgroundColor: HistoryColors.primary,
-        body: Stack(
-          children: [
-            // 1. Gambar Gelombang Biru Atas
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: Image.asset(
-                'assets/images/wave_top.png',
-                width: double.infinity,
-                fit: BoxFit.fitWidth,
-              ),
-            ),
-
-            // 2. Tata Letak Utama (Header + Konten Melengkung)
-            Column(
-              children: [
-                _buildHeader(),
-                Expanded(
-                  child: Container(
-                    width: double.infinity,
-                    decoration: const BoxDecoration(
-                      color: HistoryColors.background,
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(30),
-                        topRight: Radius.circular(30),
-                      ),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(30),
-                        topRight: Radius.circular(30),
-                      ),
-                      child: Column(
-                        children: [
-                          const SizedBox(height: 18),
-                          _buildFilterChips(),
-                          const SizedBox(height: 12),
-                          Expanded(
-                            child: data.isEmpty
-                                ? _buildEmptyState()
-                                : ListView.separated(
-                                    padding: const EdgeInsets.fromLTRB(
-                                      16,
-                                      4,
-                                      16,
-                                      105,
-                                    ),
-                                    itemCount: data.length,
-                                    separatorBuilder: (_, _) =>
-                                        const SizedBox(height: 12),
-                                    itemBuilder: (_, i) => _LaporanCard(
-                                      laporan: data[i],
-                                      onTapDetail: () =>
-                                          _showDetailSheet(data[i]),
-                                    ),
-                                  ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ------------------------------------------------------------- HEADER
 
   Widget _buildHeader() {
     return SafeArea(
@@ -589,237 +342,333 @@ class _RiwayatLaporanPageState extends State<RiwayatLaporanPage> {
   }
 }
 
-// --------------------------------------------------------- HELPER BADGE
-
-({String label, Color bg, Color fg}) _badgeStyle(StatusLaporan status) {
-  switch (status) {
-    case StatusLaporan.selesai:
-      return (
-        label: 'Selesai',
-        bg: const Color(0xFFDDEBFF),
-        fg: HistoryColors.primary,
-      );
-
-    case StatusLaporan.ditolak:
-      return (
-        label: 'Ditolak',
-        bg: const Color(0xFFFFE1E1),
-        fg: const Color(0xFFD93636),
-      );
-
-    case StatusLaporan.diproses:
-      return (
-        label: 'Diproses',
-        bg: const Color(0xFFFFF0CC),
-        fg: const Color(0xFFB7791F),
-      );
-  }
-}
-
-// --------------------------------------------------------- KARTU LAPORAN
-
 class _LaporanCard extends StatelessWidget {
-  final Laporan laporan;
-  final VoidCallback onTapDetail;
+  final ReportModel report;
 
-  const _LaporanCard({
-    required this.laporan,
-    required this.onTapDetail,
-  });
+  const _LaporanCard({required this.report});
+
+  ({String label, Color bg, Color fg}) get _badge {
+    switch (report.status) {
+      case ReportStatus.resolved:
+        return (
+          label: report.status.label,
+          bg: const Color(0xFFDDEBFF),
+          fg: HistoryColors.primary,
+        );
+      case ReportStatus.rejected:
+        return (
+          label: report.status.label,
+          bg: const Color(0xFFFFE1E1),
+          fg: const Color(0xFFD93636),
+        );
+      default:
+        return (
+          label: report.status.label,
+          bg: const Color(0xFFFFF0CC),
+          fg: const Color(0xFFB7791F),
+        );
+    }
+  }
+
+  void _showActionSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                report.assetNama,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: HistoryColors.textDark,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${report.assetLokasi} • ${report.status.label}',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: HistoryColors.textGrey,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(report.deskripsi, style: const TextStyle(fontSize: 13)),
+              if (report.status == ReportStatus.rejected &&
+                  (report.rejectionReason?.isNotEmpty ?? false)) ...[
+                const SizedBox(height: 12),
+                Text(
+                  'Alasan Penolakan: ${report.rejectionReason}',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFFD93636),
+                  ),
+                ),
+              ],
+              if (report.catatanTeknisi?.isNotEmpty ?? false) ...[
+                const SizedBox(height: 10),
+                Text(
+                  'Catatan Teknisi: ${report.catatanTeknisi}',
+                  style: const TextStyle(fontSize: 13),
+                ),
+              ],
+              const SizedBox(height: 16),
+              if (report.status == ReportStatus.reported)
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () async {
+                      Navigator.of(sheetContext).pop();
+                      try {
+                        await ReportService.instance.cancelReport(report.id);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text('Laporan berhasil dibatalkan.')),
+                          );
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Gagal membatalkan: $e')),
+                          );
+                        }
+                      }
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFFD93636),
+                      side: const BorderSide(color: Color(0xFFD93636)),
+                    ),
+                    child: const Text('Batalkan Laporan'),
+                  ),
+                ),
+              if (report.status == ReportStatus.resolved && !report.isConfirmed)
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      Navigator.of(sheetContext).pop();
+                      try {
+                        await ReportService.instance.confirmResolution(
+                          report: report,
+                          pelaporNama: report.pelaporNama,
+                        );
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text('Perbaikan dikonfirmasi selesai.')),
+                          );
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Gagal konfirmasi: $e')),
+                          );
+                        }
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: HistoryColors.primary,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text('Konfirmasi Selesai'),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final badge = _badgeStyle(laporan.status);
-    final diproses = laporan.status == StatusLaporan.diproses;
+    final badge = _badge;
+    final shortId = report.id.length > 8
+        ? report.id.substring(0, 8).toUpperCase()
+        : report.id.toUpperCase();
+    final tanggal = DateFormat('dd MMM yyyy').format(report.createdAt);
+    final imageBytes = StorageService.instance.base64ToBytes(report.fotoSebelum);
+    final diproses = !report.isClosed;
+    final adaFeedback = (report.rejectionReason?.isNotEmpty ?? false) ||
+        (report.catatanTeknisi?.isNotEmpty ?? false);
 
-    return InkWell(
-      onTap: onTapDetail,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: HistoryColors.border),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x0A000000),
-              blurRadius: 8,
-              offset: Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Flexible(
-                  child: Text(
-                    '${laporan.id} • ${laporan.tanggal}',
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      color: HistoryColors.textGrey,
-                    ),
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: HistoryColors.border),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0A000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Flexible(
+                child: Text(
+                  '#$shortId • $tanggal',
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: HistoryColors.textGrey,
                   ),
                 ),
-                const SizedBox(width: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: badge.bg,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    badge.label,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: badge.fg,
-                    ),
+              ),
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 3,
+                ),
+                decoration: BoxDecoration(
+                  color: badge.bg,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  badge.label,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: badge.fg,
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    width: 56,
-                    height: 56,
-                    color: const Color(0xFFE6EFFF),
-                    child: laporan.gambar != null
-                        ? Image.asset(
-                            laporan.gambar!,
-                            fit: BoxFit.cover,
-                          )
-                        : const Icon(
-                            Icons.image_outlined,
-                            color: HistoryColors.primary,
-                            size: 24,
-                          ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        laporan.judul,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 14.5,
-                          fontWeight: FontWeight.w800,
-                          color: HistoryColors.textDark,
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  width: 52,
+                  height: 52,
+                  color: const Color(0xFFE6EFFF),
+                  child: imageBytes != null
+                      ? Image.memory(
+                          imageBytes,
+                          fit: BoxFit.cover,
+                        )
+                      : const Icon(
+                          Icons.image_outlined,
+                          color: HistoryColors.primary,
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.location_on_outlined,
-                            size: 13,
-                            color: HistoryColors.primary,
-                          ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              laporan.lokasi,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 11.5,
-                                color: HistoryColors.textGrey,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            const Divider(
-              height: 1,
-              color: HistoryColors.border,
-            ),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                if (diproses)
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.schedule_rounded,
-                        size: 14,
-                        color: Color(0xFFB7791F),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      report.assetNama,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: HistoryColors.textDark,
                       ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Sedang diperbaiki',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFFB7791F),
-                        ),
-                      ),
-                    ],
-                  )
-                else if (laporan.adaFeedback)
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.chat_bubble_outline_rounded,
-                        size: 14,
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      report.assetLokasi,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 11,
                         color: HistoryColors.textGrey,
                       ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Feedback Admin tersedia',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: HistoryColors.textGrey,
-                        ),
-                      ),
-                    ],
-                  )
-                else
-                  const SizedBox.shrink(),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          const Divider(height: 1, color: HistoryColors.border),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              if (diproses)
                 Row(
+                  children: [
+                    const Icon(
+                      Icons.schedule,
+                      size: 14,
+                      color: Color(0xFFB7791F),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      report.status.label,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFFB7791F),
+                      ),
+                    ),
+                  ],
+                )
+              else if (adaFeedback)
+                const Row(
+                  children: [
+                    Icon(
+                      Icons.chat_bubble_outline,
+                      size: 14,
+                      color: HistoryColors.textGrey,
+                    ),
+                    SizedBox(width: 6),
+                    Text(
+                      'Catatan tersedia',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: HistoryColors.textGrey,
+                      ),
+                    ),
+                  ],
+                )
+              else
+                const SizedBox.shrink(),
+              InkWell(
+                onTap: () => _showActionSheet(context),
+                child: const Row(
                   children: [
                     Text(
                       'Detail',
-                      style: GoogleFonts.plusJakartaSans(
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
                         color: HistoryColors.primary,
                       ),
                     ),
-                    const SizedBox(width: 3),
-                    const Icon(
-                      Icons.arrow_forward_rounded,
-                      size: 13,
+                    SizedBox(width: 2),
+                    Icon(
+                      Icons.arrow_forward,
+                      size: 12,
                       color: HistoryColors.primary,
                     ),
                   ],
                 ),
-              ],
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

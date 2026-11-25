@@ -181,6 +181,25 @@ class AuthService {
     await _firebaseAuth.currentUser?.updateDisplayName(nama.trim());
   }
 
+  /// Simpan atau hapus foto profil Base64 di Firestore `users/{uid}`
+  Future<void> updateProfilePhoto({
+    required String uid,
+    String? photoBase64,
+  }) async {
+    if (photoBase64 == null || photoBase64.isEmpty) {
+      await _usersRef.doc(uid).update({
+        'photoBase64': FieldValue.delete(),
+      });
+      try {
+        await _firebaseAuth.currentUser?.updatePhotoURL(null);
+      } catch (_) {}
+    } else {
+      await _usersRef.doc(uid).update({
+        'photoBase64': photoBase64,
+      });
+    }
+  }
+
   /// Stream seluruh pengguna terdaftar (untuk Admin mencari calon teknisi)
   Stream<List<UserModel>> streamAllUsers() {
     return _usersRef.snapshots().map((snapshot) {

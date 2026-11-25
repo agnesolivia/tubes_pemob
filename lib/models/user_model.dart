@@ -23,6 +23,7 @@ class UserModel {
   final String email;
   final UserRole role;
   final DateTime createdAt;
+  final String? photoBase64;
 
   const UserModel({
     required this.uid,
@@ -30,6 +31,7 @@ class UserModel {
     required this.email,
     this.role = UserRole.pelapor,
     required this.createdAt,
+    this.photoBase64,
   });
 
   bool get isPelapor => role == UserRole.pelapor;
@@ -44,6 +46,7 @@ class UserModel {
       email: data['email'] as String? ?? '',
       role: UserRole.fromString(data['role'] as String?),
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      photoBase64: data['photoBase64'] as String?,
     );
   }
 
@@ -53,6 +56,7 @@ class UserModel {
       'email': email,
       'role': role.value,
       'createdAt': Timestamp.fromDate(createdAt),
+      if (photoBase64 != null) 'photoBase64': photoBase64,
     };
   }
 
@@ -69,6 +73,7 @@ class UserModel {
       email: email ?? this.email,
       role: role ?? this.role,
       createdAt: createdAt ?? this.createdAt,
+      photoBase64: photoBase64 ?? this.photoBase64,
     );
   }
 }

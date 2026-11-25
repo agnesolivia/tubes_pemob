@@ -576,7 +576,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Expanded(
       child: InkWell(
         onTap: () {
-          setState(() => _currentIndex = index);
+          if (index == 0) {
+            Navigator.pop(context);
+          } else if (index == 1) {
+            Navigator.pushNamed(context, '/riwayat-laporan');
+          } else if (index == 2) {
+            setState(() => _currentIndex = index);
+          }
         },
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

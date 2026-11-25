@@ -364,7 +364,19 @@ class _RiwayatLaporanPageState extends State<RiwayatLaporanPage> {
 
     return Expanded(
       child: InkWell(
-        onTap: () => setState(() => _navIndex = index),
+        onTap: () {
+          if (index == 0) {
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              '/auth',
+              (route) => false,
+            );
+          } else if (index == 3) {
+            Navigator.pushNamed(context, '/profile');
+          } else if (index == 2) {
+            setState(() => _navIndex = index);
+          }
+        },
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [

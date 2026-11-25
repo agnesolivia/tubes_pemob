@@ -23,11 +23,8 @@ class _PelaporHomeScreenState extends State<PelaporHomeScreen> {
   }
 
   void _onViewAllReportsPressed() {
-    // Hubungkan ke halaman Riwayat Laporan di sini
-    setState(() {
-      _selectedNavIndex = 1;
-    });
-  }
+  Navigator.pushNamed(context, '/riwayat-laporan');
+}
 
   @override
   Widget build(BuildContext context) {
@@ -75,9 +72,7 @@ class _PelaporHomeScreenState extends State<PelaporHomeScreen> {
                             ),
                             GestureDetector(
                               onTap: () {
-                                setState(() {
-                                  _selectedNavIndex = 3;
-                                });
+                                Navigator.pushNamed(context, '/profile');
                               },
                               child: Container(
                                 width: 42,
@@ -375,9 +370,15 @@ class _PelaporHomeScreenState extends State<PelaporHomeScreen> {
         bottomNavigationBar: _PelaporBottomNavBar(
           selectedIndex: _selectedNavIndex,
           onItemTapped: (index) {
-            setState(() {
-              _selectedNavIndex = index;
-            });
+            if (index == 1) {
+              Navigator.pushNamed(context, '/riwayat-laporan');
+            } else if (index == 3) {
+              Navigator.pushNamed(context, '/profile');
+            } else {
+              setState(() {
+                _selectedNavIndex = index;
+              });
+            }
           },
           onCameraPressed: _onCreateReportPressed,
         ),

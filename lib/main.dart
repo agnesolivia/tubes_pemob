@@ -7,6 +7,7 @@ import 'screens/auth/auth_wrapper.dart';
 import 'services/auth_service.dart';
 import 'screens/admin/admin_dashboard_screen.dart';
 import 'screens/pelapor/history_laporan_screen.dart';
+import 'screens/shared/profile_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -43,6 +44,7 @@ class MyApp extends StatelessWidget {
         '/auth': (context) => const AuthWrapper(),
         '/admin-dashboard': (context) => const AdminDashboardScreen(),
         '/riwayat-laporan': (context) => const RiwayatLaporanPage(),
+        '/profile': (context) => const ProfileScreen(),
       },
     );
   }

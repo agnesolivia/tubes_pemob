@@ -1,12 +1,16 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:tubes_pemob/constants/app_colors.dart';
 import 'package:tubes_pemob/models/report_model.dart';
 import 'package:tubes_pemob/models/user_model.dart';
 import 'package:tubes_pemob/services/auth_service.dart';
 import 'package:tubes_pemob/services/report_service.dart';
 
 class _ProfileColors {
-  static const primary = Color(0xFF0B63F6);
+  static const primary = AppColors.primaryBlue;
   static const background = Color(0xFFF7F9FC);
   static const textDark = Color(0xFF1B1F2A);
   static const textGrey = Color(0xFF8A92A3);
@@ -22,6 +26,9 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  final ImagePicker _picker = ImagePicker();
+  XFile? _pickedPhoto;
+
   bool _notifAktif = true;
   bool _isLoggingOut = false;
 
@@ -43,6 +50,257 @@ class _ProfileScreenState extends State<ProfileScreen> {
             isError ? _ProfileColors.danger : _ProfileColors.primary,
         behavior: SnackBarBehavior.floating,
       ),
+    );
+  }
+
+  Future<void> _pickPhoto(ImageSource source) async {
+    try {
+      final XFile? pickedFile = await _picker.pickImage(
+        source: source,
+        maxWidth: 800,
+        imageQuality: 85,
+      );
+
+      if (pickedFile != null) {
+        setState(() {
+          _pickedPhoto = pickedFile;
+        });
+        _showSnackBar('Foto profil berhasil diperbarui.');
+      }
+    } catch (e) {
+      _showSnackBar('Gagal mengambil gambar: $e', isError: true);
+    }
+  }
+
+  void _showPhotoPicker() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFCBD5E1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Ubah Foto Profil',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF0A0D14),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                  leading: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE6EFFF),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.photo_library_outlined,
+                      color: AppColors.primaryBlue,
+                      size: 20,
+                    ),
+                  ),
+                  title: Text(
+                    'Pilih dari Galeri',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF0A0D14),
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _pickPhoto(ImageSource.gallery);
+                  },
+                ),
+                const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                  leading: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE6EFFF),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.camera_alt_outlined,
+                      color: AppColors.primaryBlue,
+                      size: 20,
+                    ),
+                  ),
+                  title: Text(
+                    'Buka Kamera',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF0A0D14),
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _pickPhoto(ImageSource.camera);
+                  },
+                ),
+                if (_pickedPhoto != null) ...[
+                  const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                  ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                    leading: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFEBEE),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.delete_outline_rounded,
+                        color: _ProfileColors.danger,
+                        size: 20,
+                      ),
+                    ),
+                    title: Text(
+                      'Hapus Foto',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: _ProfileColors.danger,
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      setState(() => _pickedPhoto = null);
+                      _showSnackBar('Foto profil dihapus.');
+                    },
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showEditProfileSheet(UserModel user) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFCBD5E1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Edit Profil',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF0A0D14),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                  leading: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE6EFFF),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.edit_outlined,
+                      color: AppColors.primaryBlue,
+                      size: 20,
+                    ),
+                  ),
+                  title: Text(
+                    'Ubah Nama Lengkap',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF0A0D14),
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _showEditNameDialog(user);
+                  },
+                ),
+                const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                  leading: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE6EFFF),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.photo_camera_outlined,
+                      color: AppColors.primaryBlue,
+                      size: 20,
+                    ),
+                  ),
+                  title: Text(
+                    'Ubah Foto Profil',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF0A0D14),
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _showPhotoPicker();
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -164,7 +422,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onPressed: () => Navigator.of(dialogContext).pop(true),
             style: ElevatedButton.styleFrom(
               backgroundColor: _ProfileColors.danger,
-              foregroundColor: Colors.white,
+              foregroundColor: AppColors.white,
             ),
             child: Text(
               'Keluar',
@@ -217,43 +475,68 @@ class _ProfileScreenState extends State<ProfileScreen> {
               createdAt: DateTime.now(),
             );
 
-return Scaffold(
-          backgroundColor: _ProfileColors.primary,
-          body: Column(
-            children: [
-              _buildHeader(user),
-              Expanded(
-                child: Container(
-                  decoration: const BoxDecoration(
-                    color: _ProfileColors.background,
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(28),
-                    ),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(28),
-                    ),
-                    child: ListView(
-                      padding: const EdgeInsets.fromLTRB(16, 20, 16, 105),
-                      children: [
-                        _buildProfileCard(user),
-                        const SizedBox(height: 18),
-                        if (user.role == UserRole.pelapor) ...[
-                          _buildSummarySection(user.uid),
-                          const SizedBox(height: 18),
-                        ],
-                        _buildAccountInfo(user),
-                        const SizedBox(height: 18),
-                        _buildSettings(user),
-                        const SizedBox(height: 22),
-                        _buildLogoutButton(),
-                      ],
-                    ),
+        return AnnotatedRegion<SystemUiOverlayStyle>(
+          value: SystemUiOverlayStyle.light.copyWith(
+            statusBarColor: Colors.transparent,
+          ),
+          child: Scaffold(
+            backgroundColor: AppColors.primaryBlue,
+            body: Stack(
+              children: [
+                // 1. Gambar Gelombang Biru Atas
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: Image.asset(
+                    'assets/images/wave_top.png',
+                    width: double.infinity,
+                    fit: BoxFit.fitWidth,
                   ),
                 ),
-              ),
-            ],
+
+                // 2. Tata Letak Utama (Header + Konten Putih)
+                Column(
+                  children: [
+                    _buildHeader(user),
+                    Expanded(
+                      child: Container(
+                        width: double.infinity,
+                        decoration: const BoxDecoration(
+                          color: _ProfileColors.background,
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(30),
+                            topRight: Radius.circular(30),
+                          ),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(30),
+                            topRight: Radius.circular(30),
+                          ),
+                          child: ListView(
+                            padding: const EdgeInsets.fromLTRB(16, 20, 16, 105),
+                            children: [
+                              _buildProfileCard(user),
+                              const SizedBox(height: 18),
+                              if (user.role == UserRole.pelapor) ...[
+                                _buildSummarySection(user.uid),
+                                const SizedBox(height: 18),
+                              ],
+                              _buildAccountInfo(user),
+                              const SizedBox(height: 18),
+                              _buildSettings(user),
+                              const SizedBox(height: 22),
+                              _buildLogoutButton(),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -271,46 +554,50 @@ return Scaffold(
     return SafeArea(
       bottom: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 22),
-        child: Row(
+        padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+        child: Stack(
+          alignment: Alignment.center,
           children: [
-            const SizedBox(width: 40),
-            Expanded(
-              child: Column(
-                children: [
-                  Text(
-                    'Profil Saya',
-                    style: GoogleFonts.plusJakartaSans(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                    ),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Profil Saya',
+                  style: GoogleFonts.plusJakartaSans(
+                    color: AppColors.white,
+                    fontSize: 19,
+                    fontWeight: FontWeight.w800,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: GoogleFonts.plusJakartaSans(
-                      color: const Color(0xFFD6E4FF),
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            InkWell(
-              onTap: () => _showEditNameDialog(user),
-              borderRadius: BorderRadius.circular(20),
-              child: Container(
-                width: 40,
-                height: 40,
-                decoration: const BoxDecoration(
-                  color: Color(0x33FFFFFF),
-                  shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  Icons.edit_outlined,
-                  color: Colors.white,
-                  size: 20,
+                const SizedBox(height: 3),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.plusJakartaSans(
+                    color: AppColors.white.withValues(alpha: 0.88),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ],
+            ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: InkWell(
+                onTap: () => _showEditNameDialog(user),
+                borderRadius: BorderRadius.circular(22),
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.white.withValues(alpha: 0.18),
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: const Icon(
+                    Icons.edit_outlined,
+                    color: AppColors.white,
+                    size: 19,
+                  ),
                 ),
               ),
             ),
@@ -326,70 +613,85 @@ return Scaffold(
       padding: const EdgeInsets.all(16),
       child: Row(
         children: [
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE6EFFF),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: _ProfileColors.primary,
-                    width: 2,
+          GestureDetector(
+            onTap: _showPhotoPicker,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE6EFFF),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: _ProfileColors.primary,
+                      width: 2,
+                    ),
                   ),
-                ),
-                alignment: Alignment.center,
-                child: () {
-                  final photoUrl = AuthService.instance.currentUser?.photoURL;
-                  if (photoUrl != null && photoUrl.isNotEmpty) {
-                    return ClipOval(
-                      child: Image.network(
-                        photoUrl,
-                        width: 76,
-                        height: 76,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Text(
-                          _getInitial(user.nama),
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 32,
-                            fontWeight: FontWeight.w800,
-                            color: _ProfileColors.primary,
+                  alignment: Alignment.center,
+                  child: () {
+                    if (_pickedPhoto != null) {
+                      return ClipOval(
+                        child: Image.file(
+                          File(_pickedPhoto!.path),
+                          width: 76,
+                          height: 76,
+                          fit: BoxFit.cover,
+                        ),
+                      );
+                    }
+
+                    final photoUrl = AuthService.instance.currentUser?.photoURL;
+                    if (photoUrl != null && photoUrl.isNotEmpty) {
+                      return ClipOval(
+                        child: Image.network(
+                          photoUrl,
+                          width: 76,
+                          height: 76,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Text(
+                            _getInitial(user.nama),
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 32,
+                              fontWeight: FontWeight.w800,
+                              color: _ProfileColors.primary,
+                            ),
                           ),
                         ),
+                      );
+                    }
+
+                    return Text(
+                      _getInitial(user.nama),
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 32,
+                        fontWeight: FontWeight.w800,
+                        color: _ProfileColors.primary,
                       ),
                     );
-                  }
-                  return Text(
-                    _getInitial(user.nama),
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w800,
+                  }(),
+                ),
+                Positioned(
+                  right: -2,
+                  bottom: -2,
+                  child: Container(
+                    width: 26,
+                    height: 26,
+                    decoration: BoxDecoration(
                       color: _ProfileColors.primary,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.white, width: 2),
                     ),
-                  );
-                }(),
-              ),
-              Positioned(
-                right: -2,
-                bottom: -2,
-                child: Container(
-                  width: 26,
-                  height: 26,
-                  decoration: BoxDecoration(
-                    color: _ProfileColors.primary,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
-                  ),
-                  child: const Icon(
-                    Icons.photo_camera,
-                    size: 13,
-                    color: Colors.white,
+                    child: const Icon(
+                      Icons.photo_camera,
+                      size: 13,
+                      color: AppColors.white,
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -530,12 +832,17 @@ return Scaffold(
               ),
             ),
             const SizedBox(height: 4),
-            Text(
-              caption,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 10,
-                color: _ProfileColors.textGrey,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                caption,
+                maxLines: 1,
+                softWrap: false,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 10,
+                  color: _ProfileColors.textGrey,
+                ),
               ),
             ),
           ],
@@ -629,7 +936,7 @@ return Scaffold(
                 icon: Icons.person_outline,
                 title: 'Edit Profil',
                 subtitle: 'Perbarui nama, foto, dan kontak',
-                onTap: () => _showEditNameDialog(user),
+                onTap: () => _showEditProfileSheet(user),
               ),
               const Divider(height: 1, color: _ProfileColors.border),
               _settingTile(
@@ -645,7 +952,7 @@ return Scaffold(
                 subtitle: notifSubtitle,
                 trailing: Switch(
                   value: _notifAktif,
-                  activeThumbColor: Colors.white,
+                  activeThumbColor: AppColors.white,
                   activeTrackColor: _ProfileColors.primary,
                   onChanged: (value) {
                     setState(() => _notifAktif = value);
@@ -751,7 +1058,7 @@ return Scaffold(
           ),
         ),
         style: OutlinedButton.styleFrom(
-          backgroundColor: Colors.white,
+          backgroundColor: AppColors.white,
           side: const BorderSide(
             color: _ProfileColors.danger,
             width: 1.2,
@@ -808,7 +1115,7 @@ return Scaffold(
       width: double.infinity,
       padding: padding,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: _ProfileColors.border),
         boxShadow: const [

@@ -6,88 +6,96 @@ Dokumen ini menjadi acuan teknis bagi seluruh anggota tim dalam mengembangkan **
 
 Proyek ini menggunakan pola **Layer-First** yang dikombinasikan dengan pemisahan halaman berdasarkan *role* (`pelapor`, `admin`, `teknisi`) di dalam `screens/`. Seluruh file halaman di dalam `screens/` wajib menggunakan akhiran `_screen.dart`.
 
-```text
+```
 lib/
-├── main.dart                                # Entry point aplikasi, inisialisasi Firebase, & routing awal
+├── main.dart                             # Entry point aplikasi, inisialisasi Firebase, & routing awal
 │
-├── constants/                               # Nilai konstan & konfigurasi global
-│   ├── app_colors.dart                      # Palet warna utama, status badge, & tema
-│   └── app_constants.dart                   # Nama koleksi Firestore, kategori default, & teks umum
+├── constants/                            # Nilai konstan & konfigurasi global
+│   ├── app_colors.dart                   # Palet warna utama, status badge, & tema
+│   └── app_constants.dart                # Nama koleksi Firestore, kategori default, & teks umum
 │
-├── models/                                  # Blueprint objek data, enum, & konversi Firestore
-│   ├── user_model.dart                      # UserModel + enum UserRole ('pelapor' | 'admin' | 'teknisi')
-│   ├── asset_model.dart                     # AssetModel (data ruangan/aset kampus & kode QR)
-│   ├── report_model.dart                    # ReportModel, StatusHistoryItem, & enum ReportStatus / ReportPriority
-│   └── notification_model.dart              # NotificationModel (notifikasi perubahan status tiket antar-role)
+├── models/                               # Blueprint objek data, enum, & konversi Firestore
+│   ├── user_model.dart                   # UserModel + enum UserRole ('pelapor' | 'admin' | 'teknisi')
+│   ├── asset_model.dart                  # AssetModel (data ruangan/aset kampus & Auto-ID QR)
+│   ├── report_model.dart                 # ReportModel, StatusHistoryItem, & enum ReportStatus / ReportPriority
+│   └── notification_model.dart           # NotificationModel (notifikasi perubahan status tiket antar-role)
 │
-├── services/                                # Seluruh komunikasi backend (Firebase Auth & Cloud Firestore)
-│   ├── auth_service.dart                    # Login, register, Google Sign-In, verifikasi email, reset password, & role
-│   ├── storage_service.dart                 # Kompresi foto lokal (< 250 KB) & konversi Base64 dua arah
-│   ├── asset_service.dart                   # CRUD master data ruangan/aset & lookup berdasarkan ID QR
-│   ├── report_service.dart                  # CRUD laporan, transisi status, hitung SLA, & log riwayat
-│   └── notification_service.dart            # Stream notifikasi real-time & tandai notifikasi sudah dibaca
+├── services/                             # Seluruh komunikasi backend (Firebase Auth & Cloud Firestore)
+│   ├── auth_service.dart                 # Login, register, Google Sign-In, verifikasi email, reset password, & role
+│   ├── storage_service.dart              # Kompresi foto lokal (< 250 KB) & konversi Base64 dua arah
+│   ├── asset_service.dart                # CRUD & batch master data aset/ruangan, validasi unik per ruangan, & QR
+│   ├── report_service.dart               # CRUD laporan, transisi status, hitung SLA, & log riwayat
+│   └── notification_service.dart         # Stream notifikasi real-time & tandai notifikasi sudah dibaca
 │
-├── widgets/                                 # Komponen UI kecil yang dipakai berulang di banyak halaman
-│   ├── bottom_navbar.dart                   # Navigasi bawah reusable lintas role (Pelapor, Admin, Teknisi)
-│   ├── status_badge.dart                    # Label warna otomatis sesuai ReportStatus
-│   ├── sla_indicator.dart                   # Indikator sisa waktu / keterlambatan batas SLA
-│   ├── report_card.dart                     # Kartu ringkasan laporan untuk daftar/list
-│   └── base64_image_viewer.dart             # Komponen render gambar dari string Base64 + fallback error
+├── widgets/                              # Komponen UI kecil yang dipakai berulang di banyak halaman
+│   ├── bottom_navbar.dart                # Navigasi bawah reusable lintas role dengan tombol aksi tengah
+│   ├── status_badge.dart                 # Label warna otomatis sesuai ReportStatus
+│   ├── sla_indicator.dart                # Indikator sisa waktu / keterlambatan batas SLA
+│   ├── report_card.dart                  # Kartu ringkasan laporan untuk daftar/list
+│   └── base64_image_viewer.dart          # Komponen render gambar dari string Base64 + fallback error
 │
-└── screens/                                 # Seluruh halaman penuh (Scaffold)
-    ├── auth/                                # Alur sebelum masuk ke beranda role
-    │   ├── auth_wrapper.dart                # Pengecek status login, verifikasi email, & routing sesuai role
-    │   ├── login_screen.dart                # Halaman masuk (Email/Password, Google Sign-In, & pop-up Lupa Password)
-    │   ├── register_screen.dart             # Halaman daftar akun baru (default role: UserRole.pelapor)
-    │   └── email_verification_screen.dart   # Halaman tunggu verifikasi email & kirim ulang tautan verifikasi
+└── screens/                              # Seluruh halaman penuh (Scaffold)
+    ├── auth/                             # Alur sebelum masuk ke beranda role
+    │   ├── auth_wrapper.dart             # Pengecek status login, verifikasi email, & routing sesuai role
+    │   ├── login_screen.dart             # Halaman masuk (Email/Password, Google Sign-In, & pop-up Lupa Password)
+    │   ├── register_screen.dart          # Halaman daftar akun baru (default role: UserRole.pelapor)
+    │   └── email_verification_screen.dart # Halaman tunggu verifikasi email & kirim ulang tautan verifikasi
     │
-    ├── shared/                              # Halaman lintas role (dipakai 2 atau 3 role sekaligus)
-    │   ├── detail_laporan_screen.dart       # Detail tiket lengkap + tombol aksi dinamis sesuai role
-    │   ├── history_asset_screen.dart        # Info aset/ruangan & rekam jejak seluruh kerusakannya
-    │   ├── notification_screen.dart         # Daftar notifikasi real-time lintas role
-    │   └── profile_screen.dart              # Profil akun, edit nama, QR Code profil (USER:<uid>), & logout
+    ├── shared/                           # Halaman lintas role (dipakai 2 atau 3 role sekaligus)
+    │   ├── detail_laporan_screen.dart    # Detail tiket lengkap + tombol aksi dinamis sesuai role
+    │   ├── history_asset_screen.dart     # Info aset/ruangan & rekam jejak seluruh kerusakannya
+    │   ├── notification_screen.dart      # Daftar notifikasi real-time lintas role
+    │   └── profile_screen.dart           # Profil akun, edit nama, QR Code profil (USER:<uid>), & logout
     │
-    ├── pelapor/                             # Khusus Sivitas Akademika & Pengunjung Kampus
-    │   ├── pelapor_main_screen.dart         # Shell utama (Scaffold + IndexedStack + BottomNavbar) penampung tab Pelapor
-    │   ├── pelapor_home_screen.dart         # Beranda pelapor, ringkasan status, & tombol Scan QR / Lapor
-    │   ├── scan_qr_screen.dart              # Pemindai kamera QR Code (mode aset ASSET:<id>)
-    │   ├── form_pengaduan_screen.dart       # Form buat laporan (otomatis dari QR atau pilih dropdown)
-    │   └── history_laporan_screen.dart      # Daftar riwayat laporan milik pelapor + filter status
+    ├── pelapor/                          # Khusus Sivitas Akademika & Pengunjung Kampus
+    │   ├── pelapor_main_screen.dart      # Shell utama dengan IndexedStack & BottomNavbar tab Pelapor
+    │   ├── pelapor_home_screen.dart      # Beranda pelapor, ringkasan status, & tombol Scan QR / Lapor
+    │   ├── scan_qr_screen.dart           # Pemindai kamera QR Code (mode aset ASSET:<id> & mode user USER:<uid>)
+    │   ├── form_pengaduan_screen.dart    # Form buat laporan (otomatis dari QR, dropdown manual, & opsi lainnya)
+    │   └── history_laporan_screen.dart   # Daftar riwayat laporan milik pelapor + filter status
     │
-    ├── admin/                               # Khusus Pengelola Fasilitas Kampus
-    │   ├── admin_main_screen.dart           # Shell utama (Scaffold + IndexedStack + BottomNavbar) penampung tab Admin
-    │   ├── admin_dashboard_screen.dart      # Statistik tiket, monitoring kepatuhan SLA, & menu kelola
-    │   ├── kelola_laporan_screen.dart       # Daftar laporan masuk untuk verifikasi, tolak, & pilih teknisi
-    │   ├── kelola_aset_screen.dart          # Tambah/edit ruangan & aset + generate & cetak QR Code (ASSET:<id>)
-    │   └── kelola_teknisi_screen.dart       # Daftar teknisi, beban tugas aktif, & kelola role via Search/Scan QR
+    ├── admin/                            # Khusus Pengelola Fasilitas Kampus
+    │   ├── admin_main_screen.dart        # Shell utama dengan IndexedStack & BottomNavbar tab Admin
+    │   ├── admin_dashboard_screen.dart   # Statistik tiket, monitoring kepatuhan SLA, & menu kelola
+    │   ├── kelola_laporan_screen.dart    # Daftar laporan masuk untuk verifikasi, tolak, & pilih teknisi
+    │   ├── kelola_aset_screen.dart       # CRUD & batch multi-aset per ruangan + cetak stiker QR Code
+    │   └── kelola_teknisi_screen.dart    # Daftar teknisi, beban tugas aktif, & kelola role via Search/Scan QR
     │
-    └── teknisi/                             # Khusus Petugas Perbaikan Lapangan
-        ├── teknisi_main_screen.dart         # Shell utama (Scaffold + IndexedStack + BottomNavbar) penampung tab Teknisi
-        ├── teknisi_home_screen.dart         # Ringkasan tugas aktif & daftar prioritas SLA terdekat
-        ├── daftar_tugas_screen.dart         # Daftar lengkap tugas yang ditugaskan ke teknisi terkait
-        └── form_penyelesaian_screen.dart    # Form upload foto sesudah perbaikan & catatan tindakan
+    └── teknisi/                          # Khusus Petugas Perbaikan Lapangan
+        ├── teknisi_main_screen.dart      # Shell utama dengan IndexedStack & BottomNavbar tab Teknisi
+        ├── teknisi_home_screen.dart      # Ringkasan tugas aktif & daftar prioritas SLA terdekat
+        ├── daftar_tugas_screen.dart      # Daftar lengkap tugas yang ditugaskan ke teknisi terkait
+        └── form_penyelesaian_screen.dart # Form upload foto sesudah perbaikan & catatan tindakan
 ```
 
 ## 2. Tanggung Jawab Tiap Folder
 
 ### `constants/`
+
 Menyimpan nilai tetap agar tidak tersebar (*hardcoded*) di banyak file UI.
+
 * **`app_colors.dart`:** Warna primer kampus, warna latar, dan warna status tiket.
 * **`app_constants.dart`:** Konstanta nama koleksi Firestore, daftar kategori aset default, dan teks konstan aplikasi.
 
 ### `models/`
+
 Berfungsi sebagai penerjemah antara dokumen mentah Cloud Firestore (`Map<String, dynamic>`) dan objek Dart, sekaligus menyimpan definisi *enum* statis (`UserRole`, `ReportStatus`, `ReportPriority`).
+
 * Setiap model wajib memiliki `factory Model.fromFirestore(DocumentSnapshot doc)` dan `Map<String, dynamic> toMap()`.
 * **Dilarang** mengakses `doc.data()['nama_field']` langsung di dalam `screens/`.
 
 ### `services/`
+
 Satu-satunya lapisan yang boleh memanggil `FirebaseFirestore`, `FirebaseAuth`, atau utilitas pemrosesan gambar.
+
 * File di `screens/` cukup memanggil *singleton instance* dari `services/` (misalnya `ReportService.instance.streamReportsByPelapor(uid)`) dan menerima data yang sudah berbentuk `Model` atau `List<Model>`.
 
 ### `widgets/`
-Berisi komponen UI tanpa `Scaffold` yang digunakan di lebih dari satu halaman—contohnya `BottomNavbar` sebagai navigasi bawah lintas role, `ReportCard` yang dipakai di beranda Pelapor, daftar Admin, maupun daftar tugas Teknisi, serta `Base64ImageViewer` untuk menampilkan foto laporan.
+
+Berisi komponen UI tanpa `Scaffold` yang digunakan di lebih dari satu halaman—contohnya `ReportCard` yang dipakai di beranda Pelapor, daftar Admin, maupun daftar tugas Teknisi, serta `Base64ImageViewer` untuk menampilkan foto laporan.
 
 ### `screens/`
+
 Berisi tampilan halaman penuh (`Scaffold`). Dikelompokkan berdasarkan aktor pengguna agar setiap anggota tim bisa fokus mengerjakan foldernya masing-masing tanpa saling menimpa file.
 
 * **Pola Shell `*MainScreen` & `IndexedStack`:** Setiap role memiliki satu halaman induk (`PelaporMainScreen`, `AdminMainScreen`, dan `TeknisiMainScreen`) yang memegang `Scaffold`, `BottomNavbar`, dan `IndexedStack`. Keempat halaman tab utama (*Beranda*, *Riwayat/Tiket/Tugas*, *Notifikasi*, *Profil*) **tidak memasang `bottomNavigationBar` sendiri** agar navbar tetap diam di tempat (tidak ikut berkedip/tergeser) saat berpindah tab dan `ProfileScreen` dapat dipakai bersama lintas role tanpa duplikasi kode.
@@ -96,7 +104,7 @@ Berisi tampilan halaman penuh (`Scaffold`). Dikelompokkan berdasarkan aktor peng
 
 ### A. Siklus Hidup Tiket (6 Status)
 
-```text
+```
                   ┌──► rejected (Ditolak Admin + wajib alasan penolakan)
                   │
 reported ─────────┴──► verified ──► assigned ──► in progress ──► resolved
@@ -108,45 +116,49 @@ reported ─────────┴──► verified ──► assigned ─
 * **`ReportStatus.rejected`:** Laporan tidak valid/ganda (final, tidak masuk perhitungan SLA maupun histori aset).
 * **`ReportStatus.verified` & `ReportStatus.assigned`:** Admin memvalidasi laporan, menetapkan **prioritas** (yang otomatis menghitung tenggat **SLA**), dan memilih Teknisi berdasarkan beban tugas aktif.
 * **`ReportStatus.inProgress`:** Teknisi mulai menangani perbaikan di lokasi.
-* **`ReportStatus.resolved`:** Teknisi mengunggah **foto sesudah diperbaiki** dan catatan perbaikan, lalu Pelapor dapat menekan konfirmasi penyelesaian.
+* **`ReportStatus.resolved`:** Teknisi mengunggah **foto sesudah diperbaiki** dan catatan perbaikan, lalu Pelapor (atau Admin) dapat menekan konfirmasi penyelesaian atau mengajukan ulang (*re-open*) ke `assigned` apabila perbaikan belum beres.
 
 ### B. Aturan SLA (*Service Level Agreement*)
+
 Saat Admin memverifikasi tiket dan memilih prioritas, sistem otomatis mengisi field `deadlineAt` menggunakan `ReportPriority.slaHours`:
+
 * **Tinggi (`ReportPriority.tinggi`):** +24 jam dari waktu verifikasi.
 * **Sedang (`ReportPriority.sedang`):** +72 jam (3 hari) dari waktu verifikasi.
 * **Rendah (`ReportPriority.rendah`):** +168 jam (7 hari) dari waktu verifikasi.
 
 ### C. Alur Fleksibel QR Code vs. Manual
 
-```text
+```
 pelapor_home_screen
   ├──► [Scan QR]      ──► scan_qr_screen ──► history_asset_screen ──► form_pengaduan_screen (aset terisi)
   └──► [Lapor Manual] ──────────────────────────────────────────────► form_pengaduan_screen (pilih dropdown)
 ```
 
-* **Standar Prefix QR Code:** Seluruh QR Code menggunakan awalan tipe agar pemindai langsung bisa membedakan jenis QR secara otomatis:
-  * **QR Fasilitas / Aset:** `ASSET:<assetId>` (contoh: `ASSET:AC-R204`).
-  * **QR Profil Akun:** `USER:<uid>` (ditampilkan di `profile_screen.dart` untuk dipindai Admin di `kelola_teknisi_screen.dart`).
+* **Standar Prefix & Stiker QR Code:** Seluruh QR Code menggunakan awalan tipe agar pemindai langsung bisa membedakan jenis QR secara otomatis:
+  * **QR Fasilitas / Aset:** Payload QR berisi `ASSET:<assetId>` (menggunakan Auto-ID dokumen Firestore pada koleksi `assets`), sedangkan teks cetak pada stiker menampilkan **`asset.nama`** (misal `Kursi#01`) dan lokasi (`Gedung - Ruangan`) agar tetap bisa dipilih di jalur **Lapor Manual** jika kamera bermasalah.
+  * **QR Profil Akun:** Payload QR berisi `USER:<uid>` (ditampilkan di `profile_screen.dart` untuk dipindai Admin di `kelola_teknisi_screen.dart`).
 
 ### D. Sistem Notifikasi Dalam Aplikasi (*In-App Notification*)
+
 Notifikasi dibangun menggunakan koleksi Firestore `notifications` secara *real-time* (tanpa memerlukan Cloud Functions atau Firebase Storage):
+
 * **Pelapor** menerima notifikasi saat laporan diverifikasi/ditugaskan, ditolak (`rejected`), atau selesai diperbaiki (`resolved`).
-* **Teknisi** menerima notifikasi saat Admin menugaskan tiket baru kepadanya (`assigned`).
-* **Admin** menerima notifikasi saat laporan baru masuk (`reported`) atau saat Teknisi menandai tugas selesai (`resolved`).
+* **Teknisi** menerima notifikasi saat Admin menugaskan tiket baru kepadanya (`assigned`) maupun saat tiket dibuka kembali (*re-open*).
+* **Admin** menerima notifikasi saat laporan baru masuk (`reported`), saat Teknisi menandai tugas selesai (`resolved`), atau saat Pelapor mengajukan sanggahan (*re-open*).
 * Menekan item notifikasi di `notification_screen.dart` akan langsung membuka `detail_laporan_screen.dart` sesuai `reportId` terkait.
 
 ## 4. Desain Database Firestore (*Flat Collections*)
 
 Proyek ini menggunakan **4 koleksi sejajar (*root collections*)** tanpa *subcollection* agar mudah di-*query* dari sudut pandang Pelapor, Admin, Teknisi, maupun histori aset.
 
-> **Aturan ID Dokumen (`doc.id` Murni):** Seluruh koleksi tidak menyimpan ulang field ID di dalam isi dokumen; `fromFirestore` langsung mengambilnya dari `doc.id`. Koleksi `users` dan `assets` wajib disimpan menggunakan `.doc(id).set(...)`, sedangkan `reports` dan `notifications` menggunakan `.add(...)`.
+> **Aturan ID Dokumen (`doc.id` Murni):** Seluruh koleksi tidak menyimpan ulang field ID di dalam isi dokumen; `fromFirestore` langsung mengambilnya dari `doc.id`. Koleksi `users` wajib disimpan menggunakan `.doc(uid).set(...)`, sedangkan koleksi `assets`, `reports`, dan `notifications` menggunakan **Auto-ID Firestore** (`.doc()` / `.add(...)`).
 
 1. **`users`** *(Document ID = `uid` dari Firebase Auth)*
    * `nama`, `email`, `role` (`'pelapor'` | `'admin'` | `'teknisi'`), `createdAt`.
-2. **`assets`** *(Document ID = ID Aset murni, misal `'AC-R204'`, tanpa tanda `/`; QR di-generate dengan prefix `'ASSET:AC-R204'`)*
-   * `nama`, `kategori`, `gedung`, `ruangan`, `createdAt`.
+2. **`assets`** *(Document ID = Auto-generated Firestore ID; payload QR di-generate dengan prefix `'ASSET:<doc.id>'`)*
+   * `nama` *(unik secara case-insensitive per kombinasi `gedung` + `ruangan`, misal `'Kursi#01'`)*, `kategori`, `gedung`, `ruangan`, `createdAt`.
 3. **`reports`** *(Document ID = Auto-generated)*
-   * `assetId`, `assetNama`, `assetLokasi`, `pelaporId`, `pelaporNama`, `teknisiId`, `teknisiNama`, `deskripsi`, `fotoSebelum` *(Base64)*, `fotoSesudah` *(Base64)*, `status`, `prioritas`, `deadlineAt`, `rejectionReason`, `catatanTeknisi`, `isConfirmed`, `createdAt`, `resolvedAt`, `riwayatStatus`.
+   * `assetId` *(nullable; null jika jalur Fasilitas Lainnya)*, `assetNama`, `assetLokasi`, `pelaporId`, `pelaporNama`, `teknisiId`, `teknisiNama`, `deskripsi`, `fotoSebelum` *(Base64)*, `fotoSesudah` *(Base64)*, `status`, `prioritas`, `deadlineAt`, `rejectionReason`, `catatanTeknisi`, `isConfirmed`, `createdAt`, `resolvedAt`, `riwayatStatus`.
    * *Catatan Denormalisasi:* `assetNama`, `assetLokasi`, `pelaporNama`, dan `teknisiNama` ikut disimpan langsung di `reports` agar daftar laporan dapat ditampilkan dalam satu kali baca tanpa *query* tambahan.
 4. **`notifications`** *(Document ID = Auto-generated)*
    * `recipientId` *(UID penerima)*, `reportId`, `title`, `message`, `isRead` *(`bool`)*, `createdAt`.

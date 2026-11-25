@@ -4,7 +4,7 @@ Dokumen ini berisi rincian **apa saja yang bisa dilakukan oleh masing-masing akt
 
 ## 1. Alur Autentikasi & Modul Bersama (`auth/` & `shared/`)
 
-### A. Autentikasi (`login_screen.dart`, `register_screen.dart`, `verify_email_screen.dart`, `auth_wrapper.dart`)
+### A. Autentikasi (`login_screen.dart`, `register_screen.dart`, `email_verification_screen.dart`, `auth_wrapper.dart`)
 
 * **Registrasi Mandiri & Verifikasi Email:**
 
@@ -18,7 +18,7 @@ Dokumen ini berisi rincian **apa saja yang bisa dilakukan oleh masing-masing akt
 
 * **Auto-Routing Berbasis Verifikasi & Role (`auth_wrapper.dart`):**
 
-  * Memantau status login Firebase Auth. Jika akun menggunakan Email/Password dan `emailVerified == false`, arahkan pengguna ke `VerifyEmailScreen` (berisi tombol cek ulang status verifikasi, kirim ulang email, dan logout).
+  * Memantau status login Firebase Auth. Jika akun menggunakan Email/Password dan `emailVerified == false`, arahkan pengguna ke `EmailVerificationScreen` (berisi tombol cek ulang status verifikasi, kirim ulang email, dan logout).
 
   * Jika email sudah terverifikasi, sistem membaca dokumen profil di koleksi `users` untuk mengarahkan pengguna secara otomatis ke halaman induk (`*MainScreen`) sesuai role-nya:
 
@@ -46,7 +46,7 @@ Satu halaman bersama untuk melihat detail tiket (`ReportModel`), berisi informas
 
 * **Konsistensi Informasi & Tombol Riwayat Aset:**
 
-  * Baris informasi aset menampilkan `${report.assetNama} (${report.assetId})` apabila `assetId != null`, atau hanya `report.assetNama` apabila `assetId == null`.
+  * Baris informasi aset menampilkan `report.assetNama` beserta lokasi (`report.assetLokasi`), dan apabila `assetId == null` ditampilkan penanda tambahan bahwa fasilitas belum terdaftar di inventaris.
 
   * Tombol **Lihat Riwayat Aset** selalu tampil aktif dan seragam untuk **semua role** (Pelapor, Admin, dan Teknisi) serta untuk semua kondisi tiket (`assetId != null` maupun `assetId == null`), mengarahkan pengguna ke `HistoryAssetScreen` dengan membawa `assetId` beserta data *fallback* `assetNama` dan `assetLokasi`.
 
@@ -90,21 +90,21 @@ Aktor: Sivitas Akademika dan Pengunjung/Tamu Kampus.
 
 1. **Navigasi Utama (`pelapor_main_screen.dart`) & Beranda (`pelapor_home_screen.dart`):**
 
-   * `PelaporMainScreen` membungkus 4 halaman tab (`Beranda`, `Riwayat`, `Notifikasi`, `Profil`) menggunakan `IndexedStack` dan 1 `BottomNavbar` permanen di bawah (dengan tombol kamera melayang di tengah untuk membuka `CreateReportScreen`).
+   * `PelaporMainScreen` membungkus 4 halaman tab (`Beranda`, `Riwayat`, `Notifikasi`, `Profil`) menggunakan `IndexedStack` dan 1 `BottomNavbar` permanen di bawah (dengan tombol kamera melayang di tengah untuk membuka `FormPengaduanScreen`).
 
    * Di beranda, Pelapor melihat ringkasan jumlah laporan pribadi (*Menunggu*, *Diproses*, *Selesai*), daftar laporan aktif, serta tombol cepat **Buat Laporan Baru** / **Scan QR**.
 
 2. **Jalur 1 — Scan QR (`scan_qr_screen.dart`):**
 
-   * Kamera memindai QR Code pada stiker ruangan/aset dengan format `ASSET:<assetId>` (misal: `ASSET:AC-R204`).
+   * Kamera memindai QR Code pada stiker ruangan/aset dengan format `ASSET:<assetId>` (berisi Auto-ID dokumen aset di Firestore).
 
-   * **Validasi Prefix:** Sistem memastikan teks QR diawali `ASSET:` (jika berawalan `USER:` atau format tidak dikenal, tampilkan pesan error yang sesuai). Setelah valid, awalan `ASSET:` dilepas untuk mendapatkan `assetId` murni (`AC-R204`).
+   * **Validasi Prefix:** Sistem memastikan teks QR diawali `ASSET:` (jika berawalan `USER:` atau format tidak dikenal, tampilkan pesan error yang sesuai). Setelah valid, awalan `ASSET:` dilepas untuk mendapatkan `assetId` (Auto-ID dokumen).
 
    * Sistem mencocokkan `assetId` ke koleksi `assets`. Jika ditemukan, pengguna diarahkan ke `HistoryAssetScreen` untuk melihat riwayat aset tersebut terlebih dahulu, lalu menekan tombol **Buat Laporan** menuju `FormPengaduanScreen` dengan data aset sudah terisi otomatis.
 
 3. **Jalur 2 — Lapor Manual (`form_pengaduan_screen.dart`):**
 
-   * **Aset Terdaftar di Sistem:** Jika masuk tanpa QR (`selectedAsset == null`), pengguna memilih **Gedung** $\rightarrow$ **Ruangan** $\rightarrow$ **Aset** melalui pilihan berjenjang (*dropdown* / daftar yang mendukung pencarian jika item banyak) dari koleksi `assets` (mengisi `assetId`, `assetNama`, dan `assetLokasi`). Daftar pilihan gedung dan ruangan dideduplikasi secara *case-insensitive*. Saat aset terpilih, tersedia pula pintasan **"Lihat Riwayat Aset"** menuju `HistoryAssetScreen` agar Pelapor dapat mengecek riwayat aset sebelum mengirim laporan.
+   * **Aset Terdaftar di Sistem:** Jika masuk tanpa QR (`selectedAsset == null`), Pelapor cukup membaca teks **Nama Aset** (misalnya `Kursi#01`) dan lokasi yang tercetak pada stiker QR fisik, lalu memilih **Gedung** $\rightarrow$ **Ruangan** $\rightarrow$ **Nama Aset** melalui pilihan berjenjang (*dropdown* / daftar yang mendukung pencarian jika item banyak) dari koleksi `assets` (mengisi `assetId`, `assetNama`, dan `assetLokasi`). Daftar pilihan gedung dan ruangan dideduplikasi secara *case-insensitive*. Saat aset terpilih, tersedia pula pintasan **"Lihat Riwayat Aset"** menuju `HistoryAssetScreen` agar Pelapor dapat mengecek riwayat aset sebelum mengirim laporan.
 
    * **Opsi Ekstra — "Fasilitas Lainnya / Tidak Terdaftar":** Digunakan apabila fasilitas yang rusak belum dibuatkan data master oleh Admin atau berupa kerusakan bangunan umum (misalnya keramik pecah, atap bocor, kaca retak, atau kran air rusak). Ketika opsi ini dipilih, pengguna cukup mengisi **Nama Fasilitas** (`assetNama`) dan **Lokasi** (`assetLokasi`) secara manual, sehingga laporan dikirim dengan nilai **`assetId: null`**.
 
@@ -166,14 +166,39 @@ Aktor: Pengelola Sarana & Prasarana Kampus.
 
 3. **Kelola Aset & Generator QR (`kelola_aset_screen.dart`):**
 
-   * Menambah, mengubah, atau menghapus master data fasilitas di koleksi `assets` (ID Aset, Nama Aset, Kategori, Gedung, Ruangan).
+   * Menambah, mengubah, atau menghapus master data fasilitas di koleksi `assets` (`nama`, `kategori`, `gedung`, `ruangan`) dengan **`doc.id` menggunakan Auto-ID Firestore** (Admin tidak perlu menginput kode ID custom).
 
    * **Pemilihan & Input Gedung / Ruangan (Tanpa Koleksi Terpisah):**
+
      * Saat menambah atau mengubah aset, field **Gedung** menampilkan pilihan seluruh gedung unik yang sudah pernah disimpan sebelumnya (mendukung pencarian jika daftar sudah panjang) disertai opsi **"+ Tambah Gedung Baru"** untuk mengetik manual apabila gedung belum tersedia.
+
      * Field **Ruangan** mengikuti pola berjenjang yang sama: menampilkan seluruh ruangan unik yang sudah ada **di dalam gedung yang dipilih** (dicocokkan secara *case-insensitive*) disertai opsi **"+ Tambah Ruangan Baru"** untuk mengetik manual ruangan baru.
+
      * Input `gedung` dan `ruangan` bersifat ***case-insensitive*** (merapikan spasi berlebih serta menyamakan ejaan dengan data yang sudah ada) agar tidak memunculkan pilihan ganda akibat perbedaan huruf kapital atau salah ketik.
 
-   * Menghasilkan tampilan **QR Code** dengan format `ASSET:${asset.id}` (contoh: `ASSET:AC-R204`) menggunakan `qr_flutter` beserta opsi simpan/bagikan gambar QR untuk dicetak.
+   * **Input Aset Multi-Item & Batch per Ruangan:**
+
+     * Untuk mempermudah pendataan banyak fasilitas dalam satu ruangan sekaligus, Admin cukup memilih **Gedung** dan **Ruangan** satu kali di bagian atas form, lalu dapat menambahkan beberapa baris item barang (`+ Tambah Baris Barang`), masing-masing berisi **Nama Aset (atau Nama Dasar)**, **Kategori**, dan **Jumlah Unit** (default `1`).
+
+     * **Batas Total Unit (Maksimal 500):** Form menampilkan penghitung total seluruh unit dari semua baris yang ditambahkan (misalnya `Total unit: 32 / 500`). Total unit dalam sekali simpan wajib berada di rentang `1` hingga **`500` unit** sesuai batas transaksi `WriteBatch` Firestore.
+
+     * **Aturan Unik per Ruangan, Karakter `#`, & Penomoran Otomatis pada `nama`:**
+
+       * **Keunikan Berbasis `(gedung, ruangan, nama)` (*Case-Insensitive*):** Nama aset yang sama **diizinkan** apabila berada di gedung atau ruangan yang berbeda (misalnya `Kursi#01` di *Gedung A - Ruang 101* dan `Kursi#01` di *Gedung B - Ruang 202* sama-sama valid), tetapi **wajib ditolak** apabila sudah ada nama yang sama di dalam gedung dan ruangan yang sama.
+
+       * **Jika `Jumlah == 1` (Input Satuan):** Sistem menyimpan `nama` persis seperti yang diinput Admin (setelah merapikan spasi berlebih). Karakter `#` **diizinkan** pada mode satuan agar Admin dapat menyisipkan kembali nomor unit yang pernah terhapus di tengah pada ruangan tersebut (misalnya `Kursi#02`).
+
+       * **Jika `Jumlah > 1` (Input Batch):** Karakter `#` **dilarang** diketik manual di kolom nama dasar. Sistem otomatis menambahkan pemisah `#` dan nomor urut 2 digit pada field `nama` (`<Nama Dasar>#01`, `<Nama Dasar>#02`, dst., atau 3 digit jika $\ge 100$) serta menampilkan pratinjau rentang nama yang akan dibuat.
+
+       * **Auto-Continue (`Max + 1` per Ruangan):** Apabila nama dasar tersebut sudah pernah terdaftar di `(gedung, ruangan)` yang sama (misalnya sudah ada `Kursi#01`, `Kursi#03`, `Kursi#04`), sistem mencari angka akhiran **tertinggi** (`04`) di ruangan tersebut lalu melanjutkan batch baru dari `Max + 1` (`Kursi#05`, `Kursi#06`, dst.).
+
+     * **Validasi Anti-Duplikat:** Sebelum `batch.commit()`, sistem menolak seluruh transaksi apabila ditemukan duplikat nama (*case-insensitive*) antar-baris dalam satu form maupun dengan data aset yang sudah terdaftar di `(gedung, ruangan)` yang sama.
+
+   * **Generator & Label Stiker QR Code:**
+
+     * Payload QR Code men-encode **`ASSET:${asset.id}`** (Auto-ID dokumen Firestore) menggunakan `qr_flutter` agar pemindaian kamera langsung menuju dokumen spesifik.
+
+     * Tampilan stiker QR yang dicetak/disimpan wajib menampilkan teks label **`asset.nama`** (misalnya `Kursi#01` atau `AC Daikin 2 PK`) beserta keterangan lokasi (`Gedung - Ruangan`) di bawah/samping kode QR—bukan Auto-ID mentah—sehingga apabila kamera perangkat tidak berfungsi, Pelapor tetap dapat membaca nama unit pada stiker dan memilihnya melalui jalur **Lapor Manual**.
 
 4. **Kelola Teknisi (`kelola_teknisi_screen.dart`):**
 
@@ -245,7 +270,7 @@ Aktor: Petugas Perbaikan Lapangan (Staf Internal Kampus).
 
    * Saat membuat atau memperbarui tiket di `ReportService`, wajib ikut menyimpan `assetNama`, `assetLokasi`, `pelaporNama`, dan `teknisiNama` langsung di dokumen `reports`. Tujuannya agar halaman daftar tiket dapat menampilkan nama aset dan pelapor dalam satu kali *query* tanpa melakukan pembacaan ulang ke koleksi `assets` dan `users`.
 
-   * Field `assetId` bersifat *nullable* (`String?`): terisi ID aset murni jika berasal dari Scan QR atau *dropdown* `assets`, dan bernilai `null` jika Pelapor memilih opsi *Fasilitas Lainnya / Tidak Terdaftar*.
+   * Field `assetId` bersifat *nullable* (`String?`): terisi Auto-ID dokumen aset jika berasal dari Scan QR atau *dropdown* `assets`, dan bernilai `null` jika Pelapor memilih opsi *Fasilitas Lainnya / Tidak Terdaftar*.
 
 4. **Normalisasi *Case-Insensitive* untuk `gedung` & `ruangan` (Tanpa Koleksi Baru):**
 
@@ -269,15 +294,21 @@ Aktor: Petugas Perbaikan Lapangan (Staf Internal Kampus).
 
 7. **ID Dokumen Firestore (`doc.id` Murni) & Standar Prefix QR Code:**
 
-   * Koleksi `users` dan `assets` tidak menyimpan ulang field `uid`/`id` di dalam dokumen. Saat menyimpan data baru di `services/`, wajib gunakan `.doc(id).set(...)` (bukan `.add(...)`).
+   * Koleksi `users` dan `assets` tidak menyimpan ulang field `uid`/`id` di dalam dokumen. Koleksi `users` wajib disimpan menggunakan `.doc(uid).set(...)`, sedangkan koleksi `assets` menggunakan **Auto-ID Firestore** (`.doc()` / `.add(...)`) sehingga Admin tidak perlu menginput kode ID custom.
 
-   * ID Aset (`asset.id`) **dilarang mengandung karakter garis miring (`/`)** karena akan terbaca sebagai jalur *subcollection* oleh Firestore (gunakan tanda hubung `-`, misal: `AC-R204`).
+   * **Standar Payload QR Code & Stiker:** Meskipun `doc.id` di Firestore disimpan murni tanpa awalan, teks di dalam QR Code wajib memakai awalan agar pemindai bisa memvalidasi tipe QR secara otomatis:
 
-   * **Standar Payload QR Code:** Meskipun `doc.id` di Firestore disimpan murni tanpa awalan, teks di dalam QR Code wajib memakai awalan agar pemindai bisa memvalidasi tipe QR secara otomatis:
+     * QR Fasilitas / Aset: payload **`ASSET:<asset.id>`** (Auto-ID Firestore), sementara teks label cetak pada stiker menampilkan **`asset.nama`** (misal `Kursi#01`) dan lokasi (`Gedung - Ruangan`).
 
-     * QR Fasilitas / Aset: **`ASSET:<asset.id>`** (contoh: `ASSET:AC-R204`)
+     * QR Profil Pengguna: payload **`USER:<user.uid>`** (contoh: `USER:x9K2mP7qL1vB8nR4`).
 
-     * QR Profil Pengguna: **`USER:<user.uid>`** (contoh: `USER:x9K2mP7qL1vB8nR4`)
+8. **Aturan Batch Aset (`WriteBatch`), Pemisah `#`, dan `Max + 1` per Ruangan:**
+
+   * Penambahan multi-item / massal di `AssetService` wajib dieksekusi dalam satu transaksi `WriteBatch` dengan total seluruh unit berada pada rentang **`1` hingga `500` dokumen** per submit.
+
+   * Pemisah nomor urut batch (`#`) disematkan pada field **`nama`** (`<Nama Dasar>#01`), bukan pada `doc.id`. Karakter `#` hanya diizinkan pada input satuan (`Jumlah == 1` atau saat edit aset) untuk menyisipkan kembali nomor unit yang pernah terhapus di ruangan tersebut, dan **wajib ditolak** pada input massal (`Jumlah > 1`) agar sistem yang menghasilkan nomor urutnya secara otomatis.
+
+   * Validasi keunikan `nama` bersifat *case-insensitive* per pasangan **`(gedung, ruangan)`** (nama yang sama diizinkan jika gedung atau ruangannya berbeda), dan penomoran lanjutan batch berikutnya wajib dihitung dari **angka akhiran tertinggi (`Max + 1`)** pada kombinasi `(gedung, ruangan)` tersebut.
 
 ## 6. Checklist Pengerjaan Tim (Paralel & Anti-Blocking)
 
@@ -313,7 +344,7 @@ Agar seluruh anggota tim bisa mengerjakan tugas secara bersamaan tanpa saling me
 
 * [x] `services/storage_service.dart` (Ambil gambar, kompres < 250 KB, & encode/decode Base64)
 
-* [x] `services/asset_service.dart` (CRUD data aset/ruangan, normalisasi lokasi *case-insensitive*, & pencarian ID QR)
+* [x] `services/asset_service.dart` (CRUD & batch multi-aset `#` per ruangan dengan `Max + 1`, validasi unik `(gedung, ruangan, nama)`, & lookup ID QR)
 
 * [x] `services/notification_service.dart` (Stream notifikasi real-time, hitung belum dibaca, & tandai sudah dibaca)
 
@@ -369,7 +400,7 @@ Agar seluruh anggota tim bisa mengerjakan tugas secara bersamaan tanpa saling me
 
 * [ ] `screens/admin/kelola_laporan_screen.dart` (Filter semua laporan & modal verifikasi/tolak/tugaskan teknisi)
 
-* [ ] `screens/admin/kelola_aset_screen.dart` (CRUD master aset, pilih gedung/ruangan yang sudah ada atau ketik baru secara *case-insensitive*, & generator QR Code `ASSET:<id>`)
+* [ ] `screens/admin/kelola_aset_screen.dart` (CRUD & batch multi-item aset per ruangan dengan pemisah `#` pada nama, pilih gedung/ruangan *case-insensitive*, & cetak stiker QR Code `ASSET:<id>` berlabel `asset.nama`)
 
 * [ ] `screens/admin/kelola_teknisi_screen.dart` (Daftar teknisi, beban tugas aktif, & ubah role `pelapor` $\leftrightarrow$ `teknisi` via Search Email/Nama atau Scan QR Profil)
 

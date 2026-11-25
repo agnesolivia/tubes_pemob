@@ -4,8 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'package:tubes_pemob/constants/app_colors.dart';
 import 'package:tubes_pemob/models/report_model.dart';
-import 'package:tubes_pemob/screens/teknisi/daftar_tugas_screen.dart';
 import 'package:tubes_pemob/models/technician_task_item.dart';
+import 'package:tubes_pemob/screens/teknisi/daftar_tugas_screen.dart';
 import 'package:tubes_pemob/screens/teknisi/detail_laporan_screen.dart';
 
 // ============================================================
@@ -22,8 +22,6 @@ class TeknisiHomeScreen extends StatefulWidget {
   final VoidCallback? onViewAllTasksPressed;
   final ValueChanged<TechnicianTaskItem>? onTaskPressed;
 
-  final ValueChanged<int>? onNavigationTap;
-
   const TeknisiHomeScreen({
     super.key,
     required this.currentUserUid,
@@ -32,7 +30,6 @@ class TeknisiHomeScreen extends StatefulWidget {
     this.onNotificationPressed,
     this.onViewAllTasksPressed,
     this.onTaskPressed,
-    this.onNavigationTap,
   });
 
   @override
@@ -41,8 +38,6 @@ class TeknisiHomeScreen extends StatefulWidget {
 }
 
 class _TeknisiHomeScreenState extends State<TeknisiHomeScreen> {
-  int _selectedNavIndex = 0;
-
   // ==========================================================
   // FILTER TUGAS MILIK TEKNISI
   // ==========================================================
@@ -111,54 +106,25 @@ class _TeknisiHomeScreenState extends State<TeknisiHomeScreen> {
   }
 
   // ==========================================================
-  // NAVIGATION HANDLER
-  // ==========================================================
-
-  void _onNavigationTapped(int index) {
-    setState(() {
-      _selectedNavIndex = index;
-    });
-
-    if (index == 0) return;
-
-    if (widget.onNavigationTap != null) {
-      widget.onNavigationTap!(index);
-      return;
-    }
-
-    _showMessage(
-      'Halaman ${_navigationLabel(index)} belum dihubungkan.',
-    );
-  }
-
-  String _navigationLabel(int index) {
-    switch (index) {
-      case 1:
-        return 'Daftar Tugas';
-      case 2:
-        return 'Riwayat Pekerjaan';
-      case 3:
-        return 'Profil Teknisi';
-      default:
-        return 'Halaman';
-    }
-  }
-
-  // ==========================================================
   // VIEW ALL TASKS
   // ==========================================================
 
   void _onViewAllTasksPressed() {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => DaftarTugasScreen(
-        currentUserUid: widget.currentUserUid,
-        tasks: widget.tasks,
+    if (widget.onViewAllTasksPressed != null) {
+      widget.onViewAllTasksPressed!();
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DaftarTugasScreen(
+          currentUserUid: widget.currentUserUid,
+          tasks: widget.tasks,
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   // ==========================================================
   // NOTIFICATION
@@ -177,20 +143,20 @@ class _TeknisiHomeScreenState extends State<TeknisiHomeScreen> {
   // ==========================================================
 
   void _onTaskPressed(TechnicianTaskItem task) {
-  if (widget.onTaskPressed != null) {
-    widget.onTaskPressed!(task);
-    return;
-  }
+    if (widget.onTaskPressed != null) {
+      widget.onTaskPressed!(task);
+      return;
+    }
 
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => DetailLaporanScreen(
-        task: task,
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DetailLaporanScreen(
+          task: task,
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   // ==========================================================
   // SNACKBAR
@@ -229,7 +195,6 @@ class _TeknisiHomeScreenState extends State<TeknisiHomeScreen> {
 
       child: Scaffold(
         backgroundColor: AppColors.primaryBlue,
-        extendBody: true,
 
         body: Stack(
           children: [
@@ -271,7 +236,7 @@ class _TeknisiHomeScreenState extends State<TeknisiHomeScreen> {
                     width: double.infinity,
 
                     decoration: const BoxDecoration(
-                      color:  Color(0xFFFAFBFD),
+                      color: Color(0xFFFAFBFD),
                       borderRadius: BorderRadius.only(
                         topLeft: Radius.circular(32),
                         topRight: Radius.circular(32),
@@ -285,7 +250,7 @@ class _TeknisiHomeScreenState extends State<TeknisiHomeScreen> {
                         20,
                         22,
                         20,
-                        110,
+                        115,
                       ),
 
                       child: Column(
@@ -306,12 +271,6 @@ class _TeknisiHomeScreenState extends State<TeknisiHomeScreen> {
               ],
             ),
           ],
-        ),
-
-        // BOTTOM NAVIGATION
-        bottomNavigationBar: TeknisiBottomNavBar(
-          selectedIndex: _selectedNavIndex,
-          onItemTapped: _onNavigationTapped,
         ),
       ),
     );
@@ -813,44 +772,44 @@ class _ActiveTaskCard extends StatelessWidget {
         padding: const EdgeInsets.all(13),
 
         decoration: BoxDecoration(
-  color: AppColors.white,
+          color: AppColors.white,
 
-  borderRadius: BorderRadius.circular(19),
+          borderRadius: BorderRadius.circular(19),
 
-  border: Border(
-    top: const BorderSide(
-      color: Color(0xFFE5EAF2),
-      width: 1,
-    ),
+          border: Border(
+            top: const BorderSide(
+              color: Color(0xFFE5EAF2),
+              width: 1,
+            ),
 
-    right: const BorderSide(
-      color: Color(0xFFE5EAF2),
-      width: 1,
-    ),
+            right: const BorderSide(
+              color: Color(0xFFE5EAF2),
+              width: 1,
+            ),
 
-    bottom: const BorderSide(
-      color: Color(0xFFE5EAF2),
-      width: 1,
-    ),
+            bottom: const BorderSide(
+              color: Color(0xFFE5EAF2),
+              width: 1,
+            ),
 
-    left: BorderSide(
-      color: task.isOverdue
-          ? AppColors.statusRejectedText
-          : _priorityColor,
-      width: 4,
-    ),
-  ),
+            left: BorderSide(
+              color: task.isOverdue
+                  ? AppColors.statusRejectedText
+                  : _priorityColor,
+              width: 4,
+            ),
+          ),
 
-  boxShadow: [
-    BoxShadow(
-      color: const Color(0xFF0F172A).withValues(
-        alpha: 0.035,
-      ),
-      blurRadius: 12,
-      offset: const Offset(0, 4),
-    ),
-  ],
-),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF0F172A).withValues(
+                alpha: 0.035,
+              ),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
         child: Row(
           children: [
             // ICON FASILITAS
@@ -1198,154 +1157,6 @@ class _EmptyTaskCard extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ============================================================
-// BOTTOM NAVIGATION BAR
-// ============================================================
-
-class TeknisiBottomNavBar extends StatelessWidget {
-  final int selectedIndex;
-  final ValueChanged<int> onItemTapped;
-
-  const TeknisiBottomNavBar({
-    super.key,
-    required this.selectedIndex,
-    required this.onItemTapped,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
-
-    return Container(
-      height: 78 + bottomPadding,
-
-      padding: EdgeInsets.only(
-        bottom: bottomPadding,
-      ),
-
-      decoration: BoxDecoration(
-        color: AppColors.white,
-
-        border: const Border(
-          top: BorderSide(
-            color: Color(0xFFEEF2F7),
-          ),
-        ),
-
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF0F172A).withValues(
-              alpha: 0.06,
-            ),
-            blurRadius: 16,
-            offset: const Offset(0, -4),
-          ),
-        ],
-      ),
-
-      child: Row(
-        children: [
-          // BERANDA
-          _TeknisiNavItem(
-            icon: Icons.home_rounded,
-            label: 'Beranda',
-            isSelected: selectedIndex == 0,
-            onTap: () => onItemTapped(0),
-          ),
-
-          // TUGAS
-          _TeknisiNavItem(
-            icon: Icons.assignment_outlined,
-            label: 'Tugas',
-            isSelected: selectedIndex == 1,
-            onTap: () => onItemTapped(1),
-          ),
-
-          // RIWAYAT
-          _TeknisiNavItem(
-            icon: Icons.history_rounded,
-            label: 'Riwayat',
-            isSelected: selectedIndex == 2,
-            onTap: () => onItemTapped(2),
-          ),
-
-          // PROFIL
-          _TeknisiNavItem(
-            icon: Icons.person_outline_rounded,
-            label: 'Profil',
-            isSelected: selectedIndex == 3,
-            onTap: () => onItemTapped(3),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ============================================================
-// NAVIGATION ITEM
-// ============================================================
-
-class _TeknisiNavItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _TeknisiNavItem({
-    required this.icon,
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final color = isSelected
-        ? AppColors.primaryBlue
-        : const Color(0xFF8A94A6);
-
-    return Expanded(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 8,
-            vertical: 7,
-          ),
-
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                color: color,
-                size: 23,
-              ),
-
-              const SizedBox(height: 4),
-
-              Text(
-                label,
-
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 10,
-                  fontWeight: isSelected
-                      ? FontWeight.w800
-                      : FontWeight.w500,
-                  color: color,
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

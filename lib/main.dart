@@ -7,6 +7,7 @@ import 'screens/auth/auth_wrapper.dart';
 import 'screens/admin/admin_main_screen.dart';
 import 'screens/pelapor/pelapor_main_screen.dart';
 import 'screens/pelapor/history_laporan_screen.dart';
+import 'screens/teknisi/teknisi_main_screen.dart';
 import 'services/auth_service.dart';
 
 void main() async {
@@ -42,6 +43,7 @@ class MyApp extends StatelessWidget {
         '/admin-main': (context) => const AdminMainScreen(),
         '/admin-dashboard': (context) => const AdminMainScreen(),
         '/pelapor-main': (context) => const PelaporMainScreen(),
+        '/teknisi-main': (context) => const TeknisiMainScreen(),
         '/riwayat-laporan': (context) => const RiwayatLaporanPage(),
       },
     );

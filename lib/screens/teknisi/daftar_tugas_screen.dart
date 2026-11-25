@@ -14,6 +14,7 @@ import 'package:tubes_pemob/screens/teknisi/detail_laporan_screen.dart';
 class DaftarTugasScreen extends StatefulWidget {
   final String currentUserUid;
   final List<TechnicianTaskItem> tasks;
+  final bool showBackButton;
 
   final ValueChanged<TechnicianTaskItem>? onTaskPressed;
 
@@ -21,6 +22,7 @@ class DaftarTugasScreen extends StatefulWidget {
     super.key,
     required this.currentUserUid,
     this.tasks = const [],
+    this.showBackButton = true,
     this.onTaskPressed,
   });
 
@@ -180,45 +182,24 @@ class _DaftarTugasScreenState extends State<DaftarTugasScreen> {
   }
 
   // ==========================================================
-  // SHOW MESSAGE
-  // ==========================================================
-
-  // void _showMessage(String message) {
-  //   ScaffoldMessenger.of(context)
-  //     ..hideCurrentSnackBar()
-  //     ..showSnackBar(
-  //       SnackBar(
-  //         content: Text(
-  //           message,
-  //           style: GoogleFonts.plusJakartaSans(
-  //             fontSize: 12,
-  //           ),
-  //         ),
-  //         behavior: SnackBarBehavior.floating,
-  //         duration: const Duration(seconds: 2),
-  //       ),
-  //     );
-  // }
-
-  // ==========================================================
   // OPEN TASK DETAIL
   // ==========================================================
 
   void _onTaskPressed(TechnicianTaskItem task) {
-  if (widget.onTaskPressed != null) {
-    widget.onTaskPressed!(task);
-    return;
-  }
+    if (widget.onTaskPressed != null) {
+      widget.onTaskPressed!(task);
+      return;
+    }
 
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => DetailLaporanScreen(
-        task: task,
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DetailLaporanScreen(
+          task: task,
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   // ==========================================================
   // BUILD
@@ -241,6 +222,7 @@ class _DaftarTugasScreenState extends State<DaftarTugasScreen> {
           foregroundColor: AppColors.white,
           elevation: 0,
           centerTitle: true,
+          automaticallyImplyLeading: widget.showBackButton,
 
           title: Text(
             'Daftar Tugas',
@@ -251,15 +233,18 @@ class _DaftarTugasScreenState extends State<DaftarTugasScreen> {
             ),
           ),
 
-          leading: IconButton(
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.arrow_back_rounded),
-          ),
+          leading: widget.showBackButton
+              ? IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.arrow_back_rounded),
+                )
+              : null,
         ),
 
         // MAIN CONTENT
         body: SafeArea(
           top: false,
+          bottom: widget.showBackButton,
           child: Container(
             width: double.infinity,
             decoration: const BoxDecoration(
@@ -593,11 +578,11 @@ class _DaftarTugasScreenState extends State<DaftarTugasScreen> {
     return ListView.separated(
       physics: const BouncingScrollPhysics(),
 
-      padding: const EdgeInsets.fromLTRB(
+      padding: EdgeInsets.fromLTRB(
         20,
         0,
         20,
-        25,
+        widget.showBackButton ? 25 : 115,
       ),
 
       itemCount: tasks.length,

@@ -3,9 +3,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:tubes_pemob/constants/app_colors.dart';
 import 'package:tubes_pemob/models/user_model.dart';
 import 'package:tubes_pemob/screens/pelapor/form_pengaduan_screen.dart';
-// Sesuaikan nama file riwayat laporan jika berbeda di foldermu
 import 'package:tubes_pemob/screens/pelapor/history_laporan_screen.dart';
 import 'package:tubes_pemob/screens/shared/profile_screen.dart';
+import 'package:tubes_pemob/screens/teknisi/daftar_tugas_screen.dart';
+import 'package:tubes_pemob/services/auth_service.dart';
 
 class _NavItemData {
   final IconData icon;
@@ -67,38 +68,44 @@ class BottomNavbar extends StatelessWidget {
   void _handleDefaultTap(BuildContext context, int index) {
     if (index == selectedIndex) return;
 
-    if (role == UserRole.pelapor) {
-      switch (index) {
-        case 0:
-          Navigator.of(context).popUntil((route) => route.isFirst);
-          break;
-        case 1:
+    switch (index) {
+      case 0:
+        Navigator.of(context).popUntil((route) => route.isFirst);
+        break;
+      case 1:
+        if (role == UserRole.pelapor) {
           _navigateToTab(context, const RiwayatLaporanPage());
-          break;
-        case 2:
-          ScaffoldMessenger.of(context)
-            ..hideCurrentSnackBar()
-            ..showSnackBar(
-              SnackBar(
-                content: Text(
-                  'Halaman Notifikasi belum tersedia.',
-                  style: GoogleFonts.plusJakartaSans(fontSize: 12),
-                ),
-                behavior: SnackBarBehavior.floating,
-                duration: const Duration(seconds: 2),
-              ),
-            );
-          break;
-        case 3:
-          _navigateToTab(context, const ProfileScreen());
-          break;
-      }
+        } else if (role == UserRole.teknisi) {
+          final uid = AuthService.instance.currentUser?.uid ?? '';
+          _navigateToTab(context, DaftarTugasScreen(currentUserUid: uid));
+        } else {
+          _showUnavailableMessage(context, 'Halaman Daftar Tiket belum tersedia.');
+        }
+        break;
+      case 2:
+        _showUnavailableMessage(context, 'Halaman Notifikasi belum tersedia.');
+        break;
+      case 3:
+        _navigateToTab(context, const ProfileScreen());
+        break;
     }
   }
 
-  /// Jika berpindah dari Beranda (index 0), pakai push agar tombol Back kembali ke Beranda.
-  /// Jika berpindah antar tab non-Beranda (misal Riwayat <-> Profil), pakai pushReplacement
-  /// supaya tumpukan halaman tidak menumpuk.
+  void _showUnavailableMessage(BuildContext context, String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            message,
+            style: GoogleFonts.plusJakartaSans(fontSize: 12),
+          ),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+  }
+
   void _navigateToTab(BuildContext context, Widget destination) {
     final route = MaterialPageRoute(builder: (_) => destination);
     if (selectedIndex == 0) {
@@ -113,7 +120,10 @@ class BottomNavbar extends StatelessWidget {
       Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => const CreateReportScreen()),
       );
+      return;
     }
+
+    _showUnavailableMessage(context, 'Fitur pemindaian QR belum tersedia.');
   }
 
   @override
@@ -127,7 +137,6 @@ class BottomNavbar extends StatelessWidget {
         clipBehavior: Clip.none,
         alignment: Alignment.bottomCenter,
         children: [
-          // Bar Putih Utama
           Container(
             height: 64 + bottomPadding,
             padding: EdgeInsets.only(bottom: bottomPadding),
@@ -180,8 +189,6 @@ class BottomNavbar extends StatelessWidget {
               ],
             ),
           ),
-
-          // Tombol Kamera / QR Melayang di Tengah
           Positioned(
             top: 0,
             child: Material(

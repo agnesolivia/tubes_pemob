@@ -80,7 +80,7 @@ Halaman ini menerima parameter `assetId` yang bersifat *nullable* (`String?`) be
 
 ### E. Profil Pengguna (`profile_screen.dart`)
 
-* **Semua Role:** Melihat informasi akun (Nama, Email, Role), mengubah nama tampilan, menampilkan **QR Code Profil Akun** (`USER:${user.uid}` untuk keperluan aktivasi teknisi oleh Admin), dan tombol **Logout**. Halaman ini tidak memuat `bottomNavigationBar` sendiri sehingga dapat langsung disematkan ke dalam `IndexedStack` milik `PelaporMainScreen`, `AdminMainScreen`, maupun `TeknisiMainScreen`.
+* **Semua Role:** Melihat informasi akun (Nama, Email, Role), mengubah nama tampilan, mengubah/menghapus foto profil (`photoBase64` di `users/{uid}`), menampilkan **QR Code Profil Akun** (`USER:${user.uid}` untuk keperluan aktivasi teknisi oleh Admin), dan tombol **Logout**. Halaman ini tidak memuat `bottomNavigationBar` sendiri sehingga dapat langsung disematkan ke dalam `IndexedStack` milik `PelaporMainScreen`, `AdminMainScreen`, maupun `TeknisiMainScreen`.
 
 ## 2. Alur Role: Pelapor (`screens/pelapor/`)
 

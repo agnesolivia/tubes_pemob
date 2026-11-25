@@ -45,7 +45,7 @@ lib/
     │   ├── detail_laporan_screen.dart    # Detail tiket lengkap + tombol aksi dinamis sesuai role
     │   ├── history_asset_screen.dart     # Info aset/ruangan & rekam jejak seluruh kerusakannya
     │   ├── notification_screen.dart      # Daftar notifikasi real-time lintas role
-    │   └── profile_screen.dart           # Profil akun, edit nama, QR Code profil (USER:<uid>), & logout
+    │   └── profile_screen.dart           # Profil akun, edit nama & foto, QR Code profil (USER:<uid>), & logout
     │
     ├── pelapor/                          # Khusus Sivitas Akademika & Pengunjung Kampus
     │   ├── pelapor_main_screen.dart      # Shell utama dengan IndexedStack & BottomNavbar tab Pelapor
@@ -154,7 +154,7 @@ Proyek ini menggunakan **4 koleksi sejajar (*root collections*)** tanpa *subcoll
 > **Aturan ID Dokumen (`doc.id` Murni):** Seluruh koleksi tidak menyimpan ulang field ID di dalam isi dokumen; `fromFirestore` langsung mengambilnya dari `doc.id`. Koleksi `users` wajib disimpan menggunakan `.doc(uid).set(...)`, sedangkan koleksi `assets`, `reports`, dan `notifications` menggunakan **Auto-ID Firestore** (`.doc()` / `.add(...)`).
 
 1. **`users`** *(Document ID = `uid` dari Firebase Auth)*
-   * `nama`, `email`, `role` (`'pelapor'` | `'admin'` | `'teknisi'`), `createdAt`.
+   * `nama`, `email`, `role` (`'pelapor'` | `'admin'` | `'teknisi'`), `photoBase64` *(opsional, Base64 < 250 KB)*, `createdAt`.
 2. **`assets`** *(Document ID = Auto-generated Firestore ID; payload QR di-generate dengan prefix `'ASSET:<doc.id>'`)*
    * `nama` *(unik secara case-insensitive per kombinasi `gedung` + `ruangan`, misal `'Kursi#01'`)*, `kategori`, `gedung`, `ruangan`, `createdAt`.
 3. **`reports`** *(Document ID = Auto-generated)*

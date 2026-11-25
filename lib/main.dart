@@ -9,6 +9,7 @@ import 'screens/pelapor/pelapor_main_screen.dart';
 import 'screens/pelapor/history_laporan_screen.dart';
 import 'screens/teknisi/teknisi_main_screen.dart';
 import 'services/auth_service.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,6 +36,7 @@ class MyApp extends StatelessWidget {
           seedColor: Colors.blue,
         ),
         useMaterial3: true,
+        fontFamily: GoogleFonts.plusJakartaSans().fontFamily,
       ),
       initialRoute: '/',
       routes: {

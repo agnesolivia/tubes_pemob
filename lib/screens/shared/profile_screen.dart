@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:tubes_pemob/models/report_model.dart';
 import 'package:tubes_pemob/models/user_model.dart';
 import 'package:tubes_pemob/services/auth_service.dart';
@@ -34,7 +35,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: Text(
+          message,
+          style: GoogleFonts.plusJakartaSans(),
+        ),
         backgroundColor:
             isError ? _ProfileColors.danger : _ProfileColors.primary,
         behavior: SnackBarBehavior.floating,
@@ -52,13 +56,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              title: const Text('Edit Nama Profil'),
+              title: Text(
+                'Edit Nama Profil',
+                style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
+              ),
               content: TextField(
                 controller: controller,
                 autofocus: true,
                 textCapitalization: TextCapitalization.words,
-                decoration: const InputDecoration(
+                style: GoogleFonts.plusJakartaSans(),
+                decoration: InputDecoration(
                   hintText: 'Masukkan nama lengkap',
+                  hintStyle: GoogleFonts.plusJakartaSans(),
                 ),
               ),
               actions: [
@@ -66,7 +75,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   onPressed: isSaving
                       ? null
                       : () => Navigator.of(dialogContext).pop(),
-                  child: const Text('Batal'),
+                  child: Text(
+                    'Batal',
+                    style: GoogleFonts.plusJakartaSans(),
+                  ),
                 ),
                 ElevatedButton(
                   onPressed: isSaving
@@ -100,7 +112,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           height: 16,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Simpan'),
+                      : Text(
+                          'Simpan',
+                          style: GoogleFonts.plusJakartaSans(),
+                        ),
                 ),
               ],
             );
@@ -129,12 +144,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Keluar dari Akun?'),
-        content: const Text('Anda perlu masuk kembali untuk mengakses aplikasi.'),
+        title: Text(
+          'Keluar dari Akun?',
+          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
+        ),
+        content: Text(
+          'Anda perlu masuk kembali untuk mengakses aplikasi.',
+          style: GoogleFonts.plusJakartaSans(),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Batal'),
+            child: Text(
+              'Batal',
+              style: GoogleFonts.plusJakartaSans(),
+            ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
@@ -142,7 +166,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               backgroundColor: _ProfileColors.danger,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Keluar'),
+            child: Text(
+              'Keluar',
+              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),
@@ -168,8 +195,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final currentUser = AuthService.instance.currentUser;
 
     if (currentUser == null) {
-      return const Scaffold(
-        body: Center(child: Text('Pengguna belum masuk.')),
+      return Scaffold(
+        body: Center(
+          child: Text(
+            'Pengguna belum masuk.',
+            style: GoogleFonts.plusJakartaSans(),
+          ),
+        ),
       );
     }
 
@@ -185,7 +217,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               createdAt: DateTime.now(),
             );
 
-        return Scaffold(
+return Scaffold(
           backgroundColor: _ProfileColors.primary,
           body: Column(
             children: [
@@ -246,9 +278,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Expanded(
               child: Column(
                 children: [
-                  const Text(
+                  Text(
                     'Profil Saya',
-                    style: TextStyle(
+                    style: GoogleFonts.plusJakartaSans(
                       color: Colors.white,
                       fontSize: 20,
                       fontWeight: FontWeight.w800,
@@ -257,8 +289,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 4),
                   Text(
                     subtitle,
-                    style: const TextStyle(
-                      color: Color(0xFFD6E4FF),
+                    style: GoogleFonts.plusJakartaSans(
+                      color: const Color(0xFFD6E4FF),
                       fontSize: 12,
                     ),
                   ),
@@ -320,7 +352,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => Text(
                           _getInitial(user.nama),
-                          style: const TextStyle(
+                          style: GoogleFonts.plusJakartaSans(
                             fontSize: 32,
                             fontWeight: FontWeight.w800,
                             color: _ProfileColors.primary,
@@ -331,7 +363,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   }
                   return Text(
                     _getInitial(user.nama),
-                    style: const TextStyle(
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 32,
                       fontWeight: FontWeight.w800,
                       color: _ProfileColors.primary,
@@ -366,7 +398,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 Text(
                   user.nama,
-                  style: const TextStyle(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
                     color: _ProfileColors.textDark,
@@ -375,7 +407,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(height: 2),
                 Text(
                   user.email,
-                  style: const TextStyle(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 13,
                     color: _ProfileColors.textGrey,
                   ),
@@ -419,9 +451,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                  Text(
                     'Ringkasan Laporan Kamu',
-                    style: TextStyle(
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                       color: _ProfileColors.textDark,
@@ -429,7 +461,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   Text(
                     'Total ${reports.length} Laporan',
-                    style: const TextStyle(
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                       color: _ProfileColors.primary,
@@ -491,7 +523,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 8),
             Text(
               count,
-              style: const TextStyle(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 26,
                 fontWeight: FontWeight.w800,
                 color: _ProfileColors.textDark,
@@ -501,7 +533,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Text(
               caption,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 10,
                 color: _ProfileColors.textGrey,
               ),
@@ -546,7 +578,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           Text(
             label,
-            style: const TextStyle(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 13,
               color: _ProfileColors.textGrey,
             ),
@@ -555,7 +587,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Text(
               value,
               textAlign: TextAlign.right,
-              style: const TextStyle(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
                 color: _ProfileColors.textDark,
@@ -672,7 +704,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                       color: _ProfileColors.textDark,
@@ -681,7 +713,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 2),
                   Text(
                     subtitle,
-                    style: const TextStyle(
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 11,
                       color: _ProfileColors.textGrey,
                     ),
@@ -711,9 +743,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           size: 18,
           color: _ProfileColors.danger,
         ),
-        label: const Text(
+        label: Text(
           'Keluar',
-          style: TextStyle(
+          style: GoogleFonts.plusJakartaSans(
             color: _ProfileColors.danger,
             fontWeight: FontWeight.w700,
           ),
@@ -738,7 +770,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Text(
         text,
-        style: const TextStyle(
+        style: GoogleFonts.plusJakartaSans(
           fontSize: 13,
           fontWeight: FontWeight.w700,
           color: _ProfileColors.textDark,
@@ -759,7 +791,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       child: Text(
         text,
-        style: TextStyle(
+        style: GoogleFonts.plusJakartaSans(
           fontSize: 10,
           fontWeight: FontWeight.w700,
           color: fg,

@@ -5,6 +5,8 @@ import 'package:tubes_pemob/constants/app_colors.dart';
 import 'package:tubes_pemob/screens/auth/login_screen.dart';
 import 'package:tubes_pemob/services/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:tubes_pemob/screens/auth/email_verification_screen.dart';
+
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -58,13 +60,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _isEmailLoading = true);
     try {
       await AuthService.instance.registerWithEmail(
-        nama: nama,
-        email: email,
-        password: password,
-      );
-      if (mounted && Navigator.of(context).canPop()) {
-        Navigator.of(context).popUntil((route) => route.isFirst);
-      }
+  nama: nama,
+  email: email,
+  password: password,
+);
+if (!mounted) return;
+Navigator.of(context).pushReplacement(
+  MaterialPageRoute(
+    builder: (context) => const EmailVerificationScreen(),
+  ),
+);
     } on FirebaseAuthException catch (e) {
       if (e.code == 'email-already-in-use') {
         _showMessage('Email sudah terdaftar. Silakan masuk.');

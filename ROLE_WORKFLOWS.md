@@ -32,17 +32,41 @@ Dokumen ini berisi rincian **apa saja yang bisa dilakukan oleh masing-masing akt
 
 ### B. Detail Laporan (`detail_laporan_screen.dart`)
 
-Satu halaman bersama untuk melihat detail tiket (`ReportModel`), berisi informasi aset, lokasi, deskripsi, foto kerusakan (`fotoSebelum`), foto hasil perbaikan (`fotoSesudah` jika sudah selesai), indikator SLA, dan riwayat perubahan status.
+Satu halaman bersama untuk melihat detail tiket (`ReportModel`), berisi informasi aset, lokasi, deskripsi, foto kerusakan (`fotoSebelum`), foto hasil perbaikan (`fotoSesudah` jika sudah selesai), indikator SLA, lencana status konfirmasi (`isConfirmed`), dan riwayat perubahan status.
 
-* **Tombol Aksi Dinamis:** Bagian aksi di halaman ini berubah menyesuaikan kombinasi **`user.role`** dan **`report.status`** (rincian tiap role ada di bagian bawah).
+* **Tombol Aksi Dinamis:** Bagian aksi utama di halaman ini berubah menyesuaikan kombinasi **`user.role`** dan **`report.status`** (rincian tiap role ada di bagian bawah).
+
+* **Aturan Konfirmasi Selesai & Sanggahan (*Re-open*) pada Status `resolved`:**
+
+  * **Hak Akses Aksi:** Tombol tindak lanjut pada tiket berstatus `ReportStatus.resolved` (ketika `isConfirmed == false`) hanya ditampilkan kepada **Pelapor pembuat laporan** (`report.pelaporId == currentUser.uid`) dan **Admin** (`user.isAdmin`, sebagai *supervisor override*). Pelapor lain yang membuka tiket hanya memiliki akses baca (*read-only*).
+
+  * **Konfirmasi Selesai:** Mengubah `isConfirmed` menjadi `true` (status tetap `ReportStatus.resolved`), menampilkan lencana *"Terkonfirmasi"*, dan menambahkan catatan log ke `riwayatStatus`.
+
+  * **Belum Beres / Ajukan Ulang (*Re-open*):** Mewajibkan pengisian catatan/alasan singkat, mengembalikan status tiket dari `resolved` menjadi `assigned` (`resolvedAt: null`, `isConfirmed: false`), mencatat riwayat sanggahan di `riwayatStatus`, serta mengirim notifikasi ke Admin dan Teknisi terkait.
+
+* **Konsistensi Informasi & Tombol Riwayat Aset:**
+
+  * Baris informasi aset menampilkan `${report.assetNama} (${report.assetId})` apabila `assetId != null`, atau hanya `report.assetNama` apabila `assetId == null`.
+
+  * Tombol **Lihat Riwayat Aset** selalu tampil aktif dan seragam untuk **semua role** (Pelapor, Admin, dan Teknisi) serta untuk semua kondisi tiket (`assetId != null` maupun `assetId == null`), mengarahkan pengguna ke `HistoryAssetScreen` dengan membawa `assetId` beserta data *fallback* `assetNama` dan `assetLokasi`.
 
 ### C. Riwayat Aset / Ruangan (`history_asset_screen.dart`)
 
-* Menampilkan detail fasilitas (`nama`, `kategori`, `gedung`, `ruangan`) dan daftar seluruh laporan kerusakan yang pernah terjadi pada `assetId` tersebut.
+Halaman ini menerima parameter `assetId` yang bersifat *nullable* (`String?`) beserta data *fallback* (`fallbackNama` dan `fallbackLokasi`) untuk menangani dua skenario berikut:
 
-* **Aturan Data:** Laporan berstatus `ReportStatus.rejected` **tidak ditampilkan** di halaman ini agar rekam jejak kerusakan aset tetap valid.
+1. **Jika `assetId != null` (Aset Terdaftar di Koleksi `assets`):**
 
-* **Pencegahan Laporan Ganda:** Jika di aset tersebut masih ada tiket aktif (`reported`, `verified`, `assigned`, atau `inProgress`), sistem memberi penanda bahwa kerusakan sedang ditangani.
+   * Menampilkan detail fasilitas (`nama`, `kategori`, `gedung`, `ruangan`) dari koleksi `assets` dan daftar seluruh laporan kerusakan pada `assetId` tersebut (jika belum pernah dilaporkan, tampilkan *empty state* *"Belum ada riwayat kerusakan untuk aset ini"*).
+
+   * **Aturan Data:** Laporan berstatus `ReportStatus.rejected` **tidak ditampilkan** di halaman ini agar rekam jejak kerusakan aset tetap valid.
+
+   * **Pencegahan Laporan Ganda:** Jika di aset tersebut masih ada tiket aktif (`reported`, `verified`, `assigned`, atau `inProgress`), sistem memberi penanda bahwa kerusakan sedang ditangani.
+
+2. **Jika `assetId == null` (Fasilitas Lainnya / Belum Terdaftar):**
+
+   * Halaman tidak melakukan *query* ke koleksi `assets` maupun riwayat `reports`, melainkan menampilkan kartu informasi nama & lokasi fasilitas dari tiket dengan penanda **"Belum Terdaftar di Inventaris"**, disertai ilustrasi dan pesan penjelasan bahwa fasilitas dilaporkan secara manual sehingga belum memiliki rekam jejak unit.
+
+   * **Khusus Admin (`user.isAdmin`):** Tepat di bawah pesan tersebut, tampilkan tombol aksi **"Daftarkan sebagai Aset Baru"** untuk membuka form tambah aset di `KelolaAsetScreen` dengan nama aset (`fallbackNama`) dan informasi lokasi (`fallbackLokasi`) sudah terisi otomatis (*pre-filled*).
 
 ### D. Notifikasi Dalam Aplikasi (`notification_screen.dart`)
 
@@ -76,11 +100,13 @@ Aktor: Sivitas Akademika dan Pengunjung/Tamu Kampus.
 
    * **Validasi Prefix:** Sistem memastikan teks QR diawali `ASSET:` (jika berawalan `USER:` atau format tidak dikenal, tampilkan pesan error yang sesuai). Setelah valid, awalan `ASSET:` dilepas untuk mendapatkan `assetId` murni (`AC-R204`).
 
-   * Sistem mencocokkan `assetId` ke koleksi `assets`. Jika ditemukan, pengguna diarahkan ke `HistoryAssetScreen` untuk melihat riwayat aset tersebut, lalu menekan tombol **Buat Laporan** menuju `FormPengaduanScreen` dengan data aset sudah terisi otomatis.
+   * Sistem mencocokkan `assetId` ke koleksi `assets`. Jika ditemukan, pengguna diarahkan ke `HistoryAssetScreen` untuk melihat riwayat aset tersebut terlebih dahulu, lalu menekan tombol **Buat Laporan** menuju `FormPengaduanScreen` dengan data aset sudah terisi otomatis.
 
 3. **Jalur 2 — Lapor Manual (`form_pengaduan_screen.dart`):**
 
-   * Jika masuk tanpa QR (`selectedAsset == null`), pengguna memilih **Gedung** $\rightarrow$ **Ruangan** $\rightarrow$ **Aset** melalui *dropdown* berjenjang.
+   * **Aset Terdaftar di Sistem:** Jika masuk tanpa QR (`selectedAsset == null`), pengguna memilih **Gedung** $\rightarrow$ **Ruangan** $\rightarrow$ **Aset** melalui *dropdown* berjenjang dari koleksi `assets` (mengisi `assetId`, `assetNama`, dan `assetLokasi`). Saat aset terpilih di *dropdown*, tersedia pula pintasan **"Lihat Riwayat Aset"** menuju `HistoryAssetScreen` agar Pelapor dapat mengecek riwayat aset sebelum mengirim laporan.
+
+   * **Opsi Ekstra — "Fasilitas Lainnya / Tidak Terdaftar":** Digunakan apabila fasilitas yang rusak belum dibuatkan data master oleh Admin atau berupa kerusakan bangunan umum (misalnya keramik pecah, atap bocor, kaca retak, atau kran air rusak). Ketika opsi ini dipilih, pengguna cukup mengisi **Nama Fasilitas** (`assetNama`) dan **Lokasi** (`assetLokasi`) secara manual, sehingga laporan dikirim dengan nilai **`assetId: null`**.
 
 4. **Pengisian & Pengiriman Laporan (`form_pengaduan_screen.dart`):**
 
@@ -100,7 +126,11 @@ Aktor: Sivitas Akademika dan Pengunjung/Tamu Kampus.
 
    * **Jika status `rejected`:** Pelapor dapat membaca alasan penolakan (`rejectionReason`) dari Admin.
 
-   * **Jika status `resolved`:** Pelapor melihat perbandingan foto sebelum & sesudah perbaikan, serta dapat menekan tombol **Konfirmasi Selesai**.
+   * **Jika status `resolved` (dan `isConfirmed == false`):** Pelapor pembuat laporan melihat perbandingan foto sebelum & sesudah perbaikan, lalu memilih salah satu dari dua tindakan:
+
+     * **Konfirmasi Selesai:** Menandai `isConfirmed = true` sebagai tanda perbaikan sudah sesuai.
+
+     * **Belum Beres / Ajukan Ulang:** Mengisi catatan singkat apa yang masih bermasalah agar tiket dibuka kembali menjadi `assigned` (dengan tenggat SLA awal tetap berjalan).
 
 ## 3. Alur Role: Admin (`screens/admin/`)
 
@@ -116,7 +146,9 @@ Aktor: Pengelola Sarana & Prasarana Kampus.
 
 2. **Verifikasi, Penolakan & Penugasan (`kelola_laporan_screen.dart` & `detail_laporan_screen.dart`):**
 
-   * Admin memfilter daftar seluruh laporan masuk berdasarkan status, gedung, atau tingkat prioritas.
+   * Admin memfilter daftar seluruh laporan masuk berdasarkan status, gedung, atau tingkat prioritas (termasuk kemampuan memantau tiket dari jalur *Fasilitas Lainnya* dengan `assetId == null`).
+
+   * **Penanganan Laporan Tanpa ID Aset (`assetId == null`):** Laporan yang dikirim lewat opsi *Fasilitas Lainnya* tetap masuk ke antrean `reported` secara normal. Admin dapat langsung memverifikasi dan menugaskan teknisi **tanpa wajib membuat data baru di `kelola_aset_screen.dart`**. Jika objek tersebut merupakan unit inventaris yang sering dilaporkan dan perlu stiker QR, Admin dapat membuka **Lihat Riwayat Aset** dari `DetailLaporanScreen` lalu menekan tombol **"Daftarkan sebagai Aset Baru"** di dalam `HistoryAssetScreen`.
 
    * **Aksi pada tiket `reported`:**
 
@@ -126,9 +158,11 @@ Aktor: Pengelola Sarana & Prasarana Kampus.
 
    * **Aksi pada tiket `verified`:** Admin memilih teknisi untuk mengubah status menjadi `assigned`.
 
-   * **Aksi pada tiket `assigned` / `inProgress`:** Admin dapat mengalihkan tugas ke teknisi lain jika terjadi kendala di lapangan.
+   * **Aksi pada tiket `assigned` / `inProgress`:** Admin dapat mengalihkan tugas ke teknisi baru/lain (**Alihkan Teknisi**) jika terjadi kendala di lapangan atau setelah tiket dibuka kembali akibat perbaikan sebelumnya belum beres.
 
-   * *Catatan:* Setiap perubahan status otomatis mengirim notifikasi ke Pelapor (dan Teknisi jika ditugaskan).
+   * **Aksi pada tiket `resolved` (Pengawasan & *Supervisor Override*):** Admin menerima notifikasi saat teknisi menandai tugas selesai dan dapat mengecek foto hasil perbaikan (`fotoSesudah`). Admin berhak menekan **Konfirmasi Selesai** (`isConfirmed = true`) apabila pelapor tidak merespons dan hasil perbaikan sudah valid, atau menekan **Belum Beres / Ajukan Ulang** (mengembalikan status ke `assigned`) lalu mengalihkannya ke teknisi baru jika hasil kerja teknisi tidak sesuai.
+
+   * *Catatan:* Setiap perubahan status otomatis mengirim notifikasi ke pihak terkait serta dicatat dalam `riwayatStatus`.
 
 3. **Kelola Aset & Generator QR (`kelola_aset_screen.dart`):**
 
@@ -160,17 +194,17 @@ Aktor: Petugas Perbaikan Lapangan (Staf Internal Kampus).
 
    * `TeknisiMainScreen` membungkus 4 halaman tab (`Beranda`, `Tugas`, `Notifikasi`, `Profil`) menggunakan `IndexedStack` dan 1 `BottomNavbar` permanen di bawah (dengan tombol tengah pemindai QR aset untuk akses cepat tiket ruangan).
 
-   * Di beranda, Teknisi melihat ringkasan jumlah tugas pribadi (*Baru Ditugaskan*, *Sedang Dikerjakan*, *Selesai*) serta daftar tugas aktif yang **diurutkan otomatis berdasarkan batas SLA terdekat / paling mendesak**.
+   * Di beranda, Teknisi melihat ringkasan jumlah tugas pribadi (*Baru Ditugaskan*, *Sedang Dikerjakan*, *Selesai*) serta daftar tugas aktif yang **diurutkan otomatis berdasarkan batas SLA terdekat / paling mendesak** (termasuk tiket *re-open* yang sudah melewati SLA awal).
 
 2. **Daftar Tugas (`daftar_tugas_screen.dart`):**
 
-   * Menampilkan seluruh laporan dengan `teknisiId == currentUser.uid`.
+   * Menampilkan seluruh laporan dengan `teknisiId == currentUser.uid` (baik yang memiliki `assetId` maupun yang `assetId == null`).
 
    * Mendukung filter berdasarkan **Status** (`assigned`, `inProgress`, `resolved`) dan **Gedung** (memudahkan teknisi mengerjakan beberapa tugas dalam satu gedung sekaligus).
 
 3. **Eksekusi Perbaikan (`detail_laporan_screen.dart` & `form_penyelesaian_screen.dart`):**
 
-   * **Jika status `assigned`:** Teknisi membuka detail tiket (bisa mengecek `HistoryAssetScreen` untuk melihat riwayat servis alat sebelumnya), lalu menekan tombol **Mulai Kerjakan** saat tiba di lokasi. Status berubah menjadi `inProgress` dan notifikasi terkirim ke Pelapor.
+   * **Jika status `assigned`:** Teknisi membuka detail tiket (dapat menekan **Lihat Riwayat Aset** untuk mengecek `HistoryAssetScreen`—baik untuk melihat riwayat servis unit terdaftar maupun keterangan bahwa fasilitas belum terdaftar di inventaris), lalu menekan tombol **Mulai Kerjakan** saat tiba di lokasi. Status berubah menjadi `inProgress` dan notifikasi terkirim ke Pelapor.
 
    * **Jika status `inProgress`:** Teknisi menekan tombol **Selesaikan Tugas** untuk membuka `FormPenyelesaianScreen`.
 
@@ -178,7 +212,7 @@ Aktor: Petugas Perbaikan Lapangan (Staf Internal Kampus).
 
      * Teknisi wajib mengunggah foto hasil perbaikan (`fotoSesudah`) dan mengisi catatan tindakan perbaikan (`catatanTeknisi`).
 
-     * Saat disimpan: status berubah menjadi `resolved`, `resolvedAt` dicatat, dan sistem mengirim notifikasi ke Pelapor serta Admin.
+     * Saat disimpan: status langsung berubah menjadi `resolved`, `resolvedAt` dicatat, dan sistem mengirim notifikasi ke Pelapor serta Admin. Jika Pelapor atau Admin mengajukan sanggahan (*Belum Beres*), tiket akan kembali muncul pada status `assigned` selama belum dialihkan Admin ke teknisi lain.
 
 ## 5. Catatan Teknis Penting (Wajib Diperhatikan Tim)
 
@@ -190,7 +224,7 @@ Aktor: Petugas Perbaikan Lapangan (Staf Internal Kampus).
 
    * Untuk menampilkan gambar di UI, decode string Base64 menggunakan `StorageService.instance.base64ToBytes(base64String)`.
 
-2. **Rumus Perhitungan SLA (`deadlineAt`):**
+2. **Rumus Perhitungan SLA (`deadlineAt`) & Aturan *Re-open*:**
 
    * Dihitung otomatis saat Admin memverifikasi laporan berdasarkan prioritas yang dipilih (`ReportPriority.slaHours`):
 
@@ -200,15 +234,17 @@ Aktor: Petugas Perbaikan Lapangan (Staf Internal Kampus).
 
      * **`rendah`:** `verifiedAt + 168 jam` (7 hari)
 
-   * Tiket dianggap **Overdue (Melewati SLA)** jika `report.isOverdue == true`.
+   * `deadlineAt` bersifat tetap (*fixed timestamp*) dan **tidak di-reset** apabila tiket berstatus `resolved` dibuka kembali (*re-open*) menjadi `assigned` karena pekerjaan belum beres. Jika waktu saat *re-open* sudah melewati `deadlineAt`, maka `report.isOverdue` otomatis kembali bernilai `true`.
 
-3. **Denormalisasi Data pada Koleksi `reports`:**
+3. **Denormalisasi Data & Field `assetId` Nullable pada Koleksi `reports`:**
 
    * Saat membuat atau memperbarui tiket di `ReportService`, wajib ikut menyimpan `assetNama`, `assetLokasi`, `pelaporNama`, dan `teknisiNama` langsung di dokumen `reports`. Tujuannya agar halaman daftar tiket dapat menampilkan nama aset dan pelapor dalam satu kali *query* tanpa melakukan pembacaan ulang ke koleksi `assets` dan `users`.
 
-4. **Pemicu Notifikasi (`NotificationModel`):**
+   * Field `assetId` bersifat *nullable* (`String?`): terisi ID aset murni jika berasal dari Scan QR atau *dropdown* `assets`, dan bernilai `null` jika Pelapor memilih opsi *Fasilitas Lainnya / Tidak Terdaftar*.
 
-   * Pembuatan dokumen notifikasi dilakukan langsung di dalam *method* `ReportService` setiap kali status laporan berubah—tidak perlu memakai Cloud Functions.
+4. **Pemicu Notifikasi (`NotificationModel`) & Audit `riwayatStatus`:**
+
+   * Pembuatan dokumen notifikasi dan penambahan log `StatusHistoryItem` pada array `riwayatStatus` dilakukan langsung di dalam *method* `ReportService` setiap kali status laporan berubah maupun saat tindakan **Konfirmasi Selesai** (`isConfirmed = true`) dan **Belum Beres** (*re-open* ke `assigned`) dijalankan—tidak perlu memakai Cloud Functions.
 
 5. **Gunakan Enum dari File Model (Jangan Hardcode String):**
 
@@ -227,7 +263,9 @@ Aktor: Petugas Perbaikan Lapangan (Staf Internal Kampus).
    * ID Aset (`asset.id`) **dilarang mengandung karakter garis miring (`/`)** karena akan terbaca sebagai jalur *subcollection* oleh Firestore (gunakan tanda hubung `-`, misal: `AC-R204`).
 
    * **Standar Payload QR Code:** Meskipun `doc.id` di Firestore disimpan murni tanpa awalan, teks di dalam QR Code wajib memakai awalan agar pemindai bisa memvalidasi tipe QR secara otomatis:
+
      * QR Fasilitas / Aset: **`ASSET:<asset.id>`** (contoh: `ASSET:AC-R204`)
+
      * QR Profil Pengguna: **`USER:<user.uid>`** (contoh: `USER:x9K2mP7qL1vB8nR4`)
 
 ## 6. Checklist Pengerjaan Tim (Paralel & Anti-Blocking)
@@ -268,7 +306,7 @@ Agar seluruh anggota tim bisa mengerjakan tugas secara bersamaan tanpa saling me
 
 * [x] `services/notification_service.dart` (Stream notifikasi real-time, hitung belum dibaca, & tandai sudah dibaca)
 
-* [x] `services/report_service.dart` (CRUD laporan, transisi status, hitung SLA, & pemicu notifikasi)
+* [x] `services/report_service.dart` (CRUD laporan, transisi status, hitung SLA, konfirmasi/`re-open`, & pemicu notifikasi)
 
 ### Jalur B — Komponen UI Reusable (`widgets/`)
 
@@ -292,9 +330,9 @@ Agar seluruh anggota tim bisa mengerjakan tugas secara bersamaan tanpa saling me
 
 * [ ] `screens/auth/auth_wrapper.dart` (*Auto-routing* sesuai verifikasi email & `user.role`)
 
-* [ ] `screens/shared/detail_laporan_screen.dart` (Detail tiket + tombol aksi kondisional per kombinasi role & status)
+* [ ] `screens/shared/detail_laporan_screen.dart` (Detail tiket + tombol aksi kondisional per kombinasi role & status, termasuk konfirmasi & *re-open*)
 
-* [ ] `screens/shared/history_asset_screen.dart` (Info aset & riwayat kerusakan non-`rejected`)
+* [ ] `screens/shared/history_asset_screen.dart` (Info aset terdaftar & riwayat kerusakan non-`rejected`, atau tampilan fasilitas belum terdaftar + opsi daftar aset baru untuk Admin)
 
 * [ ] `screens/shared/notification_screen.dart` (Daftar notifikasi *real-time* & tandai sudah dibaca)
 
@@ -308,7 +346,7 @@ Agar seluruh anggota tim bisa mengerjakan tugas secara bersamaan tanpa saling me
 
 * [ ] `screens/pelapor/scan_qr_screen.dart` (Pemindai kamera QR & validasi prefix `ASSET:` / `USER:`)
 
-* [ ] `screens/pelapor/form_pengaduan_screen.dart` (Form dual-mode: otomatis dari QR & *dropdown* manual + unggah foto)
+* [ ] `screens/pelapor/form_pengaduan_screen.dart` (Form dual-mode: otomatis dari QR, *dropdown* manual, & opsi *Fasilitas Lainnya* dengan `assetId: null`)
 
 * [ ] `screens/pelapor/history_laporan_screen.dart` (Daftar riwayat laporan pelapor + filter status)
 

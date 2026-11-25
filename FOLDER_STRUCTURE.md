@@ -8,64 +8,64 @@ Proyek ini menggunakan pola **Layer-First** yang dikombinasikan dengan pemisahan
 
 ```text
 lib/
-├── main.dart                             # Entry point aplikasi, inisialisasi Firebase, & routing awal
+├── main.dart                                # Entry point aplikasi, inisialisasi Firebase, & routing awal
 │
-├── constants/                            # Nilai konstan & konfigurasi global
-│   ├── app_colors.dart                   # Palet warna utama, status badge, & tema
-│   └── app_constants.dart                # Nama koleksi Firestore, kategori default, & teks umum
+├── constants/                               # Nilai konstan & konfigurasi global
+│   ├── app_colors.dart                      # Palet warna utama, status badge, & tema
+│   └── app_constants.dart                   # Nama koleksi Firestore, kategori default, & teks umum
 │
-├── models/                               # Blueprint objek data, enum, & konversi Firestore
-│   ├── user_model.dart                   # UserModel + enum UserRole ('pelapor' | 'admin' | 'teknisi')
-│   ├── asset_model.dart                  # AssetModel (data ruangan/aset kampus & kode QR)
-│   ├── report_model.dart                 # ReportModel, StatusHistoryItem, & enum ReportStatus / ReportPriority
-│   └── notification_model.dart           # NotificationModel (notifikasi perubahan status tiket antar-role)
+├── models/                                  # Blueprint objek data, enum, & konversi Firestore
+│   ├── user_model.dart                      # UserModel + enum UserRole ('pelapor' | 'admin' | 'teknisi')
+│   ├── asset_model.dart                     # AssetModel (data ruangan/aset kampus & kode QR)
+│   ├── report_model.dart                    # ReportModel, StatusHistoryItem, & enum ReportStatus / ReportPriority
+│   └── notification_model.dart              # NotificationModel (notifikasi perubahan status tiket antar-role)
 │
-├── services/                             # Seluruh komunikasi backend (Firebase Auth & Cloud Firestore)
-│   ├── auth_service.dart                 # Login, register, Google Sign-In, verifikasi email, reset password, & role
-│   ├── storage_service.dart              # Kompresi foto lokal (< 250 KB) & konversi Base64 dua arah
-│   ├── asset_service.dart                # CRUD master data ruangan/aset & lookup berdasarkan ID QR
-│   ├── report_service.dart               # CRUD laporan, transisi status, hitung SLA, & log riwayat
-│   └── notification_service.dart         # Stream notifikasi real-time & tandai notifikasi sudah dibaca
+├── services/                                # Seluruh komunikasi backend (Firebase Auth & Cloud Firestore)
+│   ├── auth_service.dart                    # Login, register, Google Sign-In, verifikasi email, reset password, & role
+│   ├── storage_service.dart                 # Kompresi foto lokal (< 250 KB) & konversi Base64 dua arah
+│   ├── asset_service.dart                   # CRUD master data ruangan/aset & lookup berdasarkan ID QR
+│   ├── report_service.dart                  # CRUD laporan, transisi status, hitung SLA, & log riwayat
+│   └── notification_service.dart            # Stream notifikasi real-time & tandai notifikasi sudah dibaca
 │
-├── widgets/                              # Komponen UI kecil yang dipakai berulang di banyak halaman
-│   ├── bottom_navbar.dart                # Navigasi bawah reusable lintas role (Pelapor, Admin, Teknisi)
-│   ├── status_badge.dart                 # Label warna otomatis sesuai ReportStatus
-│   ├── sla_indicator.dart                # Indikator sisa waktu / keterlambatan batas SLA
-│   ├── report_card.dart                  # Kartu ringkasan laporan untuk daftar/list
-│   └── base64_image_viewer.dart          # Komponen render gambar dari string Base64 + fallback error
+├── widgets/                                 # Komponen UI kecil yang dipakai berulang di banyak halaman
+│   ├── bottom_navbar.dart                   # Navigasi bawah reusable lintas role (Pelapor, Admin, Teknisi)
+│   ├── status_badge.dart                    # Label warna otomatis sesuai ReportStatus
+│   ├── sla_indicator.dart                   # Indikator sisa waktu / keterlambatan batas SLA
+│   ├── report_card.dart                     # Kartu ringkasan laporan untuk daftar/list
+│   └── base64_image_viewer.dart             # Komponen render gambar dari string Base64 + fallback error
 │
-└── screens/                              # Seluruh halaman penuh (Scaffold)
-    ├── auth/                             # Alur sebelum masuk ke beranda role
-    │   ├── auth_wrapper.dart             # Pengecek status login, verifikasi email, & routing sesuai role
-    │   ├── login_screen.dart             # Halaman masuk (Email/Password, Google Sign-In, & pop-up Lupa Password)
-    │   ├── register_screen.dart          # Halaman daftar akun baru (default role: UserRole.pelapor)
-    │   └── verify_email_screen.dart      # Halaman tunggu verifikasi email & kirim ulang tautan verifikasi
+└── screens/                                 # Seluruh halaman penuh (Scaffold)
+    ├── auth/                                # Alur sebelum masuk ke beranda role
+    │   ├── auth_wrapper.dart                # Pengecek status login, verifikasi email, & routing sesuai role
+    │   ├── login_screen.dart                # Halaman masuk (Email/Password, Google Sign-In, & pop-up Lupa Password)
+    │   ├── register_screen.dart             # Halaman daftar akun baru (default role: UserRole.pelapor)
+    │   └── email_verification_screen.dart   # Halaman tunggu verifikasi email & kirim ulang tautan verifikasi
     │
-    ├── shared/                           # Halaman lintas role (dipakai 2 atau 3 role sekaligus)
-    │   ├── detail_laporan_screen.dart    # Detail tiket lengkap + tombol aksi dinamis sesuai role
-    │   ├── history_asset_screen.dart     # Info aset/ruangan & rekam jejak seluruh kerusakannya
-    │   ├── notification_screen.dart      # Daftar notifikasi real-time lintas role
-    │   └── profile_screen.dart           # Profil akun, edit nama, QR Code profil (USER:<uid>), & logout
+    ├── shared/                              # Halaman lintas role (dipakai 2 atau 3 role sekaligus)
+    │   ├── detail_laporan_screen.dart       # Detail tiket lengkap + tombol aksi dinamis sesuai role
+    │   ├── history_asset_screen.dart        # Info aset/ruangan & rekam jejak seluruh kerusakannya
+    │   ├── notification_screen.dart         # Daftar notifikasi real-time lintas role
+    │   └── profile_screen.dart              # Profil akun, edit nama, QR Code profil (USER:<uid>), & logout
     │
-    ├── pelapor/                          # Khusus Sivitas Akademika & Pengunjung Kampus
-    │   ├── pelapor_main_screen.dart      # Shell utama (Scaffold + IndexedStack + BottomNavbar) penampung tab Pelapor
-    │   ├── pelapor_home_screen.dart      # Beranda pelapor, ringkasan status, & tombol Scan QR / Lapor
-    │   ├── scan_qr_screen.dart           # Pemindai kamera QR Code (mode aset ASSET:<id>)
-    │   ├── form_pengaduan_screen.dart    # Form buat laporan (otomatis dari QR atau pilih dropdown)
-    │   └── history_laporan_screen.dart   # Daftar riwayat laporan milik pelapor + filter status
+    ├── pelapor/                             # Khusus Sivitas Akademika & Pengunjung Kampus
+    │   ├── pelapor_main_screen.dart         # Shell utama (Scaffold + IndexedStack + BottomNavbar) penampung tab Pelapor
+    │   ├── pelapor_home_screen.dart         # Beranda pelapor, ringkasan status, & tombol Scan QR / Lapor
+    │   ├── scan_qr_screen.dart              # Pemindai kamera QR Code (mode aset ASSET:<id>)
+    │   ├── form_pengaduan_screen.dart       # Form buat laporan (otomatis dari QR atau pilih dropdown)
+    │   └── history_laporan_screen.dart      # Daftar riwayat laporan milik pelapor + filter status
     │
-    ├── admin/                            # Khusus Pengelola Fasilitas Kampus
-    │   ├── admin_main_screen.dart        # Shell utama (Scaffold + IndexedStack + BottomNavbar) penampung tab Admin
-    │   ├── admin_dashboard_screen.dart   # Statistik tiket, monitoring kepatuhan SLA, & menu kelola
-    │   ├── kelola_laporan_screen.dart    # Daftar laporan masuk untuk verifikasi, tolak, & pilih teknisi
-    │   ├── kelola_aset_screen.dart       # Tambah/edit ruangan & aset + generate & cetak QR Code (ASSET:<id>)
-    │   └── kelola_teknisi_screen.dart    # Daftar teknisi, beban tugas aktif, & kelola role via Search/Scan QR
+    ├── admin/                               # Khusus Pengelola Fasilitas Kampus
+    │   ├── admin_main_screen.dart           # Shell utama (Scaffold + IndexedStack + BottomNavbar) penampung tab Admin
+    │   ├── admin_dashboard_screen.dart      # Statistik tiket, monitoring kepatuhan SLA, & menu kelola
+    │   ├── kelola_laporan_screen.dart       # Daftar laporan masuk untuk verifikasi, tolak, & pilih teknisi
+    │   ├── kelola_aset_screen.dart          # Tambah/edit ruangan & aset + generate & cetak QR Code (ASSET:<id>)
+    │   └── kelola_teknisi_screen.dart       # Daftar teknisi, beban tugas aktif, & kelola role via Search/Scan QR
     │
-    └── teknisi/                          # Khusus Petugas Perbaikan Lapangan
-        ├── teknisi_main_screen.dart      # Shell utama (Scaffold + IndexedStack + BottomNavbar) penampung tab Teknisi
-        ├── teknisi_home_screen.dart      # Ringkasan tugas aktif & daftar prioritas SLA terdekat
-        ├── daftar_tugas_screen.dart      # Daftar lengkap tugas yang ditugaskan ke teknisi terkait
-        └── form_penyelesaian_screen.dart # Form upload foto sesudah perbaikan & catatan tindakan
+    └── teknisi/                             # Khusus Petugas Perbaikan Lapangan
+        ├── teknisi_main_screen.dart         # Shell utama (Scaffold + IndexedStack + BottomNavbar) penampung tab Teknisi
+        ├── teknisi_home_screen.dart         # Ringkasan tugas aktif & daftar prioritas SLA terdekat
+        ├── daftar_tugas_screen.dart         # Daftar lengkap tugas yang ditugaskan ke teknisi terkait
+        └── form_penyelesaian_screen.dart    # Form upload foto sesudah perbaikan & catatan tindakan
 ```
 
 ## 2. Tanggung Jawab Tiap Folder

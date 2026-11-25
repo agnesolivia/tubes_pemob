@@ -11,7 +11,6 @@ class _ProfileColors {
   static const textGrey = Color(0xFF8A92A3);
   static const border = Color(0xFFE8ECF3);
   static const danger = Color(0xFFE53935);
-  static const orange = Color(0xFFF5A623);
 }
 
 class ProfileScreen extends StatefulWidget {
@@ -24,7 +23,6 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _notifAktif = true;
   bool _isLoggingOut = false;
-  int _currentIndex = 3;
 
   String _getInitial(String nama) {
     final trimmed = nama.trim();
@@ -205,12 +203,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       top: Radius.circular(28),
                     ),
                     child: ListView(
-                      padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+                      padding: const EdgeInsets.fromLTRB(16, 20, 16, 105),
                       children: [
                         _buildProfileCard(user),
                         const SizedBox(height: 18),
-                        _buildSummarySection(user.uid),
-                        const SizedBox(height: 18),
+                        if (user.role == UserRole.pelapor) ...[
+                          _buildSummarySection(user.uid),
+                          const SizedBox(height: 18),
+                        ],
                         _buildAccountInfo(user),
                         const SizedBox(height: 18),
                         _buildSettings(user),
@@ -223,7 +223,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ],
           ),
-          bottomNavigationBar: _buildBottomNav(),
         );
       },
     );
@@ -231,6 +230,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // HEADER
   Widget _buildHeader(UserModel user) {
+    final subtitle = switch (user.role) {
+      UserRole.pelapor => 'Informasi akun & ringkasan laporanmu',
+      UserRole.admin => 'Informasi akun & pengaturan admin',
+      UserRole.teknisi => 'Informasi akun & pengaturan teknisi',
+    };
+
     return SafeArea(
       bottom: false,
       child: Padding(
@@ -238,10 +243,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: Row(
           children: [
             const SizedBox(width: 40),
-            const Expanded(
+            Expanded(
               child: Column(
                 children: [
-                  Text(
+                  const Text(
                     'Profil Saya',
                     style: TextStyle(
                       color: Colors.white,
@@ -249,10 +254,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 4),
                   Text(
-                    'Informasi akun & ringkasan laporanmu',
-                    style: TextStyle(
+                    subtitle,
+                    style: const TextStyle(
                       color: Color(0xFFD6E4FF),
                       fontSize: 12,
                     ),
@@ -262,6 +267,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             InkWell(
               onTap: () => _showEditNameDialog(user),
+              borderRadius: BorderRadius.circular(20),
               child: Container(
                 width: 40,
                 height: 40,
@@ -388,7 +394,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // RINGKASAN LAPORAN
+  // RINGKASAN LAPORAN (KHUSUS PELAPOR)
   Widget _buildSummarySection(String uid) {
     return StreamBuilder<List<ReportModel>>(
       stream: ReportService.instance.streamReportsByPelapor(uid),
@@ -436,18 +442,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Row(
               children: [
                 _summaryCard(
-                  'Menunggu', '$menunggu', 'Menunggu verifikasi',
-                  const Color(0xFFFFF3D6), const Color(0xFFB7791F),
+                  'Menunggu',
+                  '$menunggu',
+                  'Menunggu verifikasi',
+                  const Color(0xFFFFF3D6),
+                  const Color(0xFFB7791F),
                 ),
                 const SizedBox(width: 10),
                 _summaryCard(
-                  'Diproses', '$diproses', 'Sedang jalan',
-                  const Color(0xFFD9F7E4), const Color(0xFF1E9E55),
+                  'Diproses',
+                  '$diproses',
+                  'Sedang jalan',
+                  const Color(0xFFD9F7E4),
+                  const Color(0xFF1E9E55),
                 ),
                 const SizedBox(width: 10),
                 _summaryCard(
-                  'Selesai', '$selesai', 'Telah diperbaiki',
-                  const Color(0xFFDDEBFF), _ProfileColors.primary,
+                  'Selesai',
+                  '$selesai',
+                  'Telah diperbaiki',
+                  const Color(0xFFDDEBFF),
+                  _ProfileColors.primary,
                 ),
               ],
             ),
@@ -554,6 +569,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // PENGATURAN
   Widget _buildSettings(UserModel user) {
+    final (notifTitle, notifSubtitle) = switch (user.role) {
+      UserRole.pelapor => (
+          'Notifikasi Status Laporan',
+          'Update progres & feedback Admin'
+        ),
+      UserRole.teknisi => (
+          'Notifikasi Tugas Perbaikan',
+          'Update penugasan tiket baru'
+        ),
+      UserRole.admin => (
+          'Notifikasi Laporan Masuk',
+          'Update laporan baru & peringatan SLA'
+        ),
+    };
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -579,8 +609,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const Divider(height: 1, color: _ProfileColors.border),
               _settingTile(
                 icon: Icons.notifications_none,
-                title: 'Notifikasi Status Laporan',
-                subtitle: 'Update progres & feedback Admin',
+                title: notifTitle,
+                subtitle: notifSubtitle,
                 trailing: Switch(
                   value: _notifAktif,
                   activeThumbColor: Colors.white,
@@ -590,13 +620,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   },
                 ),
               ),
-              const Divider(height: 1, color: _ProfileColors.border),
-              _settingTile(
-                icon: Icons.info_outline,
-                title: 'Bantuan & Kontak Admin',
-                subtitle: 'Hubungi Admin jika terdapat kendala',
-                onTap: () {},
-              ),
+              if (user.role != UserRole.admin) ...[
+                const Divider(height: 1, color: _ProfileColors.border),
+                _settingTile(
+                  icon: Icons.info_outline,
+                  title: 'Bantuan & Kontak Admin',
+                  subtitle: 'Hubungi Admin jika terdapat kendala',
+                  onTap: () {},
+                ),
+              ],
             ],
           ),
         ),
@@ -695,108 +727,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
-        ),
-      ),
-    );
-  }
-
-  // BOTTOM NAVIGATION
-  Widget _buildBottomNav() {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x14000000),
-            blurRadius: 12,
-            offset: Offset(0, -2),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: 64,
-          child: Stack(
-            clipBehavior: Clip.none,
-            alignment: Alignment.center,
-            children: [
-              Row(
-                children: [
-                  _navItem(Icons.home_rounded, 'Beranda', 0),
-                  _navItem(Icons.assignment_outlined, 'Riwayat', 1),
-                  const Expanded(child: SizedBox()),
-                  _navItem(Icons.notifications_none, 'Notifikasi', 2),
-                  _navItem(Icons.person_outline, 'Profil', 3),
-                ],
-              ),
-              Positioned(
-                top: -28,
-                child: GestureDetector(
-                  onTap: () {
-                  },
-                  child: Container(
-                    width: 64,
-                    height: 64,
-                    decoration: BoxDecoration(
-                      color: _ProfileColors.primary,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: _ProfileColors.orange,
-                        width: 3,
-                      ),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x4D0B63F6),
-                          blurRadius: 14,
-                          offset: Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.photo_camera,
-                      color: Colors.white,
-                      size: 28,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _navItem(IconData icon, String label, int index) {
-    final aktif = _currentIndex == index;
-    final color = aktif
-        ? _ProfileColors.primary
-        : _ProfileColors.textGrey;
-
-    return Expanded(
-      child: InkWell(
-        onTap: () {
-          if (index == 0 && Navigator.of(context).canPop()) {
-            Navigator.of(context).pop();
-            return;
-          }
-          setState(() => _currentIndex = index);
-        },
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: color, size: 22),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                color: color,
-                fontWeight: aktif ? FontWeight.w700 : FontWeight.w500,
-              ),
-            ),
-          ],
         ),
       ),
     );

@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 
 // --------------------------------------------------------------- COLORS
@@ -66,7 +65,12 @@ const List<Laporan> dataLaporan = [
 // --------------------------------------------------------------- PAGE
 
 class RiwayatLaporanPage extends StatefulWidget {
-  const RiwayatLaporanPage({super.key});
+  final VoidCallback? onBackToHome;
+
+  const RiwayatLaporanPage({
+    super.key,
+    this.onBackToHome,
+  });
 
   @override
   State<RiwayatLaporanPage> createState() => _RiwayatLaporanPageState();
@@ -83,7 +87,6 @@ class _RiwayatLaporanPageState extends State<RiwayatLaporanPage> {
   ];
 
   int _filterIndex = 0;
-  int _navIndex = 1;
   String _query = '';
 
   @override
@@ -147,7 +150,10 @@ class _RiwayatLaporanPageState extends State<RiwayatLaporanPage> {
                           )
                         : ListView.separated(
                             padding: const EdgeInsets.fromLTRB(
-                              16, 4, 16, 24,
+                              16,
+                              4,
+                              16,
+                              105,
                             ),
                             itemCount: data.length,
                             separatorBuilder: (_, __) =>
@@ -162,7 +168,6 @@ class _RiwayatLaporanPageState extends State<RiwayatLaporanPage> {
           ),
         ],
       ),
-      bottomNavigationBar: _buildBottomNav(),
     );
   }
 
@@ -178,7 +183,8 @@ class _RiwayatLaporanPageState extends State<RiwayatLaporanPage> {
             Row(
               children: [
                 InkWell(
-                  onTap: () => Navigator.maybePop(context),
+                  onTap: widget.onBackToHome ??
+                      () => Navigator.maybePop(context),
                   borderRadius: BorderRadius.circular(20),
                   child: Container(
                     width: 36,
@@ -287,103 +293,6 @@ class _RiwayatLaporanPageState extends State<RiwayatLaporanPage> {
       ),
     );
   }
-
-  // --------------------------------------------------- BOTTOM NAVIGATION
-
-  Widget _buildBottomNav() {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x14000000),
-            blurRadius: 12,
-            offset: Offset(0, -2),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: 64,
-          child: Stack(
-            clipBehavior: Clip.none,
-            alignment: Alignment.center,
-            children: [
-              Row(
-                children: [
-                  _navItem(Icons.home_rounded, 'Beranda', 0),
-                  _navItem(Icons.assignment_outlined, 'Riwayat', 1),
-                  const Expanded(child: SizedBox()),
-                  _navItem(Icons.notifications_none, 'Notifikasi', 2),
-                  _navItem(Icons.person_outline, 'Profil', 3),
-                ],
-              ),
-              Positioned(
-                top: -28,
-                child: GestureDetector(
-                  onTap: () {},
-                  child: Container(
-                    width: 64,
-                    height: 64,
-                    decoration: BoxDecoration(
-                      color: HistoryColors.primary,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: HistoryColors.orange,
-                        width: 3,
-                      ),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x4D0B63F6),
-                          blurRadius: 14,
-                          offset: Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.photo_camera,
-                      color: Colors.white,
-                      size: 28,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _navItem(IconData icon, String label, int index) {
-    final aktif = _navIndex == index;
-    final color = aktif
-        ? HistoryColors.primary
-        : HistoryColors.textGrey;
-
-    return Expanded(
-      child: InkWell(
-        onTap: () => setState(() => _navIndex = index),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: color, size: 22),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                color: color,
-                fontWeight:
-                    aktif ? FontWeight.w700 : FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 // --------------------------------------------------------- KARTU LAPORAN
@@ -406,14 +315,14 @@ class _LaporanCard extends StatelessWidget {
         return (
           label: 'Ditolak',
           bg: const Color(0xFFFFE1E1),
-          fg: Color(0xFFD93636),
+          fg: const Color(0xFFD93636),
         );
 
       case StatusLaporan.diproses:
         return (
           label: 'Diproses',
           bg: const Color(0xFFFFF0CC),
-          fg: Color(0xFFB7791F),
+          fg: const Color(0xFFB7791F),
         );
     }
   }

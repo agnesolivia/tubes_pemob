@@ -4,9 +4,9 @@ import 'firebase_options.dart';
 
 import 'screens/splash_screen.dart';
 import 'screens/auth/auth_wrapper.dart';
-import 'services/auth_service.dart';
 import 'screens/admin/admin_dashboard_screen.dart';
 import 'screens/pelapor/history_laporan_screen.dart';
+import 'services/auth_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

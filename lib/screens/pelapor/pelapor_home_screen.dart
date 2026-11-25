@@ -2,22 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:tubes_pemob/constants/app_colors.dart';
-import 'package:tubes_pemob/screens/pelapor/form_pengaduan_screen.dart';
-import 'package:tubes_pemob/screens/shared/profile_screen.dart';
 import 'package:tubes_pemob/models/user_model.dart';
+import 'package:tubes_pemob/screens/pelapor/form_pengaduan_screen.dart';
+import 'package:tubes_pemob/screens/pelapor/history_laporan_screen.dart';
+import 'package:tubes_pemob/screens/shared/profile_screen.dart';
 import 'package:tubes_pemob/services/auth_service.dart';
 
-class PelaporHomeScreen extends StatefulWidget {
-  const PelaporHomeScreen({super.key});
+class PelaporHomeScreen extends StatelessWidget {
+  final ValueChanged<int>? onSwitchTab;
 
-  @override
-  State<PelaporHomeScreen> createState() => _PelaporHomeScreenState();
-}
+  const PelaporHomeScreen({
+    super.key,
+    this.onSwitchTab,
+  });
 
-class _PelaporHomeScreenState extends State<PelaporHomeScreen> {
-  int _selectedNavIndex = 0;
-
-  void _onCreateReportPressed() {
+  void _onCreateReportPressed(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => const CreateReportScreen(),
@@ -25,17 +24,26 @@ class _PelaporHomeScreenState extends State<PelaporHomeScreen> {
     );
   }
 
-  void _onViewAllReportsPressed() {
-    // Hubungkan ke halaman Riwayat Laporan di sini
-    setState(() {
-      _selectedNavIndex = 1;
-    });
-  }
-
-  void _openProfileScreen() {
+  void _onViewAllReportsPressed(BuildContext context) {
+    if (onSwitchTab != null) {
+      onSwitchTab!(1);
+      return;
+    }
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => const ProfileScreen()
+        builder: (context) => const RiwayatLaporanPage(),
+      ),
+    );
+  }
+
+  void _openProfileScreen(BuildContext context) {
+    if (onSwitchTab != null) {
+      onSwitchTab!(3);
+      return;
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const ProfileScreen(),
       ),
     );
   }
@@ -50,7 +58,6 @@ class _PelaporHomeScreenState extends State<PelaporHomeScreen> {
       ),
       child: Scaffold(
         backgroundColor: AppColors.primaryBlue,
-        extendBody: true,
         body: Stack(
           children: [
             // 1. Background Gelombang Biru Atas
@@ -75,7 +82,7 @@ class _PelaporHomeScreenState extends State<PelaporHomeScreen> {
                     padding: const EdgeInsets.fromLTRB(22, 12, 22, 18),
                     child: Column(
                       children: [
-                        // Baris Logo Snafix & Avatar Profil 'R'
+                        // Baris Logo SnaFix & Avatar Profil
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -85,7 +92,7 @@ class _PelaporHomeScreenState extends State<PelaporHomeScreen> {
                               fit: BoxFit.contain,
                             ),
                             GestureDetector(
-                              onTap: _openProfileScreen,
+                              onTap: () => _openProfileScreen(context),
                               child: Container(
                                 width: 42,
                                 height: 42,
@@ -99,7 +106,8 @@ class _PelaporHomeScreenState extends State<PelaporHomeScreen> {
                                   ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.12),
+                                      color:
+                                          Colors.black.withValues(alpha: 0.12),
                                       blurRadius: 8,
                                       offset: const Offset(0, 3),
                                     ),
@@ -107,15 +115,17 @@ class _PelaporHomeScreenState extends State<PelaporHomeScreen> {
                                 ),
                                 alignment: Alignment.center,
                                 child: StreamBuilder<UserModel?>(
-                                  stream: AuthService.instance.currentUser == null
-                                      ? null
-                                      : AuthService.instance.streamUserData(
-                                          AuthService.instance.currentUser!.uid,
-                                        ),
+                                  stream:
+                                      AuthService.instance.currentUser == null
+                                          ? null
+                                          : AuthService.instance.streamUserData(
+                                              AuthService
+                                                  .instance.currentUser!.uid,
+                                            ),
                                   builder: (context, snapshot) {
                                     final nama = snapshot.data?.nama ??
-                                        AuthService
-                                            .instance.currentUser?.displayName ??
+                                        AuthService.instance.currentUser
+                                            ?.displayName ??
                                         'U';
                                     final initial = nama.trim().isEmpty
                                         ? 'U'
@@ -233,7 +243,8 @@ class _PelaporHomeScreenState extends State<PelaporHomeScreen> {
                                 ],
                               ),
                               child: ElevatedButton.icon(
-                                onPressed: _onCreateReportPressed,
+                                onPressed: () =>
+                                    _onCreateReportPressed(context),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: AppColors.primaryBlue,
                                   foregroundColor: AppColors.white,
@@ -285,7 +296,8 @@ class _PelaporHomeScreenState extends State<PelaporHomeScreen> {
                                       ),
                                     ),
                                     GestureDetector(
-                                      onTap: _onViewAllReportsPressed,
+                                      onTap: () =>
+                                          _onViewAllReportsPressed(context),
                                       child: Text(
                                         'Total 7 Laporan',
                                         style: GoogleFonts.plusJakartaSans(
@@ -301,8 +313,8 @@ class _PelaporHomeScreenState extends State<PelaporHomeScreen> {
                                 const SizedBox(height: 12),
 
                                 // 3 Kartu Ringkasan Status
-                                Row(
-                                  children: const [
+                                const Row(
+                                  children: [
                                     Expanded(
                                       child: _SummaryStatusCard(
                                         badgeText: 'Menunggu',
@@ -351,7 +363,8 @@ class _PelaporHomeScreenState extends State<PelaporHomeScreen> {
                                       ),
                                     ),
                                     GestureDetector(
-                                      onTap: _onViewAllReportsPressed,
+                                      onTap: () =>
+                                          _onViewAllReportsPressed(context),
                                       child: Text(
                                         'Lihat Semua',
                                         style: GoogleFonts.plusJakartaSans(
@@ -392,21 +405,6 @@ class _PelaporHomeScreenState extends State<PelaporHomeScreen> {
               ],
             ),
           ],
-        ),
-
-        // 3. Bottom Navigation Bar + Tombol Kamera Melayang
-        bottomNavigationBar: _PelaporBottomNavBar(
-          selectedIndex: _selectedNavIndex,
-          onItemTapped: (index) {
-            if (index == 3) {
-              _openProfileScreen();
-              return;
-            }
-            setState(() {
-              _selectedNavIndex = index;
-            });
-          },
-          onCameraPressed: _onCreateReportPressed,
         ),
       ),
     );
@@ -789,156 +787,4 @@ class _AcIconPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-/// Bottom Navigation Bar dengan Tombol Kamera Bulat di Tengah
-class _PelaporBottomNavBar extends StatelessWidget {
-  final int selectedIndex;
-  final ValueChanged<int> onItemTapped;
-  final VoidCallback onCameraPressed;
-
-  const _PelaporBottomNavBar({
-    required this.selectedIndex,
-    required this.onItemTapped,
-    required this.onCameraPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
-
-    return SizedBox(
-      height: 78 + bottomPadding,
-      child: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.bottomCenter,
-        children: [
-          // Bar Putih Utama
-          Container(
-            height: 64 + bottomPadding,
-            padding: EdgeInsets.only(bottom: bottomPadding),
-            decoration: BoxDecoration(
-              color: AppColors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF0F172A).withValues(alpha: 0.06),
-                  blurRadius: 16,
-                  offset: const Offset(0, -4),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _NavBarItem(
-                  icon: Icons.home_rounded,
-                  label: 'Beranda',
-                  isSelected: selectedIndex == 0,
-                  onTap: () => onItemTapped(0),
-                ),
-                _NavBarItem(
-                  icon: Icons.assignment_outlined,
-                  label: 'Riwayat',
-                  isSelected: selectedIndex == 1,
-                  onTap: () => onItemTapped(1),
-                ),
-                const SizedBox(width: 64), // Ruang untuk tombol kamera tengah
-                _NavBarItem(
-                  icon: Icons.notifications_none_rounded,
-                  label: 'Notifikasi',
-                  isSelected: selectedIndex == 2,
-                  onTap: () => onItemTapped(2),
-                ),
-                _NavBarItem(
-                  icon: Icons.person_outline_rounded,
-                  label: 'Profil',
-                  isSelected: selectedIndex == 3,
-                  onTap: () => onItemTapped(3),
-                ),
-              ],
-            ),
-          ),
-
-          // Tombol Kamera Bulat Biru dengan Border Kuning di Tengah
-          Positioned(
-            top: 0,
-            child: Material(
-              color: Colors.transparent,
-              shape: const CircleBorder(),
-              child: InkWell(
-                onTap: onCameraPressed,
-                customBorder: const CircleBorder(),
-                child: Container(
-                  width: 58,
-                  height: 58,
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryBlue,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: const Color(0xFFFFB800),
-                      width: 2.2,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primaryBlue.withValues(alpha: 0.30),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.camera_alt_outlined,
-                    color: AppColors.white,
-                    size: 26,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _NavBarItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _NavBarItem({
-    required this.icon,
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final color = isSelected ? AppColors.primaryBlue : const Color(0xFF8A94A6);
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 23),
-            const SizedBox(height: 3),
-            Text(
-              label,
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 11,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                color: color,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }

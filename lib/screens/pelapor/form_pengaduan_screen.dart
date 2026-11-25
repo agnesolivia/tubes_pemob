@@ -1,13 +1,19 @@
-import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:tubes_pemob/constants/app_colors.dart';
+import 'package:tubes_pemob/models/asset_model.dart';
+import 'package:tubes_pemob/models/user_model.dart';
+import 'package:tubes_pemob/services/auth_service.dart';
+import 'package:tubes_pemob/services/report_service.dart';
+import 'package:tubes_pemob/services/storage_service.dart';
 
 class CreateReportScreen extends StatefulWidget {
-  const CreateReportScreen({super.key});
+  final AssetModel? selectedAsset;
+
+  const CreateReportScreen({super.key, this.selectedAsset});
 
   @override
   State<CreateReportScreen> createState() => _CreateReportScreenState();
@@ -19,8 +25,9 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
       TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
 
-  final ImagePicker _picker = ImagePicker();
-  final List<XFile> _uploadedPhotos = [];
+  final List<String> _uploadedPhotos =
+      []; // Menyimpan string Base64 hasil kompresi
+  bool _isSubmitting = false;
 
   final List<String> _categories = const [
     'Meja & Kursi',
@@ -66,6 +73,20 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
   String? _selectedBuilding;
 
   @override
+  void initState() {
+    super.initState();
+    final asset = widget.selectedAsset;
+    if (asset != null) {
+      _titleController.text = asset.nama;
+      _selectedBuilding = asset.gedung;
+      _detailLocationController.text = asset.ruangan;
+      if (_categories.contains(asset.kategori)) {
+        _selectedCategory = asset.kategori;
+      }
+    }
+  }
+
+  @override
   void dispose() {
     _titleController.dispose();
     _detailLocationController.dispose();
@@ -75,29 +96,29 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
 
   /// Membuka pemilih file/galeri (JPG/PNG) atau kamera perangkat
   Future<void> _pickPhoto(ImageSource source) async {
-    if (_uploadedPhotos.length >= 3) {
+    if (_uploadedPhotos.isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Maksimal 3 foto yang dapat diunggah.')),
+        const SnackBar(
+          content: Text('Maksimal 1 foto bukti kerusakan (batas ukuran Firestore).'),
+        ),
       );
       return;
     }
 
     try {
-      final XFile? pickedFile = await _picker.pickImage(
+      final base64Photo = await StorageService.instance.pickAndCompressImage(
         source: source,
-        maxWidth: 1200,
-        imageQuality: 85,
       );
 
-      if (pickedFile != null) {
+      if (base64Photo != null && mounted) {
         setState(() {
-          _uploadedPhotos.add(pickedFile);
+          _uploadedPhotos.add(base64Photo);
         });
       }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal mengambil gambar: $e')),
+        SnackBar(content: Text('Gagal memproses gambar: $e')),
       );
     }
   }
@@ -116,8 +137,11 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
         return StatefulBuilder(
           builder: (context, setModalState) {
             final filteredBuildings = _usuBuildings
-                .where((building) =>
-                    building.toLowerCase().contains(searchQuery.toLowerCase()))
+                .where(
+                  (building) => building.toLowerCase().contains(
+                    searchQuery.toLowerCase(),
+                  ),
+                )
                 .toList();
 
             return DraggableScrollableSheet(
@@ -245,7 +269,7 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
     );
   }
 
-  void _onSubmitReport() {
+  Future<void> _onSubmitReport() async {
     if (_uploadedPhotos.isEmpty ||
         _titleController.text.trim().isEmpty ||
         _selectedCategory == null ||
@@ -260,12 +284,63 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Laporan berhasil dikirim dan menunggu verifikasi Admin.'),
-      ),
-    );
-    Navigator.of(context).pop();
+    final firebaseUser = AuthService.instance.currentUser;
+    if (firebaseUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sesi login tidak ditemukan. Silakan masuk ulang.')),
+      );
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+    try {
+      final pelapor = await AuthService.instance.getUserData(firebaseUser.uid) ??
+          UserModel(
+            uid: firebaseUser.uid,
+            nama: firebaseUser.displayName ?? 'Pengguna Kampus',
+            email: firebaseUser.email ?? '',
+            role: UserRole.pelapor,
+            createdAt: DateTime.now(),
+          );
+
+      final assetToReport = widget.selectedAsset ??
+          AssetModel(
+            id: 'MANUAL-${DateTime.now().millisecondsSinceEpoch}',
+            nama: _titleController.text.trim(),
+            kategori: _selectedCategory!,
+            gedung: _selectedBuilding!,
+            ruangan: _detailLocationController.text.trim(),
+            createdAt: DateTime.now(),
+          );
+
+      await ReportService.instance.createReport(
+        asset: assetToReport,
+        pelapor: pelapor,
+        deskripsi: _descriptionController.text.trim(),
+        fotoSebelumBase64: _uploadedPhotos.first,
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Laporan berhasil dikirim dan menunggu verifikasi Admin.'),
+          backgroundColor: AppColors.primaryBlue,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      Navigator.of(context).pop();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal mengirim laporan: $e'),
+          backgroundColor: AppColors.statusRejectedText,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 
   @override
@@ -373,7 +448,7 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                               children: [
                                 _buildRequiredLabel('Foto Kerusakan Fasilitas'),
                                 Text(
-                                  '${_uploadedPhotos.length}/3 Foto Terunggah',
+                                  '${_uploadedPhotos.length}/1 Foto Terunggah',
                                   style: GoogleFonts.plusJakartaSans(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w700,
@@ -430,20 +505,25 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                                             const SizedBox(height: 10),
                                             Text(
                                               'Tap to upload photo',
-                                              style: GoogleFonts.plusJakartaSans(
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w700,
-                                                color: AppColors.primaryBlue,
-                                              ),
+                                              style:
+                                                  GoogleFonts.plusJakartaSans(
+                                                    fontSize: 13,
+                                                    fontWeight: FontWeight.w700,
+                                                    color:
+                                                        AppColors.primaryBlue,
+                                                  ),
                                             ),
                                             const SizedBox(height: 3),
                                             Text(
                                               'PNG, JPG or PDF (max. 800x400px)',
-                                              style: GoogleFonts.plusJakartaSans(
-                                                fontSize: 10.5,
-                                                fontWeight: FontWeight.w400,
-                                                color: const Color(0xFF94A3B8),
-                                              ),
+                                              style:
+                                                  GoogleFonts.plusJakartaSans(
+                                                    fontSize: 10.5,
+                                                    fontWeight: FontWeight.w400,
+                                                    color: const Color(
+                                                      0xFF94A3B8,
+                                                    ),
+                                                  ),
                                             ),
                                           ],
                                         ),
@@ -463,7 +543,8 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                                         ),
                                         Padding(
                                           padding: const EdgeInsets.symmetric(
-                                              horizontal: 12),
+                                            horizontal: 12,
+                                          ),
                                           child: Text(
                                             'OR',
                                             style: GoogleFonts.plusJakartaSans(
@@ -499,8 +580,9 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                                             horizontal: 24,
                                           ),
                                           shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(24),
+                                            borderRadius: BorderRadius.circular(
+                                              24,
+                                            ),
                                           ),
                                         ),
                                         child: Text(
@@ -531,12 +613,24 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                                                 ClipRRect(
                                                   borderRadius:
                                                       BorderRadius.circular(12),
-                                                  child: Image.file(
-                                                    File(photo.path),
-                                                    width: 74,
-                                                    height: 74,
-                                                    fit: BoxFit.cover,
-                                                  ),
+                                                  child: () {
+                                                    final bytes = StorageService
+                                                        .instance
+                                                        .base64ToBytes(photo);
+                                                    if (bytes == null) {
+                                                      return const SizedBox(
+                                                        width: 74,
+                                                        height: 74,
+                                                        child: Icon(Icons.broken_image),
+                                                      );
+                                                    }
+                                                    return Image.memory(
+                                                      bytes,
+                                                      width: 74,
+                                                      height: 74,
+                                                      fit: BoxFit.cover,
+                                                    );
+                                                  }(),
                                                 ),
                                                 Positioned(
                                                   top: -6,
@@ -553,10 +647,12 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                                                       height: 22,
                                                       decoration:
                                                           const BoxDecoration(
-                                                        color:
-                                                            Color(0xFFEF4444),
-                                                        shape: BoxShape.circle,
-                                                      ),
+                                                            color: Color(
+                                                              0xFFEF4444,
+                                                            ),
+                                                            shape:
+                                                                BoxShape.circle,
+                                                          ),
                                                       child: const Icon(
                                                         Icons.close_rounded,
                                                         size: 14,
@@ -607,8 +703,7 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                                     });
                                   },
                                   child: AnimatedContainer(
-                                    duration:
-                                        const Duration(milliseconds: 180),
+                                    duration: const Duration(milliseconds: 180),
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 16,
                                       vertical: 9,
@@ -716,7 +811,8 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                               onChanged: (_) => setState(() {}),
                               style: _inputTextStyle(),
                               decoration: InputDecoration(
-                                hintText: 'Jelaskan kerusakan yang kamu temukan',
+                                hintText:
+                                    'Jelaskan kerusakan yang kamu temukan',
                                 hintStyle: GoogleFonts.plusJakartaSans(
                                   fontSize: 13.5,
                                   fontWeight: FontWeight.w400,
@@ -805,8 +901,8 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                                         ),
                                         children: const [
                                           TextSpan(
-                                              text:
-                                                  'Laporan akan diperiksa '),
+                                            text: 'Laporan akan diperiksa ',
+                                          ),
                                           TextSpan(
                                             text: 'Admin',
                                             style: TextStyle(
@@ -815,8 +911,8 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                                             ),
                                           ),
                                           TextSpan(
-                                              text:
-                                                  ' lalu diteruskan kepada '),
+                                            text: ' lalu diteruskan kepada ',
+                                          ),
                                           TextSpan(
                                             text: 'Teknisi',
                                             style: TextStyle(
@@ -843,15 +939,16 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                                 borderRadius: BorderRadius.circular(30),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: AppColors.primaryBlue
-                                        .withValues(alpha: 0.25),
+                                    color: AppColors.primaryBlue.withValues(
+                                      alpha: 0.25,
+                                    ),
                                     blurRadius: 14,
                                     offset: const Offset(0, 6),
                                   ),
                                 ],
                               ),
                               child: ElevatedButton(
-                                onPressed: _onSubmitReport,
+                                onPressed: _isSubmitting ? null : _onSubmitReport,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: AppColors.primaryBlue,
                                   foregroundColor: AppColors.white,
@@ -860,23 +957,33 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                                     borderRadius: BorderRadius.circular(30),
                                   ),
                                 ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      'Kirim Laporan',
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w700,
+                                child: _isSubmitting
+                                    ? const SizedBox(
+                                        width: 22,
+                                        height: 22,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2.5,
+                                          color: AppColors.white,
+                                        ),
+                                      )
+                                    : Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            'Kirim Laporan',
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          const Icon(
+                                            Icons.arrow_forward_rounded,
+                                            size: 20,
+                                          ),
+                                        ],
                                       ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    const Icon(
-                                      Icons.arrow_forward_rounded,
-                                      size: 20,
-                                    ),
-                                  ],
-                                ),
                               ),
                             ),
                           ],
@@ -933,23 +1040,14 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
       ),
       filled: true,
       fillColor: AppColors.inputFill,
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 20,
-        vertical: 15,
-      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(28),
-        borderSide: const BorderSide(
-          color: Color(0xFFD5DFEF),
-          width: 1,
-        ),
+        borderSide: const BorderSide(color: Color(0xFFD5DFEF), width: 1),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(28),
-        borderSide: const BorderSide(
-          color: AppColors.primaryBlue,
-          width: 1.4,
-        ),
+        borderSide: const BorderSide(color: AppColors.primaryBlue, width: 1.4),
       ),
     );
   }

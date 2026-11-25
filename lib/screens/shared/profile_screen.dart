@@ -461,8 +461,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 _buildSummarySection(user.uid),
                                 const SizedBox(height: 18),
                               ],
-                              _buildAccountInfo(user),
-                              const SizedBox(height: 18),
                               _buildSettings(user),
                               const SizedBox(height: 22),
                               _buildLogoutButton(),
@@ -789,61 +787,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // INFORMASI AKUN
-  Widget _buildAccountInfo(UserModel user) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _sectionTitle('Informasi Akun'),
-        const SizedBox(height: 10),
-        _card(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 4,
-          ),
-          child: Column(
-            children: [
-              _infoRow('Nama lengkap', user.nama),
-              const Divider(height: 1, color: _ProfileColors.border),
-              _infoRow('Peran (Role)', user.role.label),
-              const Divider(height: 1, color: _ProfileColors.border),
-              _infoRow('Email', user.email),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _infoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 14),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 13,
-              color: _ProfileColors.textGrey,
-            ),
-          ),
-          Flexible(
-            child: Text(
-              value,
-              textAlign: TextAlign.right,
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: _ProfileColors.textDark,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   // PENGATURAN
   Widget _buildSettings(UserModel user) {
     final (notifTitle, notifSubtitle) = switch (user.role) {
@@ -873,7 +816,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _settingTile(
                 icon: Icons.person_outline,
                 title: 'Edit Profil',
-                subtitle: 'Perbarui nama, foto, dan kontak',
+                subtitle: 'Perbarui nama dan foto profil',
                 onTap: () => _showEditProfileSheet(user),
               ),
               const Divider(height: 1, color: _ProfileColors.border),

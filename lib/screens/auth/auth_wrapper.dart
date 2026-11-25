@@ -3,18 +3,25 @@ import 'package:flutter/material.dart';
 import 'package:tubes_pemob/constants/app_colors.dart';
 import 'package:tubes_pemob/models/user_model.dart';
 import 'package:tubes_pemob/screens/admin/admin_main_screen.dart';
+import 'package:tubes_pemob/screens/auth/email_verification_screen.dart';
 import 'package:tubes_pemob/screens/auth/login_screen.dart';
 import 'package:tubes_pemob/screens/pelapor/pelapor_main_screen.dart';
 import 'package:tubes_pemob/screens/teknisi/teknisi_main_screen.dart';
 import 'package:tubes_pemob/services/auth_service.dart';
 
-class AuthWrapper extends StatelessWidget {
+class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
 
   @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
+  @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
-      stream: AuthService.instance.authStateChanges,
+      // userChanges() ikut terpanggil saat user.reload() mendeteksi emailVerified == true
+      stream: FirebaseAuth.instance.userChanges(),
       builder: (context, authSnapshot) {
         if (authSnapshot.connectionState == ConnectionState.waiting) {
           return const _AuthLoadingScreen();
@@ -23,6 +30,15 @@ class AuthWrapper extends StatelessWidget {
         final firebaseUser = authSnapshot.data;
         if (firebaseUser == null) {
           return const LoginScreen();
+        }
+
+        // Gerbang wajib verifikasi email sebelum masuk ke halaman utama
+        if (!firebaseUser.emailVerified) {
+          return EmailVerificationScreen(
+            onVerified: () {
+              if (mounted) setState(() {});
+            },
+          );
         }
 
         return StreamBuilder<UserModel?>(

@@ -17,8 +17,11 @@ class AuthService {
 
   bool _isInitialized = false;
 
-  /// Stream status autentikasi Firebase (dipakai di AuthWrapper)
+  /// Stream perubahan login/logout Firebase
   Stream<User?> get authStateChanges => _firebaseAuth.authStateChanges();
+
+  /// Stream perubahan status user termasuk saat user.reload() memperbarui emailVerified
+  Stream<User?> get userChanges => _firebaseAuth.userChanges();
 
   User? get currentUser => _firebaseAuth.currentUser;
 
@@ -65,7 +68,17 @@ class AuthService {
     );
 
     await _usersRef.doc(user.uid).set(newUser.toMap());
-    await user.sendEmailVerification();
+
+    // Bungkus try-catch agar jika kirim email awal gagal sementara,
+    // akun tetap tercatat dan user bisa menekan "Kirim ulang" di layar verifikasi.
+    try {
+      if (!user.emailVerified) {
+        await user.sendEmailVerification();
+      }
+    } catch (_) {
+      // Diabaikan di tahap registrasi; ditangani ulang di EmailVerificationScreen
+    }
+
     return newUser;
   }
 

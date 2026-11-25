@@ -5,7 +5,6 @@ import 'package:tubes_pemob/constants/app_colors.dart';
 import 'package:tubes_pemob/screens/auth/login_screen.dart';
 import 'package:tubes_pemob/services/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:tubes_pemob/screens/auth/email_verification_screen.dart';
 
 
 class RegisterScreen extends StatefulWidget {
@@ -60,28 +59,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _isEmailLoading = true);
     try {
       await AuthService.instance.registerWithEmail(
-  nama: nama,
-  email: email,
-  password: password,
-);
-if (!mounted) return;
-Navigator.of(context).pushReplacement(
-  MaterialPageRoute(
-    builder: (context) => const EmailVerificationScreen(),
-  ),
-);
+        nama: nama,
+        email: email,
+        password: password,
+      );
+      if (!mounted) return;
+      Navigator.of(context).popUntil((route) => route.isFirst);
     } on FirebaseAuthException catch (e) {
       if (e.code == 'email-already-in-use') {
         _showMessage('Email sudah terdaftar. Silakan masuk.');
       } else if (e.code == 'invalid-email') {
         _showMessage('Format email tidak valid.');
       } else if (e.code == 'weak-password') {
-        _showMessage('Kata sandi terlalu lemah.');
+        _showMessage('Kata sandi terlalu lemah (minimal 8 karakter).');
+      } else if (e.code == 'network-request-failed') {
+        _showMessage('Koneksi internet bermasalah.');
+      } else if (e.code == 'too-many-requests') {
+        _showMessage('Terlalu banyak percobaan. Coba lagi beberapa saat.');
       } else {
         _showMessage(e.message ?? 'Pendaftaran gagal (${e.code}).');
       }
-    } catch (e) {
-      _showMessage('Pendaftaran gagal: $e');
     } finally {
       if (mounted) setState(() => _isEmailLoading = false);
     }
@@ -242,7 +239,7 @@ Navigator.of(context).pushReplacement(
                                     validator: (value) {
                                       final text = value?.trim() ?? '';
                                       if (text.isEmpty) return 'Email wajib diisi.';
-                                      final emailRegex = RegExp(r'^[\w\.\-]+@([\w\-]+\.)+[\w\-]{2,4}$');
+                                      final emailRegex = RegExp(r'^[\w\.\-]+@([\w\-]+\.)+[\w\-]{2,}$');
                                       if (!emailRegex.hasMatch(text)) return 'Format email tidak valid.';
                                       return null;
                                     },

@@ -231,7 +231,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 validator: (value) {
                                   final text = value?.trim() ?? '';
                                   if (text.isEmpty) return 'Email wajib diisi.';
-                                  final emailRegex = RegExp(r'^[\w\.\-]+@([\w\-]+\.)+[\w\-]{2,4}$');
+                                  final emailRegex = RegExp(r'^[\w\.\-]+@([\w\-]+\.)+[\w\-]{2,}$');
                                   if (!emailRegex.hasMatch(text)) return 'Format email tidak valid.';
                                   return null;
                                 },

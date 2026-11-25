@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:tubes_pemob/constants/app_colors.dart';
-import 'package:tubes_pemob/screens/auth/login_screen.dart';
 import 'package:tubes_pemob/services/auth_service.dart';
 
 class EmailVerificationScreen extends StatefulWidget {
@@ -35,6 +34,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   void initState() {
     super.initState();
     _startAutoCheckTimer();
+    _startCooldownTimer(60);
   }
 
   @override
@@ -186,10 +186,6 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
 
       if (Navigator.of(context).canPop()) {
         Navigator.of(context).popUntil((route) => route.isFirst);
-      } else {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
-        );
       }
     } catch (e) {
       _showMessage('Gagal keluar dari akun: $e');

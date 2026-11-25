@@ -7,6 +7,8 @@ import 'package:tubes_pemob/screens/pelapor/form_pengaduan_screen.dart';
 import 'package:tubes_pemob/screens/pelapor/history_laporan_screen.dart';
 import 'package:tubes_pemob/screens/shared/profile_screen.dart';
 import 'package:tubes_pemob/services/auth_service.dart';
+import 'package:tubes_pemob/models/report_model.dart';
+import 'package:tubes_pemob/services/report_service.dart';
 
 class PelaporHomeScreen extends StatelessWidget {
   final ValueChanged<int>? onSwitchTab;
@@ -46,6 +48,49 @@ class PelaporHomeScreen extends StatelessWidget {
         builder: (context) => const ProfileScreen(),
       ),
     );
+  }
+
+  ({int step, String percent, String stageText}) _progressFromStatus(
+    ReportStatus status,
+  ) {
+    switch (status) {
+      case ReportStatus.reported:
+        return (
+          step: 1,
+          percent: '20%',
+          stageText: 'Tahap 1/5: Menunggu verifikasi Admin',
+        );
+      case ReportStatus.verified:
+        return (
+          step: 2,
+          percent: '40%',
+          stageText: 'Tahap 2/5: Diverifikasi, menunggu teknisi',
+        );
+      case ReportStatus.assigned:
+        return (
+          step: 3,
+          percent: '60%',
+          stageText: 'Tahap 3/5: Teknisi telah ditugaskan',
+        );
+      case ReportStatus.inProgress:
+        return (
+          step: 4,
+          percent: '80%',
+          stageText: 'Tahap 4/5: Teknisi sedang memperbaiki',
+        );
+      case ReportStatus.resolved:
+        return (
+          step: 5,
+          percent: '100%',
+          stageText: 'Tahap 5/5: Perbaikan selesai',
+        );
+      case ReportStatus.rejected:
+        return (
+          step: 1,
+          percent: '0%',
+          stageText: 'Laporan ditolak Admin',
+        );
+    }
   }
 
   @override
@@ -276,126 +321,203 @@ class PelaporHomeScreen extends StatelessWidget {
 
                         // Area Scrollable: Ringkasan & Pantau Laporan Aktif
                         Expanded(
-                          child: SingleChildScrollView(
-                            physics: const BouncingScrollPhysics(),
-                            padding: const EdgeInsets.fromLTRB(20, 16, 20, 105),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Header Section: Ringkasan Laporan Kamu
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
+                          child: StreamBuilder<List<ReportModel>>(
+                            stream: AuthService.instance.currentUser == null
+                                ? null
+                                : ReportService.instance.streamReportsByPelapor(
+                                    AuthService.instance.currentUser!.uid,
+                                  ),
+                            builder: (context, snapshot) {
+                              final reports = snapshot.data ?? [];
+                              final menunggu = reports
+                                  .where(
+                                      (r) => r.status == ReportStatus.reported)
+                                  .length;
+                              final diproses = reports
+                                  .where((r) =>
+                                      r.status == ReportStatus.verified ||
+                                      r.status == ReportStatus.assigned ||
+                                      r.status == ReportStatus.inProgress)
+                                  .length;
+                              final selesai = reports
+                                  .where(
+                                      (r) => r.status == ReportStatus.resolved)
+                                  .length;
+                              final activeReports =
+                                  reports.where((r) => !r.isClosed).toList();
+
+                              return SingleChildScrollView(
+                                physics: const BouncingScrollPhysics(),
+                                padding:
+                                    const EdgeInsets.fromLTRB(20, 16, 20, 105),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      'Ringkasan Laporan Kamu',
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 15.5,
-                                        fontWeight: FontWeight.w800,
-                                        color: const Color(0xFF0A0D14),
-                                      ),
-                                    ),
-                                    GestureDetector(
-                                      onTap: () =>
-                                          _onViewAllReportsPressed(context),
-                                      child: Text(
-                                        'Total 7 Laporan',
-                                        style: GoogleFonts.plusJakartaSans(
-                                          fontSize: 12.5,
-                                          fontWeight: FontWeight.w700,
-                                          color: AppColors.primaryBlue,
+                                    // Header Section: Ringkasan Laporan Kamu
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          'Ringkasan Laporan Kamu',
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 15.5,
+                                            fontWeight: FontWeight.w800,
+                                            color: const Color(0xFF0A0D14),
+                                          ),
                                         ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-
-                                const SizedBox(height: 12),
-
-                                // 3 Kartu Ringkasan Status
-                                const Row(
-                                  children: [
-                                    Expanded(
-                                      child: _SummaryStatusCard(
-                                        badgeText: 'Menunggu',
-                                        badgeBgColor: Color(0xFFFEF3C7),
-                                        badgeTextColor: Color(0xFFA16207),
-                                        count: '1',
-                                        subtitle: 'Menunggu verifikasi',
-                                      ),
-                                    ),
-                                    SizedBox(width: 10),
-                                    Expanded(
-                                      child: _SummaryStatusCard(
-                                        badgeText: 'Diproses',
-                                        badgeBgColor: Color(0xFFDCFCE7),
-                                        badgeTextColor: Color(0xFF15803D),
-                                        count: '2',
-                                        subtitle: 'Sedang jalan',
-                                      ),
-                                    ),
-                                    SizedBox(width: 10),
-                                    Expanded(
-                                      child: _SummaryStatusCard(
-                                        badgeText: 'Selesai',
-                                        badgeBgColor: Color(0xFFDBEAFE),
-                                        badgeTextColor: Color(0xFF1D4ED8),
-                                        count: '4',
-                                        subtitle: 'Telah diperbaiki',
-                                      ),
-                                    ),
-                                  ],
-                                ),
-
-                                const SizedBox(height: 22),
-
-                                // Header Section: Pantau Laporan Aktif
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      'Pantau Laporan Aktif',
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 15.5,
-                                        fontWeight: FontWeight.w800,
-                                        color: const Color(0xFF0A0D14),
-                                      ),
-                                    ),
-                                    GestureDetector(
-                                      onTap: () =>
-                                          _onViewAllReportsPressed(context),
-                                      child: Text(
-                                        'Lihat Semua',
-                                        style: GoogleFonts.plusJakartaSans(
-                                          fontSize: 12.5,
-                                          fontWeight: FontWeight.w700,
-                                          color: AppColors.primaryBlue,
+                                        GestureDetector(
+                                          onTap: () =>
+                                              _onViewAllReportsPressed(context),
+                                          child: Text(
+                                            'Total ${reports.length} Laporan',
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontSize: 12.5,
+                                              fontWeight: FontWeight.w700,
+                                              color: AppColors.primaryBlue,
+                                            ),
+                                          ),
                                         ),
-                                      ),
+                                      ],
                                     ),
+
+                                    const SizedBox(height: 12),
+
+                                    // 3 Kartu Ringkasan Status
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: _SummaryStatusCard(
+                                            badgeText: 'Menunggu',
+                                            badgeBgColor:
+                                                const Color(0xFFFEF3C7),
+                                            badgeTextColor:
+                                                const Color(0xFFA16207),
+                                            count: '$menunggu',
+                                            subtitle: 'Menunggu verifikasi',
+                                          ),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: _SummaryStatusCard(
+                                            badgeText: 'Diproses',
+                                            badgeBgColor:
+                                                const Color(0xFFDCFCE7),
+                                            badgeTextColor:
+                                                const Color(0xFF15803D),
+                                            count: '$diproses',
+                                            subtitle: 'Sedang jalan',
+                                          ),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: _SummaryStatusCard(
+                                            badgeText: 'Selesai',
+                                            badgeBgColor:
+                                                const Color(0xFFDBEAFE),
+                                            badgeTextColor:
+                                                const Color(0xFF1D4ED8),
+                                            count: '$selesai',
+                                            subtitle: 'Telah diperbaiki',
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+
+                                    const SizedBox(height: 22),
+
+                                    // Header Section: Pantau Laporan Aktif
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          'Pantau Laporan Aktif',
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 15.5,
+                                            fontWeight: FontWeight.w800,
+                                            color: const Color(0xFF0A0D14),
+                                          ),
+                                        ),
+                                        GestureDetector(
+                                          onTap: () =>
+                                              _onViewAllReportsPressed(context),
+                                          child: Text(
+                                            'Lihat Semua',
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontSize: 12.5,
+                                              fontWeight: FontWeight.w700,
+                                              color: AppColors.primaryBlue,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+
+                                    const SizedBox(height: 12),
+
+                                    if (snapshot.connectionState ==
+                                        ConnectionState.waiting)
+                                      const Center(
+                                        child: Padding(
+                                          padding: EdgeInsets.all(24),
+                                          child: CircularProgressIndicator(),
+                                        ),
+                                      )
+                                    else if (activeReports.isEmpty)
+                                      Container(
+                                        width: double.infinity,
+                                        padding: const EdgeInsets.all(20),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.white,
+                                          borderRadius:
+                                              BorderRadius.circular(18),
+                                          border: Border.all(
+                                              color: const Color(0xFFE8EEF6)),
+                                        ),
+                                        child: Text(
+                                          'Belum ada laporan aktif saat ini.',
+                                          textAlign: TextAlign.center,
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 13,
+                                            color: AppColors.textSecondary,
+                                          ),
+                                        ),
+                                      )
+                                    else
+                                      ...activeReports.take(3).map((report) {
+                                        final prog =
+                                            _progressFromStatus(report.status);
+                                        final shortId = report.id.length > 8
+                                            ? report.id
+                                                .substring(0, 8)
+                                                .toUpperCase()
+                                            : report.id.toUpperCase();
+                                        final latestNote = report
+                                                .riwayatStatus.isNotEmpty
+                                            ? report.riwayatStatus.last.catatan
+                                            : report.deskripsi;
+
+                                        return Padding(
+                                          padding:
+                                              const EdgeInsets.only(bottom: 12),
+                                          child: _ActiveReportCard(
+                                            ticketId: '#$shortId',
+                                            statusText: report.status.label,
+                                            title: report.assetNama,
+                                            location: report.assetLokasi,
+                                            stageText: prog.stageText,
+                                            progressPercent: prog.percent,
+                                            completedSegments: prog.step,
+                                            totalSegments: 5,
+                                            feedbackText: latestNote,
+                                          ),
+                                        );
+                                      }),
                                   ],
                                 ),
-
-                                const SizedBox(height: 12),
-
-                                // Kartu Laporan Aktif
-                                const _ActiveReportCard(
-                                  ticketId: '#SNF-2026-089',
-                                  statusText: 'Sedang Diperbaiki',
-                                  title: 'AC Ruang Kelas D-104 Bocor',
-                                  location:
-                                      'Fakultas Ilmu Komputer dan Teknologi Informasi • Lantai 1 (R. D-104)',
-                                  stageText:
-                                      'Tahap 4/5: Teknisi sedang memperbaiki',
-                                  progressPercent: '80%',
-                                  completedSegments: 4,
-                                  totalSegments: 5,
-                                  feedbackText:
-                                      'Teknisi sedang memperbaiki pipa pembuangan AC di Ruang D-104.',
-                                ),
-                              ],
-                            ),
+                              );
+                            },
                           ),
                         ),
                       ],

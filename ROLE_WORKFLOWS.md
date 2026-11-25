@@ -104,7 +104,7 @@ Aktor: Sivitas Akademika dan Pengunjung/Tamu Kampus.
 
 3. **Jalur 2 — Lapor Manual (`form_pengaduan_screen.dart`):**
 
-   * **Aset Terdaftar di Sistem:** Jika masuk tanpa QR (`selectedAsset == null`), pengguna memilih **Gedung** $\rightarrow$ **Ruangan** $\rightarrow$ **Aset** melalui *dropdown* berjenjang dari koleksi `assets` (mengisi `assetId`, `assetNama`, dan `assetLokasi`). Saat aset terpilih di *dropdown*, tersedia pula pintasan **"Lihat Riwayat Aset"** menuju `HistoryAssetScreen` agar Pelapor dapat mengecek riwayat aset sebelum mengirim laporan.
+   * **Aset Terdaftar di Sistem:** Jika masuk tanpa QR (`selectedAsset == null`), pengguna memilih **Gedung** $\rightarrow$ **Ruangan** $\rightarrow$ **Aset** melalui pilihan berjenjang (*dropdown* / daftar yang mendukung pencarian jika item banyak) dari koleksi `assets` (mengisi `assetId`, `assetNama`, dan `assetLokasi`). Daftar pilihan gedung dan ruangan dideduplikasi secara *case-insensitive*. Saat aset terpilih, tersedia pula pintasan **"Lihat Riwayat Aset"** menuju `HistoryAssetScreen` agar Pelapor dapat mengecek riwayat aset sebelum mengirim laporan.
 
    * **Opsi Ekstra — "Fasilitas Lainnya / Tidak Terdaftar":** Digunakan apabila fasilitas yang rusak belum dibuatkan data master oleh Admin atau berupa kerusakan bangunan umum (misalnya keramik pecah, atap bocor, kaca retak, atau kran air rusak). Ketika opsi ini dipilih, pengguna cukup mengisi **Nama Fasilitas** (`assetNama`) dan **Lokasi** (`assetLokasi`) secara manual, sehingga laporan dikirim dengan nilai **`assetId: null`**.
 
@@ -167,6 +167,11 @@ Aktor: Pengelola Sarana & Prasarana Kampus.
 3. **Kelola Aset & Generator QR (`kelola_aset_screen.dart`):**
 
    * Menambah, mengubah, atau menghapus master data fasilitas di koleksi `assets` (ID Aset, Nama Aset, Kategori, Gedung, Ruangan).
+
+   * **Pemilihan & Input Gedung / Ruangan (Tanpa Koleksi Terpisah):**
+     * Saat menambah atau mengubah aset, field **Gedung** menampilkan pilihan seluruh gedung unik yang sudah pernah disimpan sebelumnya (mendukung pencarian jika daftar sudah panjang) disertai opsi **"+ Tambah Gedung Baru"** untuk mengetik manual apabila gedung belum tersedia.
+     * Field **Ruangan** mengikuti pola berjenjang yang sama: menampilkan seluruh ruangan unik yang sudah ada **di dalam gedung yang dipilih** (dicocokkan secara *case-insensitive*) disertai opsi **"+ Tambah Ruangan Baru"** untuk mengetik manual ruangan baru.
+     * Input `gedung` dan `ruangan` bersifat ***case-insensitive*** (merapikan spasi berlebih serta menyamakan ejaan dengan data yang sudah ada) agar tidak memunculkan pilihan ganda akibat perbedaan huruf kapital atau salah ketik.
 
    * Menghasilkan tampilan **QR Code** dengan format `ASSET:${asset.id}` (contoh: `ASSET:AC-R204`) menggunakan `qr_flutter` beserta opsi simpan/bagikan gambar QR untuk dicetak.
 
@@ -242,11 +247,17 @@ Aktor: Petugas Perbaikan Lapangan (Staf Internal Kampus).
 
    * Field `assetId` bersifat *nullable* (`String?`): terisi ID aset murni jika berasal dari Scan QR atau *dropdown* `assets`, dan bernilai `null` jika Pelapor memilih opsi *Fasilitas Lainnya / Tidak Terdaftar*.
 
-4. **Pemicu Notifikasi (`NotificationModel`) & Audit `riwayatStatus`:**
+4. **Normalisasi *Case-Insensitive* untuk `gedung` & `ruangan` (Tanpa Koleksi Baru):**
+
+   * Data `gedung` dan `ruangan` tetap disimpan langsung di dalam dokumen koleksi `assets` tanpa membuat koleksi lokasi terpisah.
+
+   * Baik saat penyimpanan di `AssetService` maupun saat ekstraksi daftar pilihan unik di UI (`kelola_aset_screen.dart` dan `form_pengaduan_screen.dart`), perbandingan nilai `gedung` dan pasangan `(gedung, ruangan)` wajib dilakukan secara ***case-insensitive*** (mengabaikan perbedaan huruf besar/kecil dan spasi berlebih) agar *dropdown* pengguna bebas dari duplikat.
+
+5. **Pemicu Notifikasi (`NotificationModel`) & Audit `riwayatStatus`:**
 
    * Pembuatan dokumen notifikasi dan penambahan log `StatusHistoryItem` pada array `riwayatStatus` dilakukan langsung di dalam *method* `ReportService` setiap kali status laporan berubah maupun saat tindakan **Konfirmasi Selesai** (`isConfirmed = true`) dan **Belum Beres** (*re-open* ke `assigned`) dijalankan—tidak perlu memakai Cloud Functions.
 
-5. **Gunakan Enum dari File Model (Jangan Hardcode String):**
+6. **Gunakan Enum dari File Model (Jangan Hardcode String):**
 
    * `UserRole` (ada di `user_model.dart`): `UserRole.pelapor`, `UserRole.admin`, `UserRole.teknisi`
 
@@ -256,7 +267,7 @@ Aktor: Petugas Perbaikan Lapangan (Staf Internal Kampus).
 
    * *Tips UI:* Untuk menampilkan teks Bahasa Indonesia ke layar, langsung panggil `.label` (contoh: `report.status.label` otomatis menghasilkan `"Sedang Dikerjakan"`).
 
-6. **ID Dokumen Firestore (`doc.id` Murni) & Standar Prefix QR Code:**
+7. **ID Dokumen Firestore (`doc.id` Murni) & Standar Prefix QR Code:**
 
    * Koleksi `users` dan `assets` tidak menyimpan ulang field `uid`/`id` di dalam dokumen. Saat menyimpan data baru di `services/`, wajib gunakan `.doc(id).set(...)` (bukan `.add(...)`).
 
@@ -302,7 +313,7 @@ Agar seluruh anggota tim bisa mengerjakan tugas secara bersamaan tanpa saling me
 
 * [x] `services/storage_service.dart` (Ambil gambar, kompres < 250 KB, & encode/decode Base64)
 
-* [x] `services/asset_service.dart` (CRUD data aset/ruangan & pencarian berdasarkan ID QR)
+* [x] `services/asset_service.dart` (CRUD data aset/ruangan, normalisasi lokasi *case-insensitive*, & pencarian ID QR)
 
 * [x] `services/notification_service.dart` (Stream notifikasi real-time, hitung belum dibaca, & tandai sudah dibaca)
 
@@ -346,7 +357,7 @@ Agar seluruh anggota tim bisa mengerjakan tugas secara bersamaan tanpa saling me
 
 * [ ] `screens/pelapor/scan_qr_screen.dart` (Pemindai kamera QR & validasi prefix `ASSET:` / `USER:`)
 
-* [ ] `screens/pelapor/form_pengaduan_screen.dart` (Form dual-mode: otomatis dari QR, *dropdown* manual, & opsi *Fasilitas Lainnya* dengan `assetId: null`)
+* [ ] `screens/pelapor/form_pengaduan_screen.dart` (Form dual-mode: otomatis dari QR, pilihan berjenjang manual + pencarian, & opsi *Fasilitas Lainnya* dengan `assetId: null`)
 
 * [ ] `screens/pelapor/history_laporan_screen.dart` (Daftar riwayat laporan pelapor + filter status)
 
@@ -358,7 +369,7 @@ Agar seluruh anggota tim bisa mengerjakan tugas secara bersamaan tanpa saling me
 
 * [ ] `screens/admin/kelola_laporan_screen.dart` (Filter semua laporan & modal verifikasi/tolak/tugaskan teknisi)
 
-* [ ] `screens/admin/kelola_aset_screen.dart` (CRUD master aset & generator tampilan/simpan QR Code `ASSET:<id>`)
+* [ ] `screens/admin/kelola_aset_screen.dart` (CRUD master aset, pilih gedung/ruangan yang sudah ada atau ketik baru secara *case-insensitive*, & generator QR Code `ASSET:<id>`)
 
 * [ ] `screens/admin/kelola_teknisi_screen.dart` (Daftar teknisi, beban tugas aktif, & ubah role `pelapor` $\leftrightarrow$ `teknisi` via Search Email/Nama atau Scan QR Profil)
 

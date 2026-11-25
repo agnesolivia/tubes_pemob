@@ -741,7 +741,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _settingTile(
                 icon: Icons.person_outline,
                 title: 'Edit Profil',
-                subtitle: 'Perbarui nama, foto, dan kontak',
+                subtitle: 'Perbarui nama dan foto profil',
                 onTap: () => _showEditProfileSheet(user),
               ),
               const Divider(height: 1, color: _ProfileColors.border),

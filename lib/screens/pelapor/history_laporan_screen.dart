@@ -1,5 +1,5 @@
-
 import 'package:flutter/material.dart';
+import '../shared/detail_laporan_screen.dart';
 
 // --------------------------------------------------------------- COLORS
 
@@ -14,6 +14,7 @@ class HistoryColors {
 
 // --------------------------------------------------------------- MODEL
 
+
 enum StatusLaporan { diproses, selesai, ditolak }
 
 class Laporan {
@@ -23,7 +24,20 @@ class Laporan {
   final String lokasi;
   final StatusLaporan status;
   final bool adaFeedback;
+
   final String? gambar;
+  final List<String> fotoPaths;
+
+  final String kategori;
+  final String detailLokasi;
+  final String dilaporkan;
+  final String deskripsi;
+
+  final String waktuDikirim;
+  final String waktuVerifikasi;
+  final String waktuPerbaikan;
+  final String waktuSelesai;
+  final String catatanAdmin;
 
   const Laporan({
     required this.id,
@@ -33,6 +47,16 @@ class Laporan {
     required this.status,
     this.adaFeedback = false,
     this.gambar,
+    this.fotoPaths = const [],
+    this.kategori = '-',
+    this.detailLokasi = '-',
+    this.dilaporkan = '-',
+    this.deskripsi = 'Belum ada deskripsi laporan.',
+    this.waktuDikirim = '-',
+    this.waktuVerifikasi = '-',
+    this.waktuPerbaikan = '-',
+    this.waktuSelesai = '-',
+    this.catatanAdmin = '-',
   });
 }
 
@@ -45,6 +69,16 @@ const List<Laporan> dataLaporan = [
     lokasi: 'Gedung D • Lantai 2',
     status: StatusLaporan.selesai,
     adaFeedback: true,
+    kategori: 'Pendingin Ruangan',
+    detailLokasi: 'Ruang Kelas D-204',
+    dilaporkan: '16 Nov 2026, 08.30 WIB',
+    deskripsi:
+        'AC di ruang kelas mengalami kebocoran air sehingga mengganggu kegiatan perkuliahan.',
+    waktuDikirim: '08.30 WIB',
+    waktuVerifikasi: '09.00 WIB',
+    waktuPerbaikan: '10.15 WIB',
+    waktuSelesai: '13.00 WIB',
+    catatanAdmin: 'Perbaikan AC telah selesai dilakukan.',
   ),
   Laporan(
     id: '#SNF-2026-085',
@@ -53,6 +87,15 @@ const List<Laporan> dataLaporan = [
     lokasi: 'Gedung B • Lantai 1',
     status: StatusLaporan.ditolak,
     adaFeedback: true,
+    kategori: 'Elektronik',
+    detailLokasi: 'Laboratorium Komputer 1',
+    dilaporkan: '15 Nov 2026, 09.20 WIB',
+    deskripsi:
+        'Proyektor di Laboratorium Komputer 1 tidak dapat dinyalakan saat akan digunakan untuk praktikum.',
+    waktuDikirim: '09.20 WIB',
+    waktuVerifikasi: '10.05 WIB',
+    catatanAdmin:
+        'Laporan ditolak karena masalah telah ditangani sebelumnya.',
   ),
   Laporan(
     id: '#SNF-2026-090',
@@ -60,6 +103,14 @@ const List<Laporan> dataLaporan = [
     judul: 'Kursi Lipat Mahasiswa Patah',
     lokasi: 'Gedung C • Ruang C-102',
     status: StatusLaporan.diproses,
+    kategori: 'Kursi & Meja',
+    detailLokasi: 'Ruang Kelas C-102',
+    dilaporkan: '25 Nov 2026, 20.45 WIB',
+    deskripsi:
+        'Sandaran dan baut penyangga besi kursi lipat mahasiswa di barisan tengah patah sehingga membahayakan mahasiswa saat duduk mengikuti perkuliahan.',
+    waktuDikirim: '20.45 WIB',
+    waktuVerifikasi: '21.00 WIB',
+    waktuPerbaikan: 'Sedang berlangsung',
   ),
 ];
 
@@ -583,10 +634,26 @@ class _LaporanCard extends StatelessWidget {
                 const SizedBox.shrink(),
               InkWell(
                 onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Halaman detail laporan belum dibuat.',
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => DetailLaporanPage(
+                        id: laporan.id,
+                        tanggal: laporan.tanggal,
+                        judul: laporan.judul,
+                        lokasi: laporan.lokasi,
+                        status: laporan.status == StatusLaporan.selesai
+                            ? 'Selesai'
+                            : laporan.status == StatusLaporan.ditolak
+                              ? 'Ditolak'
+                              : 'Diproses',
+                        gambar: laporan.gambar,
+                        fotoPaths: laporan.fotoPaths,
+                        waktuDikirim: laporan.waktuDikirim,
+                        waktuVerifikasi: laporan.waktuVerifikasi,
+                        waktuPerbaikan: laporan.waktuPerbaikan,
+                        waktuSelesai: laporan.waktuSelesai,
+                        catatanAdmin: laporan.catatanAdmin,
                       ),
                     ),
                   );

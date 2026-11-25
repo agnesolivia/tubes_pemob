@@ -3,6 +3,7 @@ import 'package:tubes_pemob/models/user_model.dart';
 import 'package:tubes_pemob/screens/pelapor/form_pengaduan_screen.dart';
 import 'package:tubes_pemob/screens/pelapor/history_laporan_screen.dart';
 import 'package:tubes_pemob/screens/pelapor/pelapor_home_screen.dart';
+import 'package:tubes_pemob/screens/shared/notification_screen.dart';
 import 'package:tubes_pemob/screens/shared/profile_screen.dart';
 import 'package:tubes_pemob/widgets/bottom_navbar.dart';
 
@@ -40,7 +41,7 @@ class _PelaporMainScreenState extends State<PelaporMainScreen> {
         children: [
           PelaporHomeScreen(onSwitchTab: _onTabSelected),
           RiwayatLaporanPage(onBackToHome: () => _onTabSelected(0)),
-          const _NotifikasiPlaceholderScreen(),
+          NotificationScreen(onBackToHome: () => _onTabSelected(0)),
           const ProfileScreen(),
         ],
       ),
@@ -49,19 +50,6 @@ class _PelaporMainScreenState extends State<PelaporMainScreen> {
         selectedIndex: _selectedIndex,
         onItemTapped: _onTabSelected,
         onCenterPressed: _onCreateReportPressed,
-      ),
-    );
-  }
-}
-
-class _NotifikasiPlaceholderScreen extends StatelessWidget {
-  const _NotifikasiPlaceholderScreen();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: Text('Halaman Notifikasi belum tersedia.'),
       ),
     );
   }

@@ -8,6 +8,7 @@ import 'screens/admin/admin_main_screen.dart';
 import 'screens/pelapor/pelapor_main_screen.dart';
 import 'screens/pelapor/history_laporan_screen.dart';
 import 'screens/teknisi/teknisi_main_screen.dart';
+import 'screens/shared/notification_screen.dart';
 import 'services/auth_service.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -47,6 +48,7 @@ class MyApp extends StatelessWidget {
         '/pelapor-main': (context) => const PelaporMainScreen(),
         '/teknisi-main': (context) => const TeknisiMainScreen(),
         '/riwayat-laporan': (context) => const RiwayatLaporanPage(),
+        '/notifikasi': (context) => const NotificationScreen(),
       },
     );
   }

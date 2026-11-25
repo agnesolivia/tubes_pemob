@@ -20,13 +20,13 @@ Dokumen ini berisi rincian **apa saja yang bisa dilakukan oleh masing-masing akt
 
   * Memantau status login Firebase Auth. Jika akun menggunakan Email/Password dan `emailVerified == false`, arahkan pengguna ke `VerifyEmailScreen` (berisi tombol cek ulang status verifikasi, kirim ulang email, dan logout).
 
-  * Jika email sudah terverifikasi, sistem membaca dokumen profil di koleksi `users` untuk mengarahkan pengguna secara otomatis ke:
+  * Jika email sudah terverifikasi, sistem membaca dokumen profil di koleksi `users` untuk mengarahkan pengguna secara otomatis ke halaman induk (`*MainScreen`) sesuai role-nya:
 
-    * `PelaporHomeScreen` jika `user.isPelapor`
+    * `PelaporMainScreen` jika `user.isPelapor`
 
-    * `AdminDashboardScreen` jika `user.isAdmin`
+    * `AdminMainScreen` jika `user.isAdmin`
 
-    * `TeknisiHomeScreen` jika `user.isTeknisi`
+    * `TeknisiMainScreen` jika `user.isTeknisi`
 
 * **Catatan Akun Admin & Teknisi:** Tidak ada opsi memilih role saat registrasi mandiri. Akun `admin` pertama diatur manual di Firebase Console, sedangkan akun `teknisi` (petugas internal kampus) diaktifkan oleh Admin melalui menu kelola teknisi.
 
@@ -56,7 +56,7 @@ Satu halaman bersama untuk melihat detail tiket (`ReportModel`), berisi informas
 
 ### E. Profil Pengguna (`profile_screen.dart`)
 
-* **Semua Role:** Melihat informasi akun (Nama, Email, Role), mengubah nama tampilan, menampilkan **QR Code Profil Akun** (`USER:${user.uid}` untuk keperluan aktivasi teknisi oleh Admin), dan tombol **Logout**.
+* **Semua Role:** Melihat informasi akun (Nama, Email, Role), mengubah nama tampilan, menampilkan **QR Code Profil Akun** (`USER:${user.uid}` untuk keperluan aktivasi teknisi oleh Admin), dan tombol **Logout**. Halaman ini tidak memuat `bottomNavigationBar` sendiri sehingga dapat langsung disematkan ke dalam `IndexedStack` milik `PelaporMainScreen`, `AdminMainScreen`, maupun `TeknisiMainScreen`.
 
 ## 2. Alur Role: Pelapor (`screens/pelapor/`)
 
@@ -64,13 +64,11 @@ Aktor: Sivitas Akademika dan Pengunjung/Tamu Kampus.
 
 ### Alur Utama Pelaporan (Fleksibel: QR vs. Manual)
 
-1. **Beranda (`pelapor_home_screen.dart`):**
+1. **Navigasi Utama (`pelapor_main_screen.dart`) & Beranda (`pelapor_home_screen.dart`):**
 
-   * Melihat ringkasan jumlah laporan pribadi (*Menunggu*, *Diproses*, *Selesai*).
+   * `PelaporMainScreen` membungkus 4 halaman tab (`Beranda`, `Riwayat`, `Notifikasi`, `Profil`) menggunakan `IndexedStack` dan 1 `BottomNavbar` permanen di bawah (dengan tombol kamera melayang di tengah untuk membuka `CreateReportScreen`).
 
-   * Melihat daftar laporan aktif terbaru di kampus (untuk mengecek apakah fasilitas rusak sudah dilaporkan orang lain).
-
-   * Memilih satu dari dua jalur pelaporan: **Scan QR** atau **Lapor Manual**.
+   * Di beranda, Pelapor melihat ringkasan jumlah laporan pribadi (*Menunggu*, *Diproses*, *Selesai*), daftar laporan aktif, serta tombol cepat **Buat Laporan Baru** / **Scan QR**.
 
 2. **Jalur 1 — Scan QR (`scan_qr_screen.dart`):**
 
@@ -86,7 +84,7 @@ Aktor: Sivitas Akademika dan Pengunjung/Tamu Kampus.
 
 4. **Pengisian & Pengiriman Laporan (`form_pengaduan_screen.dart`):**
 
-   * Pengguna mengisi deskripsi kerusakan dan wajib melampirkan 1 foto bukti (`fotoSebelum`) dari kamera atau galeri.
+   * Pengguna mengisi deskripsi kerusakan dan wajib melampirkan foto bukti (`fotoSebelum`) dari kamera atau galeri.
 
    * Saat dikirim:
 
@@ -94,9 +92,9 @@ Aktor: Sivitas Akademika dan Pengunjung/Tamu Kampus.
 
      * Sistem mengirim notifikasi ke Admin bahwa ada laporan baru masuk.
 
-5. **Riwayat & Tindak Lanjut (`history_pelaporan_screen.dart` & `detail_laporan_screen.dart`):**
+5. **Riwayat & Tindak Lanjut (`history_laporan_screen.dart` & `detail_laporan_screen.dart`):**
 
-   * Pelapor memantau seluruh tiket miliknya dengan filter status.
+   * Pelapor memantau seluruh tiket miliknya dengan filter status dan kolom pencarian.
 
    * **Jika status `reported`:** Pelapor masih bisa **membatalkan/menghapus** laporan jika salah input.
 
@@ -110,11 +108,11 @@ Aktor: Pengelola Sarana & Prasarana Kampus.
 
 ### Alur Kerja Admin
 
-1. **Dashboard Pantauan (`admin_dashboard_screen.dart`):**
+1. **Navigasi Utama (`admin_main_screen.dart`) & Dashboard Pantauan (`admin_dashboard_screen.dart`):**
 
-   * Melihat statistik tiket berdasarkan status (`reported`, `verified`/`assigned`/`inProgress`, `resolved`).
+   * `AdminMainScreen` membungkus 4 halaman tab (`Beranda`, `Tiket`, `Notifikasi`, `Profil`) menggunakan `IndexedStack` dan 1 `BottomNavbar` permanen di bawah (dengan tombol tengah pemindai QR aset/profil).
 
-   * Melihat daftar peringatan tiket **Overdue SLA** (tiket belum `resolved` dan waktu sekarang sudah melewati `deadlineAt` / `report.isOverdue`).
+   * Di dashboard, Admin melihat statistik tiket berdasarkan status (`reported`, `verified`/`assigned`/`inProgress`, `resolved`) serta daftar peringatan tiket **Overdue SLA** (tiket belum `resolved` dan waktu sekarang sudah melewati `deadlineAt` / `report.isOverdue`).
 
 2. **Verifikasi, Penolakan & Penugasan (`kelola_laporan_screen.dart` & `detail_laporan_screen.dart`):**
 
@@ -158,11 +156,11 @@ Aktor: Petugas Perbaikan Lapangan (Staf Internal Kampus).
 
 ### Alur Kerja Teknisi
 
-1. **Beranda Teknisi (`teknisi_home_screen.dart`):**
+1. **Navigasi Utama (`teknisi_main_screen.dart`) & Beranda Teknisi (`teknisi_home_screen.dart`):**
 
-   * Melihat ringkasan jumlah tugas pribadi (*Baru Ditugaskan*, *Sedang Dikerjakan*, *Selesai*).
+   * `TeknisiMainScreen` membungkus 4 halaman tab (`Beranda`, `Tugas`, `Notifikasi`, `Profil`) menggunakan `IndexedStack` dan 1 `BottomNavbar` permanen di bawah (dengan tombol tengah pemindai QR aset untuk akses cepat tiket ruangan).
 
-   * Melihat daftar tugas aktif yang **diurutkan otomatis berdasarkan batas SLA terdekat / paling mendesak**.
+   * Di beranda, Teknisi melihat ringkasan jumlah tugas pribadi (*Baru Ditugaskan*, *Sedang Dikerjakan*, *Selesai*) serta daftar tugas aktif yang **diurutkan otomatis berdasarkan batas SLA terdekat / paling mendesak**.
 
 2. **Daftar Tugas (`daftar_tugas_screen.dart`):**
 
@@ -276,6 +274,8 @@ Agar seluruh anggota tim bisa mengerjakan tugas secara bersamaan tanpa saling me
 
 *Dapat dikerjakan sepenuhnya secara paralel tanpa menunggu koneksi Firebase.*
 
+* [ ] `widgets/bottom_navbar.dart` (Navigasi bawah reusable lintas role dengan tombol aksi tengah)
+
 * [ ] `widgets/status_badge.dart` (Label warna otomatis per status tiket)
 
 * [ ] `widgets/sla_indicator.dart` (Indikator sisa waktu / label *Overdue* berdasarkan `deadlineAt`)
@@ -302,15 +302,19 @@ Agar seluruh anggota tim bisa mengerjakan tugas secara bersamaan tanpa saling me
 
 ### Jalur D — Modul Pelapor (`screens/pelapor/`)
 
+* [ ] `screens/pelapor/pelapor_main_screen.dart` (*Shell* utama dengan `IndexedStack` & `BottomNavbar` untuk tab Pelapor)
+
 * [ ] `screens/pelapor/pelapor_home_screen.dart` (Ringkasan status pribadi, laporan kampus terkini, & tombol QR/Manual)
 
 * [ ] `screens/pelapor/scan_qr_screen.dart` (Pemindai kamera QR & validasi prefix `ASSET:` / `USER:`)
 
 * [ ] `screens/pelapor/form_pengaduan_screen.dart` (Form dual-mode: otomatis dari QR & *dropdown* manual + unggah foto)
 
-* [ ] `screens/pelapor/history_pelaporan_screen.dart` (Daftar riwayat laporan pelapor + filter status)
+* [ ] `screens/pelapor/history_laporan_screen.dart` (Daftar riwayat laporan pelapor + filter status)
 
 ### Jalur E — Modul Admin (`screens/admin/`)
+
+* [ ] `screens/admin/admin_main_screen.dart` (*Shell* utama dengan `IndexedStack` & `BottomNavbar` untuk tab Admin)
 
 * [ ] `screens/admin/admin_dashboard_screen.dart` (Statistik tiket & daftar peringatan *Overdue SLA*)
 
@@ -321,6 +325,8 @@ Agar seluruh anggota tim bisa mengerjakan tugas secara bersamaan tanpa saling me
 * [ ] `screens/admin/kelola_teknisi_screen.dart` (Daftar teknisi, beban tugas aktif, & ubah role `pelapor` $\leftrightarrow$ `teknisi` via Search Email/Nama atau Scan QR Profil)
 
 ### Jalur F — Modul Teknisi (`screens/teknisi/`)
+
+* [ ] `screens/teknisi/teknisi_main_screen.dart` (*Shell* utama dengan `IndexedStack` & `BottomNavbar` untuk tab Teknisi)
 
 * [ ] `screens/teknisi/teknisi_home_screen.dart` (Ringkasan tugas pribadi & daftar urut batas SLA terdekat)
 

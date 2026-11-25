@@ -28,6 +28,7 @@ lib/
 │   └── notification_service.dart         # Stream notifikasi real-time & tandai notifikasi sudah dibaca
 │
 ├── widgets/                              # Komponen UI kecil yang dipakai berulang di banyak halaman
+│   ├── bottom_navbar.dart                # Navigasi bawah reusable lintas role (Pelapor, Admin, Teknisi)
 │   ├── status_badge.dart                 # Label warna otomatis sesuai ReportStatus
 │   ├── sla_indicator.dart                # Indikator sisa waktu / keterlambatan batas SLA
 │   ├── report_card.dart                  # Kartu ringkasan laporan untuk daftar/list
@@ -47,18 +48,21 @@ lib/
     │   └── profile_screen.dart           # Profil akun, edit nama, QR Code profil (USER:<uid>), & logout
     │
     ├── pelapor/                          # Khusus Sivitas Akademika & Pengunjung Kampus
+    │   ├── pelapor_main_screen.dart      # Shell utama (Scaffold + IndexedStack + BottomNavbar) penampung tab Pelapor
     │   ├── pelapor_home_screen.dart      # Beranda pelapor, ringkasan status, & tombol Scan QR / Lapor
     │   ├── scan_qr_screen.dart           # Pemindai kamera QR Code (mode aset ASSET:<id>)
     │   ├── form_pengaduan_screen.dart    # Form buat laporan (otomatis dari QR atau pilih dropdown)
-    │   └── history_pelaporan_screen.dart # Daftar riwayat laporan milik pelapor + filter status
+    │   └── history_laporan_screen.dart   # Daftar riwayat laporan milik pelapor + filter status
     │
     ├── admin/                            # Khusus Pengelola Fasilitas Kampus
+    │   ├── admin_main_screen.dart        # Shell utama (Scaffold + IndexedStack + BottomNavbar) penampung tab Admin
     │   ├── admin_dashboard_screen.dart   # Statistik tiket, monitoring kepatuhan SLA, & menu kelola
     │   ├── kelola_laporan_screen.dart    # Daftar laporan masuk untuk verifikasi, tolak, & pilih teknisi
     │   ├── kelola_aset_screen.dart       # Tambah/edit ruangan & aset + generate & cetak QR Code (ASSET:<id>)
     │   └── kelola_teknisi_screen.dart    # Daftar teknisi, beban tugas aktif, & kelola role via Search/Scan QR
     │
     └── teknisi/                          # Khusus Petugas Perbaikan Lapangan
+        ├── teknisi_main_screen.dart      # Shell utama (Scaffold + IndexedStack + BottomNavbar) penampung tab Teknisi
         ├── teknisi_home_screen.dart      # Ringkasan tugas aktif & daftar prioritas SLA terdekat
         ├── daftar_tugas_screen.dart      # Daftar lengkap tugas yang ditugaskan ke teknisi terkait
         └── form_penyelesaian_screen.dart # Form upload foto sesudah perbaikan & catatan tindakan
@@ -81,10 +85,12 @@ Satu-satunya lapisan yang boleh memanggil `FirebaseFirestore`, `FirebaseAuth`, a
 * File di `screens/` cukup memanggil *singleton instance* dari `services/` (misalnya `ReportService.instance.streamReportsByPelapor(uid)`) dan menerima data yang sudah berbentuk `Model` atau `List<Model>`.
 
 ### `widgets/`
-Berisi komponen UI tanpa `Scaffold` yang digunakan di lebih dari satu halaman—contohnya `ReportCard` yang dipakai di beranda Pelapor, daftar Admin, maupun daftar tugas Teknisi, serta `Base64ImageViewer` untuk menampilkan foto laporan.
+Berisi komponen UI tanpa `Scaffold` yang digunakan di lebih dari satu halaman—contohnya `BottomNavbar` sebagai navigasi bawah lintas role, `ReportCard` yang dipakai di beranda Pelapor, daftar Admin, maupun daftar tugas Teknisi, serta `Base64ImageViewer` untuk menampilkan foto laporan.
 
 ### `screens/`
 Berisi tampilan halaman penuh (`Scaffold`). Dikelompokkan berdasarkan aktor pengguna agar setiap anggota tim bisa fokus mengerjakan foldernya masing-masing tanpa saling menimpa file.
+
+* **Pola Shell `*MainScreen` & `IndexedStack`:** Setiap role memiliki satu halaman induk (`PelaporMainScreen`, `AdminMainScreen`, dan `TeknisiMainScreen`) yang memegang `Scaffold`, `BottomNavbar`, dan `IndexedStack`. Keempat halaman tab utama (*Beranda*, *Riwayat/Tiket/Tugas*, *Notifikasi*, *Profil*) **tidak memasang `bottomNavigationBar` sendiri** agar navbar tetap diam di tempat (tidak ikut berkedip/tergeser) saat berpindah tab dan `ProfileScreen` dapat dipakai bersama lintas role tanpa duplikasi kode.
 
 ## 3. Alur Inti & Skenario Lintas Role
 

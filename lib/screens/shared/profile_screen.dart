@@ -305,84 +305,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _showEditNameDialog(UserModel user) async {
-    final controller = TextEditingController(text: user.nama);
-    bool isSaving = false;
-
-    await showDialog<void>(
+    final newName = await showDialog<String>(
       context: context,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: Text(
-                'Edit Nama Profil',
-                style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
-              ),
-              content: TextField(
-                controller: controller,
-                autofocus: true,
-                textCapitalization: TextCapitalization.words,
-                style: GoogleFonts.plusJakartaSans(),
-                decoration: InputDecoration(
-                  hintText: 'Masukkan nama lengkap',
-                  hintStyle: GoogleFonts.plusJakartaSans(),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: isSaving
-                      ? null
-                      : () => Navigator.of(dialogContext).pop(),
-                  child: Text(
-                    'Batal',
-                    style: GoogleFonts.plusJakartaSans(),
-                  ),
-                ),
-                ElevatedButton(
-                  onPressed: isSaving
-                      ? null
-                      : () async {
-                          final newName = controller.text.trim();
-                          if (newName.length < 3) {
-                            _showSnackBar('Nama minimal 3 karakter.',
-                                isError: true);
-                            return;
-                          }
-                          setDialogState(() => isSaving = true);
-                          try {
-                            await AuthService.instance.updateProfile(
-                              uid: user.uid,
-                              nama: newName,
-                            );
-                            if (dialogContext.mounted) {
-                              Navigator.of(dialogContext).pop();
-                            }
-                            _showSnackBar('Nama berhasil diperbarui.');
-                          } catch (e) {
-                            setDialogState(() => isSaving = false);
-                            _showSnackBar('Gagal memperbarui nama: $e',
-                                isError: true);
-                          }
-                        },
-                  child: isSaving
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Text(
-                          'Simpan',
-                          style: GoogleFonts.plusJakartaSans(),
-                        ),
-                ),
-              ],
-            );
-          },
-        );
-      },
+      builder: (_) => _EditNameDialog(initialName: user.nama),
     );
 
-    controller.dispose();
+    if (newName == null || !mounted) return;
+
+    try {
+      await AuthService.instance.updateProfile(
+        uid: user.uid,
+        nama: newName,
+      );
+      _showSnackBar('Nama berhasil diperbarui.');
+    } catch (e) {
+      _showSnackBar('Gagal memperbarui nama: $e', isError: true);
+    }
   }
 
   Future<void> _sendResetPassword(String email) async {
@@ -1127,6 +1065,73 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
       child: child,
+    );
+  }
+}
+
+class _EditNameDialog extends StatefulWidget {
+  final String initialName;
+
+  const _EditNameDialog({required this.initialName});
+
+  @override
+  State<_EditNameDialog> createState() => _EditNameDialogState();
+}
+
+class _EditNameDialogState extends State<_EditNameDialog> {
+  late final TextEditingController _controller;
+  String? _errorText;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialName);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final newName = _controller.text.trim();
+    if (newName.length < 3) {
+      setState(() => _errorText = 'Nama minimal 3 karakter.');
+      return;
+    }
+    Navigator.of(context).pop(newName);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(
+        'Edit Nama Profil',
+        style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
+      ),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        textCapitalization: TextCapitalization.words,
+        style: GoogleFonts.plusJakartaSans(),
+        decoration: InputDecoration(
+          hintText: 'Masukkan nama lengkap',
+          hintStyle: GoogleFonts.plusJakartaSans(),
+          errorText: _errorText,
+        ),
+        onSubmitted: (_) => _submit(),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text('Batal', style: GoogleFonts.plusJakartaSans()),
+        ),
+        ElevatedButton(
+          onPressed: _submit,
+          child: Text('Simpan', style: GoogleFonts.plusJakartaSans()),
+        ),
+      ],
     );
   }
 }

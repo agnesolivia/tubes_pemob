@@ -4,7 +4,8 @@ import 'firebase_options.dart';
 
 import 'screens/splash_screen.dart';
 import 'screens/auth/auth_wrapper.dart';
-import 'screens/admin/admin_dashboard_screen.dart';
+import 'screens/admin/admin_main_screen.dart';
+import 'screens/pelapor/pelapor_main_screen.dart';
 import 'screens/pelapor/history_laporan_screen.dart';
 import 'services/auth_service.dart';
 
@@ -28,20 +29,19 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Pelaporan Fasilitas Kampus',
       debugShowCheckedModeBanner: false,
-
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: Colors.blue,
         ),
         useMaterial3: true,
       ),
-
       initialRoute: '/',
-
       routes: {
         '/': (context) => const SplashScreen(),
         '/auth': (context) => const AuthWrapper(),
-        '/admin-dashboard': (context) => const AdminDashboardScreen(),
+        '/admin-main': (context) => const AdminMainScreen(),
+        '/admin-dashboard': (context) => const AdminMainScreen(),
+        '/pelapor-main': (context) => const PelaporMainScreen(),
         '/riwayat-laporan': (context) => const RiwayatLaporanPage(),
       },
     );

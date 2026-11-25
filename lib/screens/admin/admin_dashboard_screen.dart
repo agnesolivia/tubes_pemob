@@ -2,15 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:tubes_pemob/constants/app_colors.dart';
+import 'package:tubes_pemob/models/user_model.dart';
 import 'package:tubes_pemob/screens/admin/kelola_aset_screen.dart';
 import 'package:tubes_pemob/screens/admin/kelola_teknisi_screen.dart';
+import 'package:tubes_pemob/services/auth_service.dart';
 
 // ============================================================
 // ADMIN DASHBOARD SCREEN
 // ============================================================
 
 class AdminDashboardScreen extends StatefulWidget {
-  const AdminDashboardScreen({super.key});
+  final ValueChanged<int>? onSwitchTab;
+
+  const AdminDashboardScreen({
+    super.key,
+    this.onSwitchTab,
+  });
 
   @override
   State<AdminDashboardScreen> createState() =>
@@ -18,8 +25,6 @@ class AdminDashboardScreen extends StatefulWidget {
 }
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
-  int _selectedNavIndex = 0;
-
   // Statistik akan diisi ketika backend sudah terintegrasi.
   final int _totalTickets = 0;
   final int _reportedCount = 0;
@@ -31,63 +36,38 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   // NAVIGATION HANDLER
   // ==========================================================
 
-  void _onNavigationTapped(int index) {
-    setState(() {
-      _selectedNavIndex = index;
-    });
-
-    switch (index) {
-      case 0:
-        break;
-
-      case 1:
-        _showMessage('Halaman Kelola Laporan belum dihubungkan.');
-        break;
-
-      case 3:
-        _showMessage('Halaman Notifikasi belum dihubungkan.');
-        break;
-
-      case 4:
-        _showMessage('Halaman Profil Admin belum dihubungkan.');
-        break;
-    }
-  }
-
-  void _onCameraPressed() {
-    _showMessage('Fitur pemindaian belum tersedia.');
-  }
-
   void _onManageAssetsPressed() {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => const KelolaAsetScreen(),
-    ),
-  );
-}
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const KelolaAsetScreen(),
+      ),
+    );
+  }
 
-void _onManageTechniciansPressed() {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => const KelolaTeknisiScreen(),
-    ),
-  );
-}
+  void _onManageTechniciansPressed() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const KelolaTeknisiScreen(),
+      ),
+    );
+  }
 
   void _onViewAllTicketsPressed() {
-    setState(() {
-      _selectedNavIndex = 1;
-    });
+    if (widget.onSwitchTab != null) {
+      widget.onSwitchTab!(1);
+      return;
+    }
 
     _showMessage('Halaman Kelola Laporan belum dihubungkan.');
   }
 
   void _onProfilePressed() {
-    setState(() {
-      _selectedNavIndex = 4;
-    });
+    if (widget.onSwitchTab != null) {
+      widget.onSwitchTab!(3);
+      return;
+    }
 
     _showMessage('Halaman Profil Admin belum dihubungkan.');
   }
@@ -126,8 +106,6 @@ void _onManageTechniciansPressed() {
       ),
       child: Scaffold(
         backgroundColor: AppColors.primaryBlue,
-        extendBody: true,
-
         body: Stack(
           children: [
             // 1. Background Gelombang Biru Atas
@@ -241,14 +219,31 @@ void _onManageTechniciansPressed() {
                                       ],
                                     ),
                                     alignment: Alignment.center,
-                                    child: Text(
-                                      'A',
-                                      style:
-                                          GoogleFonts.plusJakartaSans(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w700,
-                                        color: AppColors.white,
-                                      ),
+                                    child: StreamBuilder<UserModel?>(
+                                      stream: AuthService.instance.currentUser ==
+                                              null
+                                          ? null
+                                          : AuthService.instance.streamUserData(
+                                              AuthService
+                                                  .instance.currentUser!.uid,
+                                            ),
+                                      builder: (context, snapshot) {
+                                        final nama = snapshot.data?.nama ??
+                                            AuthService.instance.currentUser
+                                                ?.displayName ??
+                                            'A';
+                                        final initial = nama.trim().isEmpty
+                                            ? 'A'
+                                            : nama.trim()[0].toUpperCase();
+                                        return Text(
+                                          initial,
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w700,
+                                            color: AppColors.white,
+                                          ),
+                                        );
+                                      },
                                     ),
                                   ),
                                 ),
@@ -341,43 +336,43 @@ void _onManageTechniciansPressed() {
 
                           const SizedBox(height: 24),
 
-                          //Tombol Kelola Teknisi
+                          // Tombol Kelola Teknisi
                           Align(
-  alignment: Alignment.centerRight,
-  child: TextButton.icon(
-    onPressed: _onManageTechniciansPressed,
-    icon: const Icon(
-      Icons.engineering_rounded,
-      size: 18,
-    ),
-    label: Text(
-      'Kelola Teknisi',
-      style: GoogleFonts.plusJakartaSans(
-        fontSize: 12,
-        fontWeight: FontWeight.w700,
-      ),
-    ),
-  ),
-),
+                            alignment: Alignment.centerRight,
+                            child: TextButton.icon(
+                              onPressed: _onManageTechniciansPressed,
+                              icon: const Icon(
+                                Icons.engineering_rounded,
+                                size: 18,
+                              ),
+                              label: Text(
+                                'Kelola Teknisi',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ),
 
                           // Tombol Kelola Aset
                           Align(
-  alignment: Alignment.centerRight,
-  child: TextButton.icon(
-    onPressed: _onManageAssetsPressed,
-    icon: const Icon(
-      Icons.inventory_2_outlined,
-      size: 18,
-    ),
-    label: Text(
-      'Kelola Aset',
-      style: GoogleFonts.plusJakartaSans(
-        fontSize: 12,
-        fontWeight: FontWeight.w700,
-      ),
-    ),
-  ),
-),
+                            alignment: Alignment.centerRight,
+                            child: TextButton.icon(
+                              onPressed: _onManageAssetsPressed,
+                              icon: const Icon(
+                                Icons.inventory_2_outlined,
+                                size: 18,
+                              ),
+                              label: Text(
+                                'Kelola Aset',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ),
 
                           // Peringatan Overdue SLA
                           _buildOverdueSection(),
@@ -394,13 +389,6 @@ void _onManageTechniciansPressed() {
               ],
             ),
           ],
-        ),
-
-        // 4. Bottom Navigation Bar
-        bottomNavigationBar: AdminBottomNavBar(
-          selectedIndex: _selectedNavIndex,
-          onItemTapped: _onNavigationTapped,
-          onCameraPressed: _onCameraPressed,
         ),
       ),
     );
@@ -999,187 +987,6 @@ class _IllustrationBar extends StatelessWidget {
         color: color,
         borderRadius: const BorderRadius.vertical(
           top: Radius.circular(4),
-        ),
-      ),
-    );
-  }
-}
-
-// ============================================================
-// ADMIN BOTTOM NAVIGATION BAR
-// ============================================================
-
-class AdminBottomNavBar extends StatelessWidget {
-  final int selectedIndex;
-  final ValueChanged<int> onItemTapped;
-  final VoidCallback onCameraPressed;
-
-  const AdminBottomNavBar({
-    super.key,
-    required this.selectedIndex,
-    required this.onItemTapped,
-    required this.onCameraPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
-
-    return SizedBox(
-      height: 78 + bottomPadding,
-      child: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.bottomCenter,
-        children: [
-          // Bar Putih Utama
-          Container(
-            height: 64 + bottomPadding,
-            padding: EdgeInsets.only(
-              bottom: bottomPadding,
-            ),
-            decoration: BoxDecoration(
-              color: AppColors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF0F172A)
-                      .withValues(alpha: 0.06),
-                  blurRadius: 16,
-                  offset: const Offset(0, -4),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _AdminNavBarItem(
-                  icon: Icons.home_rounded,
-                  label: 'Beranda',
-                  isSelected: selectedIndex == 0,
-                  onTap: () => onItemTapped(0),
-                ),
-
-                _AdminNavBarItem(
-                  icon: Icons.assignment_outlined,
-                  label: 'Tiket',
-                  isSelected: selectedIndex == 1,
-                  onTap: () => onItemTapped(1),
-                ),
-
-                const SizedBox(width: 64),
-
-                _AdminNavBarItem(
-                  icon: Icons.notifications_none_rounded,
-                  label: 'Notifikasi',
-                  isSelected: selectedIndex == 3,
-                  onTap: () => onItemTapped(3),
-                ),
-
-                _AdminNavBarItem(
-                  icon: Icons.person_outline_rounded,
-                  label: 'Profil',
-                  isSelected: selectedIndex == 4,
-                  onTap: () => onItemTapped(4),
-                ),
-              ],
-            ),
-          ),
-
-          // Tombol Kamera Tengah
-          Positioned(
-            top: 0,
-            child: Material(
-              color: Colors.transparent,
-              shape: const CircleBorder(),
-              child: InkWell(
-                onTap: onCameraPressed,
-                customBorder: const CircleBorder(),
-                child: Container(
-                  width: 58,
-                  height: 58,
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryBlue,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: AppColors.accentYellow,
-                      width: 2.2,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primaryBlue
-                            .withValues(alpha: 0.30),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.camera_alt_outlined,
-                    color: AppColors.white,
-                    size: 26,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ============================================================
-// ADMIN NAVIGATION ITEM
-// ============================================================
-
-class _AdminNavBarItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _AdminNavBarItem({
-    required this.icon,
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final color = isSelected
-        ? AppColors.primaryBlue
-        : const Color(0xFF8A94A6);
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 8,
-          vertical: 6,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color: color,
-              size: 23,
-            ),
-
-            const SizedBox(height: 3),
-
-            Text(
-              label,
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 10,
-                fontWeight: isSelected
-                    ? FontWeight.w700
-                    : FontWeight.w500,
-                color: color,
-              ),
-            ),
-          ],
         ),
       ),
     );

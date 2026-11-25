@@ -2,7 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:tubes_pemob/constants/app_colors.dart';
 import 'package:tubes_pemob/models/user_model.dart';
-import 'package:tubes_pemob/screens/admin/admin_dashboard_screen.dart';
+import 'package:tubes_pemob/screens/admin/admin_main_screen.dart';
 import 'package:tubes_pemob/screens/auth/login_screen.dart';
 import 'package:tubes_pemob/screens/pelapor/pelapor_main_screen.dart';
 import 'package:tubes_pemob/screens/teknisi/teknisi_home_screen.dart';
@@ -46,7 +46,7 @@ class AuthWrapper extends StatelessWidget {
             }
 
             if (user.isAdmin) {
-              return const AdminDashboardScreen();
+              return const AdminMainScreen();
             }
             if (user.isTeknisi) {
               return TeknisiHomeScreen(

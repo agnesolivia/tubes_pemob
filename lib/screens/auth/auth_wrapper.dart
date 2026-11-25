@@ -17,18 +17,32 @@ class AuthWrapper extends StatefulWidget {
 }
 
 class _AuthWrapperState extends State<AuthWrapper> {
+  String? _cachedUid;
+  Stream<UserModel?>? _userStream;
+
+  Stream<UserModel?> _getUserStream(String uid) {
+    if (_cachedUid != uid || _userStream == null) {
+      _cachedUid = uid;
+      _userStream = AuthService.instance.streamUserData(uid);
+    }
+    return _userStream!;
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
       // userChanges() ikut terpanggil saat user.reload() mendeteksi emailVerified == true
       stream: FirebaseAuth.instance.userChanges(),
       builder: (context, authSnapshot) {
-        if (authSnapshot.connectionState == ConnectionState.waiting) {
+        if (authSnapshot.connectionState == ConnectionState.waiting &&
+          !authSnapshot.hasData) {
           return const _AuthLoadingScreen();
         }
 
         final firebaseUser = authSnapshot.data;
         if (firebaseUser == null) {
+          _cachedUid = null;
+          _userStream = null;
           return const LoginScreen();
         }
 
@@ -42,9 +56,10 @@ class _AuthWrapperState extends State<AuthWrapper> {
         }
 
         return StreamBuilder<UserModel?>(
-          stream: AuthService.instance.streamUserData(firebaseUser.uid),
+          stream: _getUserStream(firebaseUser.uid),
           builder: (context, userSnapshot) {
-            if (userSnapshot.connectionState == ConnectionState.waiting) {
+            if (userSnapshot.connectionState == ConnectionState.waiting &&
+              !userSnapshot.hasData) {
               return const _AuthLoadingScreen();
             }
 

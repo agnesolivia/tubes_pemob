@@ -58,7 +58,9 @@ lib/
     │   ├── admin_main_screen.dart        # Shell utama dengan IndexedStack & BottomNavbar tab Admin
     │   ├── admin_dashboard_screen.dart   # Statistik tiket, monitoring kepatuhan SLA, & menu kelola
     │   ├── kelola_laporan_screen.dart    # Daftar laporan masuk untuk verifikasi, tolak, & pilih teknisi
-    │   ├── kelola_aset_screen.dart       # CRUD & batch multi-aset per ruangan + cetak stiker QR Code
+    │   ├── kelola_aset_screen.dart       # Daftar master aset, filter lokasi & kategori, & pintasan QR
+    │   ├── tambah_aset_screen.dart       # Form tambah aset satuan & batch multi-item (#) per ruangan
+    │   ├── detail_aset_screen.dart       # Detail aset, stiker QR Code (Simpan/Bagikan), edit, & hapus
     │   └── kelola_teknisi_screen.dart    # Daftar teknisi, beban tugas aktif, & kelola role via Search/Scan QR
     │
     └── teknisi/                          # Khusus Petugas Perbaikan Lapangan
@@ -167,8 +169,8 @@ Proyek ini menggunakan **4 koleksi sejajar (*root collections*)** tanpa *subcoll
 ## 5. Aturan Kolaborasi & Git Tim
 
 1. **Penamaan File & Variabel:**
-   * Nama file wajib `snake_case`, menyertakan peran/fungsinya, dan berakhiran `_screen.dart` untuk seluruh halaman di `screens/` (contoh: `pelapor_home_screen.dart`, `history_asset_screen.dart`, `report_model.dart`).
-   * Nama *class* wajib `PascalCase` sesuai nama file (contoh: `PelaporHomeScreen`, `HistoryAssetScreen`).
+   * Nama file wajib `snake_case`, menyertakan peran/fungsinya, dan berakhiran `_screen.dart` untuk seluruh halaman di `screens/` (contoh: `pelapor_home_screen.dart`, `history_asset_screen.dart`, `detail_aset_screen.dart`).
+   * Nama *class* wajib `PascalCase` sesuai nama file (contoh: `PelaporHomeScreen`, `HistoryAssetScreen`, `DetailAsetScreen`).
 2. **Alur Branch & Commit:**
    * Jangan *push* fitur setengah jadi langsung ke `main`.
    * Buat *branch* baru dari `main` sesuai tugas: `feature/pelapor-scan-qr`, `feature/admin-verifikasi`, `fix/login-error`, atau `chore/update-docs`.

@@ -1,99 +1,47 @@
-import 'dart:ui' as ui;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/rendering.dart';
-
 import 'package:google_fonts/google_fonts.dart';
-import 'package:qr_flutter/qr_flutter.dart';
-import 'package:gal/gal.dart';
-import 'package:share_plus/share_plus.dart';
-
 import 'package:tubes_pemob/constants/app_colors.dart';
+import 'package:tubes_pemob/models/asset_model.dart';
+import 'package:tubes_pemob/screens/admin/detail_aset_screen.dart';
+import 'package:tubes_pemob/screens/admin/tambah_aset_screen.dart';
+import 'package:tubes_pemob/services/asset_service.dart';
 
-// ============================================================
-// MODEL ASSET
-// ============================================================
-
-class AssetItem {
-  final String id;
-  final String name;
-  final String category;
-  final String building;
-  final String room;
-
-  const AssetItem({
-    required this.id,
-    required this.name,
-    required this.category,
-    required this.building,
-    required this.room,
-  });
-
-  // ICON BERDASARKAN KATEGORI
-  IconData get icon {
-    switch (category) {
-      case 'Elektronik':
-        return Icons.ac_unit_rounded;
-
-      case 'Inventaris':
-        return Icons.chair_alt_rounded;
-
-      case 'Sanitasi':
-        return Icons.plumbing_rounded;
-
-      case 'Kelistrikan':
-        return Icons.electrical_services_rounded;
-
-      default:
-        return Icons.inventory_2_outlined;
-    }
+IconData getAssetCategoryIcon(String category) {
+  switch (category.trim().toLowerCase()) {
+    case 'elektronik':
+      return Icons.devices_other_rounded;
+    case 'inventaris':
+      return Icons.chair_alt_rounded;
+    case 'sanitasi':
+      return Icons.plumbing_rounded;
+    case 'kelistrikan':
+      return Icons.electrical_services_rounded;
+    default:
+      return Icons.inventory_2_outlined;
   }
 }
-
-// ============================================================
-// KELOLA ASET SCREEN
-// ============================================================
 
 class KelolaAsetScreen extends StatefulWidget {
   const KelolaAsetScreen({super.key});
 
   @override
-  State<KelolaAsetScreen> createState() =>
-      _KelolaAsetScreenState();
+  State<KelolaAsetScreen> createState() => _KelolaAsetScreenState();
 }
 
 class _KelolaAsetScreenState extends State<KelolaAsetScreen> {
-  // SEARCH CONTROLLER
-  final TextEditingController _searchController =
-      TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
 
-  // DATA ASET
-  // Tidak menggunakan data dummy.
-  final List<AssetItem> _assets = [];
-
-  // FILTER
-  String _selectedCategory = 'Semua Kategori';
   String _selectedBuilding = 'Semua Gedung';
+  String _selectedRoom = 'Semua Ruangan';
+  String _selectedCategory = 'Semua Kategori';
 
-  // PILIHAN KATEGORI
-  final List<String> _categories = [
-    'Semua Kategori',
+  static const List<String> _defaultCategories = [
     'Elektronik',
     'Inventaris',
     'Sanitasi',
     'Kelistrikan',
     'Lainnya',
-  ];
-
-  // PILIHAN GEDUNG
-  final List<String> _buildings = [
-    'Semua Gedung',
-    'Gedung A',
-    'Gedung B',
-    'Gedung C',
-    'Gedung D',
-    'Gedung E',
   ];
 
   @override
@@ -102,35 +50,123 @@ class _KelolaAsetScreenState extends State<KelolaAsetScreen> {
     super.dispose();
   }
 
-  // ==========================================================
-  // FILTER ASSET
-  // ==========================================================
+  List<String> _buildCategoryOptions(List<AssetModel> assets) {
+    final Map<String, String> uniqueMap = {
+      for (final cat in _defaultCategories) cat.toLowerCase(): cat,
+    };
 
-  List<AssetItem> get _filteredAssets {
-    final query = _searchController.text.toLowerCase();
+    for (final asset in assets) {
+      final clean = asset.kategori.trim();
+      if (clean.isNotEmpty) {
+        uniqueMap.putIfAbsent(clean.toLowerCase(), () => clean);
+      }
+    }
 
-    return _assets.where((asset) {
-      final matchesSearch =
-          asset.id.toLowerCase().contains(query) ||
-          asset.name.toLowerCase().contains(query);
+    return ['Semua Kategori', ...uniqueMap.values];
+  }
 
-      final matchesCategory =
-          _selectedCategory == 'Semua Kategori' ||
-          asset.category == _selectedCategory;
+  List<String> _buildBuildingOptions(List<AssetModel> assets) {
+    final uniqueGedung = AssetService.instance.extractUniqueGedung(assets);
+    return ['Semua Gedung', ...uniqueGedung];
+  }
 
-      final matchesBuilding =
-          _selectedBuilding == 'Semua Gedung' ||
-          asset.building == _selectedBuilding;
+  List<String> _buildRoomOptions(
+    List<AssetModel> assets,
+    String effectiveBuilding,
+  ) {
+    if (effectiveBuilding != 'Semua Gedung') {
+      final rooms = AssetService.instance.extractUniqueRuangan(
+        assets,
+        effectiveBuilding,
+      );
+      return ['Semua Ruangan', ...rooms];
+    }
+
+    final Map<String, String> allRoomsMap = {};
+    for (final asset in assets) {
+      final clean = asset.ruangan.trim();
+      if (clean.isNotEmpty) {
+        allRoomsMap.putIfAbsent(clean.toLowerCase(), () => clean);
+      }
+    }
+    final sorted = allRoomsMap.values.toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+
+    return ['Semua Ruangan', ...sorted];
+  }
+
+  bool _hasActiveFilter({
+    required String effectiveBuilding,
+    required String effectiveRoom,
+    required String effectiveCategory,
+  }) {
+    return _searchController.text.trim().isNotEmpty ||
+        effectiveBuilding != 'Semua Gedung' ||
+        effectiveRoom != 'Semua Ruangan' ||
+        effectiveCategory != 'Semua Kategori';
+  }
+
+  void _resetAllFilters() {
+    _searchController.clear();
+    setState(() {
+      _selectedBuilding = 'Semua Gedung';
+      _selectedRoom = 'Semua Ruangan';
+      _selectedCategory = 'Semua Kategori';
+    });
+  }
+
+  List<AssetModel> _filterAssets(
+    List<AssetModel> assets, {
+    required String effectiveBuilding,
+    required String effectiveRoom,
+    required String effectiveCategory,
+  }) {
+    final query = _searchController.text.trim().toLowerCase();
+
+    return assets.where((asset) {
+      final matchesSearch = query.isEmpty ||
+          asset.nama.toLowerCase().contains(query) ||
+          asset.gedung.toLowerCase().contains(query) ||
+          asset.ruangan.toLowerCase().contains(query) ||
+          asset.id.toLowerCase().contains(query);
+
+      final matchesBuilding = effectiveBuilding == 'Semua Gedung' ||
+          asset.gedung.trim().toLowerCase() ==
+              effectiveBuilding.trim().toLowerCase();
+
+      final matchesRoom = effectiveRoom == 'Semua Ruangan' ||
+          asset.ruangan.trim().toLowerCase() ==
+              effectiveRoom.trim().toLowerCase();
+
+      final matchesCategory = effectiveCategory == 'Semua Kategori' ||
+          asset.kategori.trim().toLowerCase() ==
+              effectiveCategory.trim().toLowerCase();
 
       return matchesSearch &&
-          matchesCategory &&
-          matchesBuilding;
+          matchesBuilding &&
+          matchesRoom &&
+          matchesCategory;
     }).toList();
   }
 
-  // ==========================================================
-  // BUILD
-  // ==========================================================
+  void _openTambahAset() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const TambahAsetScreen()),
+    );
+  }
+
+  void _openDetailAset(AssetModel asset, {bool scrollToQr = false}) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DetailAsetScreen(
+          asset: asset,
+          scrollToQr: scrollToQr,
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -142,14 +178,11 @@ class _KelolaAsetScreenState extends State<KelolaAsetScreen> {
       ),
       child: Scaffold(
         backgroundColor: AppColors.primaryBlue,
-
-        // APP BAR
         appBar: AppBar(
           backgroundColor: AppColors.primaryBlue,
           foregroundColor: AppColors.white,
           elevation: 0,
           centerTitle: true,
-
           title: Text(
             'Kelola Aset & QR',
             style: GoogleFonts.plusJakartaSans(
@@ -158,67 +191,147 @@ class _KelolaAsetScreenState extends State<KelolaAsetScreen> {
               color: AppColors.white,
             ),
           ),
-
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_rounded),
             onPressed: () => Navigator.pop(context),
           ),
-
           actions: [
             IconButton(
-              onPressed: () => _openAssetForm(),
-              icon: const Icon(
-                Icons.add_rounded,
-                size: 29,
-              ),
+              onPressed: _openTambahAset,
+              tooltip: 'Tambah Aset',
+              icon: const Icon(Icons.add_rounded, size: 28),
             ),
-            const SizedBox(width: 5),
+            const SizedBox(width: 6),
           ],
         ),
-
-        // MAIN CONTENT
         body: SafeArea(
           top: false,
           child: Container(
             width: double.infinity,
             decoration: const BoxDecoration(
               color: AppColors.background,
-              borderRadius: BorderRadius.vertical(
-                top: Radius.circular(30),
-              ),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
             ),
-            child: Column(
-              children: [
-                // SEARCH DAN FILTER
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    20,
-                    20,
-                    20,
-                    0,
-                  ),
-                  child: Column(
-                    children: [
-                      _buildSearchField(),
+            child: StreamBuilder<List<AssetModel>>(
+              stream: AssetService.instance.streamAllAssets(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting &&
+                    !snapshot.hasData) {
+                  return const Center(
+                    child: CircularProgressIndicator(
+                      color: AppColors.primaryBlue,
+                    ),
+                  );
+                }
 
-                      const SizedBox(height: 14),
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text(
+                        'Gagal memuat data aset: ${snapshot.error}',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 13,
+                          color: AppColors.statusRejectedText,
+                        ),
+                      ),
+                    ),
+                  );
+                }
 
-                      _buildFilterSection(),
+                final allAssets = snapshot.data ?? [];
 
-                      const SizedBox(height: 20),
+                final buildingOptions = _buildBuildingOptions(allAssets);
+                final effectiveBuilding =
+                    buildingOptions.contains(_selectedBuilding)
+                        ? _selectedBuilding
+                        : 'Semua Gedung';
 
-                      _buildAssetCount(),
-                    ],
-                  ),
-                ),
+                final roomOptions = _buildRoomOptions(
+                  allAssets,
+                  effectiveBuilding,
+                );
+                final effectiveRoom = roomOptions.contains(_selectedRoom)
+                    ? _selectedRoom
+                    : 'Semua Ruangan';
 
-                const SizedBox(height: 12),
+                final categoryOptions = _buildCategoryOptions(allAssets);
+                final effectiveCategory =
+                    categoryOptions.contains(_selectedCategory)
+                        ? _selectedCategory
+                        : 'Semua Kategori';
 
-                // DAFTAR ASET
-                Expanded(
-                  child: _buildAssetList(),
-                ),
-              ],
+                final isFiltering = _hasActiveFilter(
+                  effectiveBuilding: effectiveBuilding,
+                  effectiveRoom: effectiveRoom,
+                  effectiveCategory: effectiveCategory,
+                );
+
+                final filteredAssets = _filterAssets(
+                  allAssets,
+                  effectiveBuilding: effectiveBuilding,
+                  effectiveRoom: effectiveRoom,
+                  effectiveCategory: effectiveCategory,
+                );
+
+                return Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                      child: Column(
+                        children: [
+                          _buildSearchField(),
+                          const SizedBox(height: 12),
+                          _buildFilterSection(
+                            buildingOptions: buildingOptions,
+                            effectiveBuilding: effectiveBuilding,
+                            roomOptions: roomOptions,
+                            effectiveRoom: effectiveRoom,
+                            categoryOptions: categoryOptions,
+                            effectiveCategory: effectiveCategory,
+                            isFiltering: isFiltering,
+                          ),
+                          const SizedBox(height: 16),
+                          _buildAssetCount(
+                            filteredCount: filteredAssets.length,
+                            totalCount: allAssets.length,
+                            isFiltering: isFiltering,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Expanded(
+                      child: filteredAssets.isEmpty
+                          ? _buildEmptyState(isFiltering: isFiltering)
+                          : ListView.separated(
+                              physics: const BouncingScrollPhysics(),
+                              padding: const EdgeInsets.fromLTRB(
+                                20,
+                                4,
+                                20,
+                                26,
+                              ),
+                              itemCount: filteredAssets.length,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(height: 11),
+                              itemBuilder: (context, index) {
+                                final asset = filteredAssets[index];
+                                return _AssetListTile(
+                                  asset: asset,
+                                  onTap: () => _openDetailAset(asset),
+                                  onQrTap: () => _openDetailAset(
+                                    asset,
+                                    scrollToQr: true,
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         ),
@@ -226,98 +339,157 @@ class _KelolaAsetScreenState extends State<KelolaAsetScreen> {
     );
   }
 
-  // ==========================================================
-  // SEARCH FIELD
-  // ==========================================================
-
   Widget _buildSearchField() {
     return TextField(
       controller: _searchController,
       onChanged: (_) => setState(() {}),
-
       style: GoogleFonts.plusJakartaSans(
-        fontSize: 12,
+        fontSize: 13,
         color: AppColors.textPrimary,
       ),
-
       decoration: InputDecoration(
-        hintText: 'Cari ID aset, nama aset...',
+        hintText: 'Cari nama aset, gedung, atau ruangan...',
         hintStyle: GoogleFonts.plusJakartaSans(
-          fontSize: 12,
+          fontSize: 12.5,
           color: AppColors.textSecondary,
         ),
-
         prefixIcon: const Icon(
           Icons.search_rounded,
           color: AppColors.textSecondary,
+          size: 20,
         ),
-
         suffixIcon: _searchController.text.isNotEmpty
             ? IconButton(
                 onPressed: () {
                   _searchController.clear();
                   setState(() {});
                 },
-                icon: const Icon(Icons.close_rounded),
+                icon: const Icon(Icons.close_rounded, size: 19),
               )
             : null,
-
         filled: true,
         fillColor: AppColors.white,
-
         contentPadding: const EdgeInsets.symmetric(
-          vertical: 15,
-          horizontal: 15,
+          vertical: 13,
+          horizontal: 14,
         ),
-
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(
-            color: AppColors.border,
-          ),
+          borderRadius: BorderRadius.circular(15),
+          borderSide: const BorderSide(color: AppColors.border),
         ),
-
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(15),
+          borderSide: const BorderSide(color: AppColors.border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
           borderSide: const BorderSide(
-            color: AppColors.border,
+            color: AppColors.primaryBlue,
+            width: 1.4,
           ),
         ),
       ),
     );
   }
 
-  // ==========================================================
-  // FILTER SECTION
-  // ==========================================================
-
-  Widget _buildFilterSection() {
-    return Row(
+  Widget _buildFilterSection({
+    required List<String> buildingOptions,
+    required String effectiveBuilding,
+    required List<String> roomOptions,
+    required String effectiveRoom,
+    required List<String> categoryOptions,
+    required String effectiveCategory,
+    required bool isFiltering,
+  }) {
+    return Column(
       children: [
-        Expanded(
-          child: _buildFilterDropdown(
-            value: _selectedCategory,
-            items: _categories,
-            onChanged: (value) {
-              setState(() {
-                _selectedCategory = value!;
-              });
-            },
-          ),
+        // Baris 1: Lokasi (Gedung & Ruangan)
+        Row(
+          children: [
+            Expanded(
+              child: _buildFilterDropdown(
+                value: effectiveBuilding,
+                items: buildingOptions,
+                prefixIcon: Icons.apartment_rounded,
+                isActive: effectiveBuilding != 'Semua Gedung',
+                onChanged: (value) {
+                  if (value == null) return;
+                  setState(() {
+                    _selectedBuilding = value;
+                    _selectedRoom = 'Semua Ruangan';
+                  });
+                },
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _buildFilterDropdown(
+                value: effectiveRoom,
+                items: roomOptions,
+                prefixIcon: Icons.meeting_room_outlined,
+                isActive: effectiveRoom != 'Semua Ruangan',
+                onChanged: (value) {
+                  if (value == null) return;
+                  setState(() => _selectedRoom = value);
+                },
+              ),
+            ),
+          ],
         ),
-
-        const SizedBox(width: 10),
-
-        Expanded(
-          child: _buildFilterDropdown(
-            value: _selectedBuilding,
-            items: _buildings,
-            onChanged: (value) {
-              setState(() {
-                _selectedBuilding = value!;
-              });
-            },
-          ),
+        const SizedBox(height: 10),
+        // Baris 2: Kategori + Tombol Reset
+        Row(
+          children: [
+            Expanded(
+              child: _buildFilterDropdown(
+                value: effectiveCategory,
+                items: categoryOptions,
+                prefixIcon: Icons.category_outlined,
+                isActive: effectiveCategory != 'Semua Kategori',
+                onChanged: (value) {
+                  if (value == null) return;
+                  setState(() => _selectedCategory = value);
+                },
+              ),
+            ),
+            if (isFiltering) ...[
+              const SizedBox(width: 10),
+              InkWell(
+                onTap: _resetAllFilters,
+                borderRadius: BorderRadius.circular(13),
+                child: Container(
+                  height: 44,
+                  padding: const EdgeInsets.symmetric(horizontal: 13),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEAF2FF),
+                    borderRadius: BorderRadius.circular(13),
+                    border: Border.all(
+                      color: AppColors.primaryBlue.withValues(alpha: 0.35),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.restart_alt_rounded,
+                        size: 17,
+                        color: AppColors.primaryBlue,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Reset',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primaryBlue,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
       ],
     );
@@ -326,164 +498,136 @@ class _KelolaAsetScreenState extends State<KelolaAsetScreen> {
   Widget _buildFilterDropdown({
     required String value,
     required List<String> items,
+    required IconData prefixIcon,
+    required bool isActive,
     required ValueChanged<String?> onChanged,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 11,
-      ),
-
+      height: 44,
+      padding: const EdgeInsets.symmetric(horizontal: 11),
       decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(14),
+        color: isActive ? const Color(0xFFF3F8FF) : AppColors.white,
+        borderRadius: BorderRadius.circular(13),
         border: Border.all(
-          color: AppColors.border,
+          color: isActive
+              ? AppColors.primaryBlue.withValues(alpha: 0.45)
+              : AppColors.border,
         ),
       ),
-
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: value,
-          isExpanded: true,
-
-          icon: const Icon(
-            Icons.keyboard_arrow_down_rounded,
-            color: AppColors.textSecondary,
-            size: 20,
+      child: Row(
+        children: [
+          Icon(
+            prefixIcon,
+            size: 16,
+            color: isActive ? AppColors.primaryBlue : AppColors.textSecondary,
           ),
-
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 10,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary,
-          ),
-
-          items: items.map((item) {
-            return DropdownMenuItem(
-              value: item,
-              child: Text(
-                item,
-                overflow: TextOverflow.ellipsis,
+          const SizedBox(width: 7),
+          Expanded(
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: value,
+                isExpanded: true,
+                icon: Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  color: isActive
+                      ? AppColors.primaryBlue
+                      : AppColors.textSecondary,
+                  size: 19,
+                ),
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 11.5,
+                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
+                  color: isActive
+                      ? AppColors.primaryBlue
+                      : AppColors.textPrimary,
+                ),
+                items: items.map((item) {
+                  return DropdownMenuItem<String>(
+                    value: item,
+                    child: Text(
+                      item,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  );
+                }).toList(),
+                onChanged: onChanged,
               ),
-            );
-          }).toList(),
-
-          onChanged: onChanged,
-        ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  // ==========================================================
-  // ASSET COUNT
-  // ==========================================================
-
-  Widget _buildAssetCount() {
+  Widget _buildAssetCount({
+    required int filteredCount,
+    required int totalCount,
+    required bool isFiltering,
+  }) {
     return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          'Total Aset: ',
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 15,
-            fontWeight: FontWeight.w500,
-            color: AppColors.textPrimary,
-          ),
+        Row(
+          children: [
+            Text(
+              'Total Aset: ',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            Text(
+              isFiltering && totalCount > 0
+                  ? '$filteredCount dari $totalCount'
+                  : '$filteredCount',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ],
         ),
-
-        Text(
-          '${_filteredAssets.length}',
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 15,
-            fontWeight: FontWeight.w800,
-            color: AppColors.textPrimary,
+        if (isFiltering)
+          Text(
+            'Filter aktif',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: AppColors.primaryBlue,
+            ),
           ),
-        ),
       ],
     );
   }
 
-  // ==========================================================
-  // ASSET LIST
-  // ==========================================================
-
-  Widget _buildAssetList() {
-    final assets = _filteredAssets;
-
-    if (assets.isEmpty) {
-      return _buildEmptyState();
-    }
-
-    return ListView.separated(
-      physics: const BouncingScrollPhysics(),
-
-      padding: const EdgeInsets.fromLTRB(
-        20,
-        5,
-        20,
-        25,
-      ),
-
-      itemCount: assets.length,
-
-      separatorBuilder: (context, index) {
-        return const SizedBox(height: 12);
-      },
-
-      itemBuilder: (context, index) {
-        final asset = assets[index];
-
-        return _AssetCard(
-          asset: asset,
-
-          onQrPressed: () {
-            _openQrScreen(asset);
-          },
-
-          onEditPressed: () {
-            _openAssetForm(asset: asset);
-          },
-
-          onDeletePressed: () {
-            _confirmDeleteAsset(asset);
-          },
-        );
-      },
-    );
-  }
-
-  // ==========================================================
-  // EMPTY STATE
-  // ==========================================================
-
-  Widget _buildEmptyState() {
-    final isSearching = _searchController.text.isNotEmpty ||
-        _selectedCategory != 'Semua Kategori' ||
-        _selectedBuilding != 'Semua Gedung';
-
+  Widget _buildEmptyState({required bool isFiltering}) {
     return Center(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(25),
+        padding: const EdgeInsets.all(26),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 85,
-              height: 85,
+              width: 82,
+              height: 82,
               decoration: const BoxDecoration(
                 color: Color(0xFFE3EEFF),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
-                Icons.inventory_2_outlined,
-                size: 40,
+              child: Icon(
+                isFiltering
+                    ? Icons.filter_alt_off_outlined
+                    : Icons.inventory_2_outlined,
+                size: 38,
                 color: AppColors.primaryBlue,
               ),
             ),
-
             const SizedBox(height: 18),
-
             Text(
-              isSearching
+              isFiltering
                   ? 'Aset tidak ditemukan'
                   : 'Belum Ada Aset Terdaftar',
               textAlign: TextAlign.center,
@@ -493,39 +637,59 @@ class _KelolaAsetScreenState extends State<KelolaAsetScreen> {
                 color: AppColors.textPrimary,
               ),
             ),
-
             const SizedBox(height: 8),
-
             Text(
-              isSearching
-                  ? 'Coba ubah kata pencarian atau filter.'
-                  : 'Tambahkan master data fasilitas kampus untuk mulai mengelola aset.',
+              isFiltering
+                  ? 'Tidak ada aset yang cocok dengan pencarian atau filter gedung, ruangan, dan kategori saat ini.'
+                  : 'Tambahkan master data fasilitas kampus untuk mulai mengelola aset dan mencetak stiker QR.',
               textAlign: TextAlign.center,
               style: GoogleFonts.plusJakartaSans(
-                fontSize: 11,
+                fontSize: 12,
                 color: AppColors.textSecondary,
                 height: 1.5,
               ),
             ),
-
             const SizedBox(height: 20),
-
-            if (!isSearching)
+            if (isFiltering)
+              OutlinedButton.icon(
+                onPressed: _resetAllFilters,
+                icon: const Icon(Icons.restart_alt_rounded, size: 18),
+                label: Text(
+                  'Reset Semua Filter',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primaryBlue,
+                  side: const BorderSide(color: AppColors.primaryBlue),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                ),
+              )
+            else
               ElevatedButton.icon(
-                onPressed: () => _openAssetForm(),
-                icon: const Icon(Icons.add_rounded),
+                onPressed: _openTambahAset,
+                icon: const Icon(Icons.add_rounded, size: 20),
                 label: Text(
                   'Tambah Aset',
                   style: GoogleFonts.plusJakartaSans(
-                    fontSize: 12,
+                    fontSize: 12.5,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primaryBlue,
                   foregroundColor: AppColors.white,
+                  elevation: 0,
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
+                    horizontal: 22,
                     vertical: 12,
                   ),
                   shape: RoundedRectangleBorder(
@@ -538,1540 +702,150 @@ class _KelolaAsetScreenState extends State<KelolaAsetScreen> {
       ),
     );
   }
-
-  // ==========================================================
-  // ADD / EDIT ASSET
-  // ==========================================================
-
-  Future<void> _openAssetForm({
-    AssetItem? asset,
-  }) async {
-    final result = await showModalBottomSheet<AssetItem>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-
-      builder: (context) {
-        return _AssetFormSheet(
-          asset: asset,
-        );
-      },
-    );
-
-    if (result == null || !mounted) return;
-
-    // CEK ID DUPLIKAT
-    final isDuplicate = _assets.any(
-      (item) =>
-          item.id.toLowerCase() == result.id.toLowerCase() &&
-          item.id != asset?.id,
-    );
-
-    if (isDuplicate) {
-      _showMessage(
-        'ID aset sudah digunakan.',
-        isError: true,
-      );
-      return;
-    }
-
-    setState(() {
-      if (asset == null) {
-        _assets.add(result);
-      } else {
-        final index = _assets.indexWhere(
-          (item) => item.id == asset.id,
-        );
-
-        if (index != -1) {
-          _assets[index] = result;
-        }
-      }
-    });
-
-    _showMessage(
-      asset == null
-          ? 'Aset berhasil ditambahkan.'
-          : 'Aset berhasil diperbarui.',
-    );
-  }
-
-  // ==========================================================
-  // DELETE ASSET
-  // ==========================================================
-
-  Future<void> _confirmDeleteAsset(
-    AssetItem asset,
-  ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-
-          title: Text(
-            'Hapus Aset?',
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-              color: AppColors.textPrimary,
-            ),
-          ),
-
-          content: Text(
-            'Apakah kamu yakin ingin menghapus ${asset.name} (${asset.id})?',
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 12,
-              color: AppColors.textSecondary,
-              height: 1.5,
-            ),
-          ),
-
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext, false);
-              },
-              child: Text(
-                'Batal',
-                style: GoogleFonts.plusJakartaSans(
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ),
-
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(dialogContext, true);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.statusRejectedText,
-                foregroundColor: AppColors.white,
-              ),
-              child: Text(
-                'Hapus',
-                style: GoogleFonts.plusJakartaSans(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (confirmed != true || !mounted) return;
-
-    setState(() {
-      _assets.removeWhere(
-        (item) => item.id == asset.id,
-      );
-    });
-
-    _showMessage('Aset berhasil dihapus.');
-  }
-
-  // ==========================================================
-  // OPEN QR SCREEN
-  // ==========================================================
-
-  void _openQrScreen(AssetItem asset) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) {
-          return QRAssetScreen(
-            asset: asset,
-          );
-        },
-      ),
-    );
-  }
-
-  // ==========================================================
-  // SNACKBAR
-  // ==========================================================
-
-  void _showMessage(
-    String message, {
-    bool isError = false,
-  }) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(
-            message,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          backgroundColor: isError
-              ? AppColors.statusRejectedText
-              : const Color(0xFF15803D),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-  }
 }
 
-// ============================================================
-// ASSET CARD
-// ============================================================
-
-class _AssetCard extends StatelessWidget {
-  final AssetItem asset;
-  final VoidCallback onQrPressed;
-  final VoidCallback onEditPressed;
-  final VoidCallback onDeletePressed;
-
-  const _AssetCard({
-    required this.asset,
-    required this.onQrPressed,
-    required this.onEditPressed,
-    required this.onDeletePressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(13),
-
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(19),
-        border: Border.all(
-          color: const Color(0xFFE8EEF6),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-
-      child: Row(
-        children: [
-          // ICON ASSET
-          Container(
-            width: 75,
-            height: 82,
-            decoration: BoxDecoration(
-              color: AppColors.statusDoneBg,
-              borderRadius: BorderRadius.circular(15),
-            ),
-            alignment: Alignment.center,
-            child: Icon(
-              asset.icon,
-              color: AppColors.primaryBlue,
-              size: 38,
-            ),
-          ),
-
-          const SizedBox(width: 12),
-
-          // INFORMASI ASET
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.statusDoneBg,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    asset.id,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.primaryBlue,
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 6),
-
-                Text(
-                  asset.name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-
-                const SizedBox(height: 7),
-
-                _assetInformation(
-                  Icons.folder_outlined,
-                  asset.category,
-                ),
-
-                const SizedBox(height: 4),
-
-                _assetInformation(
-                  Icons.apartment_rounded,
-                  asset.building,
-                ),
-
-                const SizedBox(height: 4),
-
-                _assetInformation(
-                  Icons.location_on_outlined,
-                  asset.room,
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(width: 7),
-
-          // ACTION BUTTONS
-          Column(
-            children: [
-              _AssetActionButton(
-                icon: Icons.qr_code_scanner_rounded,
-                color: AppColors.primaryBlue,
-                onTap: onQrPressed,
-              ),
-
-              const SizedBox(height: 6),
-
-              _AssetActionButton(
-                icon: Icons.edit_outlined,
-                color: AppColors.primaryBlue,
-                onTap: onEditPressed,
-              ),
-
-              const SizedBox(height: 6),
-
-              _AssetActionButton(
-                icon: Icons.delete_outline_rounded,
-                color: AppColors.statusRejectedText,
-                onTap: onDeletePressed,
-                isDanger: true,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _assetInformation(
-    IconData icon,
-    String text,
-  ) {
-    return Row(
-      children: [
-        Icon(
-          icon,
-          size: 15,
-          color: AppColors.textSecondary,
-        ),
-
-        const SizedBox(width: 6),
-
-        Expanded(
-          child: Text(
-            text,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 10,
-              fontWeight: FontWeight.w500,
-              color: AppColors.textSecondary,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ============================================================
-// ASSET ACTION BUTTON
-// ============================================================
-
-class _AssetActionButton extends StatelessWidget {
-  final IconData icon;
-  final Color color;
+class _AssetListTile extends StatelessWidget {
+  final AssetModel asset;
   final VoidCallback onTap;
-  final bool isDanger;
+  final VoidCallback onQrTap;
 
-  const _AssetActionButton({
-    required this.icon,
-    required this.color,
-    required this.onTap,
-    this.isDanger = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(11),
-      child: Container(
-        width: 43,
-        height: 42,
-        decoration: BoxDecoration(
-          color: isDanger
-              ? const Color(0xFFFFF5F5)
-              : AppColors.white,
-          borderRadius: BorderRadius.circular(11),
-          border: Border.all(
-            color: isDanger
-                ? const Color(0xFFFFCDD2)
-                : const Color(0xFFDCE5F1),
-          ),
-        ),
-        alignment: Alignment.center,
-        child: Icon(
-          icon,
-          color: color,
-          size: 21,
-        ),
-      ),
-    );
-  }
-}
-
-// ============================================================
-// ASSET FORM SHEET
-// ============================================================
-
-class _AssetFormSheet extends StatefulWidget {
-  final AssetItem? asset;
-
-  const _AssetFormSheet({
-    this.asset,
-  });
-
-  @override
-  State<_AssetFormSheet> createState() =>
-      _AssetFormSheetState();
-}
-
-class _AssetFormSheetState extends State<_AssetFormSheet> {
-  final _formKey = GlobalKey<FormState>();
-
-  late final TextEditingController _idController;
-  late final TextEditingController _nameController;
-  late final TextEditingController _roomController;
-
-  String? _selectedCategory;
-  String? _selectedBuilding;
-
-  final List<String> _categories = [
-    'Elektronik',
-    'Inventaris',
-    'Sanitasi',
-    'Kelistrikan',
-    'Lainnya',
-  ];
-
-  final List<String> _buildings = [
-    'Gedung A',
-    'Gedung B',
-    'Gedung C',
-    'Gedung D',
-    'Gedung E',
-  ];
-
-  bool get _isEditing => widget.asset != null;
-
-  @override
-  void initState() {
-    super.initState();
-
-    _idController = TextEditingController(
-      text: widget.asset?.id ?? '',
-    );
-
-    _nameController = TextEditingController(
-      text: widget.asset?.name ?? '',
-    );
-
-    _roomController = TextEditingController(
-      text: widget.asset?.room ?? '',
-    );
-
-    _selectedCategory = widget.asset?.category;
-    _selectedBuilding = widget.asset?.building;
-  }
-
-  @override
-  void dispose() {
-    _idController.dispose();
-    _nameController.dispose();
-    _roomController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-
-      child: Container(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.88,
-        ),
-
-        decoration: const BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.vertical(
-            top: Radius.circular(28),
-          ),
-        ),
-
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(
-            22,
-            18,
-            22,
-            25,
-          ),
-
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // HANDLE
-                Center(
-                  child: Container(
-                    width: 42,
-                    height: 5,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFDCE3ED),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // TITLE
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        _isEditing
-                            ? 'Ubah Data Aset'
-                            : 'Tambah Aset Baru',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                    ),
-
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.close_rounded),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 5),
-
-                Text(
-                  'Lengkapi informasi aset fasilitas kampus.',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 11,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-
-                const SizedBox(height: 23),
-
-                // ID ASET
-                _fieldLabel('ID Aset'),
-
-                const SizedBox(height: 8),
-
-                TextFormField(
-                  controller: _idController,
-                  enabled: !_isEditing,
-
-                  textCapitalization: TextCapitalization.characters,
-
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
-                  ),
-
-                  decoration: _inputDecoration(
-                    hint: 'Contoh: AST-001',
-                    icon: Icons.qr_code_rounded,
-                  ),
-
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'ID aset wajib diisi.';
-                    }
-
-                    if (!RegExp(
-                      r'^[A-Za-z0-9_-]+$',
-                    ).hasMatch(value.trim())) {
-                      return 'Gunakan huruf, angka, - atau _.';
-                    }
-
-                    return null;
-                  },
-                ),
-
-                if (_isEditing)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 5),
-                    child: Text(
-                      'ID aset tidak dapat diubah agar QR tetap konsisten.',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 9,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ),
-
-                const SizedBox(height: 17),
-
-                // NAMA ASET
-                _fieldLabel('Nama Aset'),
-
-                const SizedBox(height: 8),
-
-                TextFormField(
-                  controller: _nameController,
-
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 12,
-                    color: AppColors.textPrimary,
-                  ),
-
-                  decoration: _inputDecoration(
-                    hint: 'Masukkan nama fasilitas',
-                    icon: Icons.inventory_2_outlined,
-                  ),
-
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Nama aset wajib diisi.';
-                    }
-
-                    return null;
-                  },
-                ),
-
-                const SizedBox(height: 17),
-
-                // KATEGORI
-                _fieldLabel('Kategori'),
-
-                const SizedBox(height: 8),
-
-                _buildFormDropdown(
-                  value: _selectedCategory,
-                  hint: 'Pilih kategori aset',
-                  items: _categories,
-                  icon: Icons.category_outlined,
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedCategory = value;
-                    });
-                  },
-                ),
-
-                const SizedBox(height: 17),
-
-                // GEDUNG
-                _fieldLabel('Gedung'),
-
-                const SizedBox(height: 8),
-
-                _buildFormDropdown(
-                  value: _selectedBuilding,
-                  hint: 'Pilih gedung',
-                  items: _buildings,
-                  icon: Icons.apartment_rounded,
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedBuilding = value;
-                    });
-                  },
-                ),
-
-                const SizedBox(height: 17),
-
-                // RUANGAN
-                _fieldLabel('Ruangan'),
-
-                const SizedBox(height: 8),
-
-                TextFormField(
-                  controller: _roomController,
-
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 12,
-                    color: AppColors.textPrimary,
-                  ),
-
-                  decoration: _inputDecoration(
-                    hint: 'Contoh: Ruang D-204',
-                    icon: Icons.location_on_outlined,
-                  ),
-
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Ruangan wajib diisi.';
-                    }
-
-                    return null;
-                  },
-                ),
-
-                const SizedBox(height: 25),
-
-                // BUTTON SAVE
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _saveAsset,
-                    icon: const Icon(Icons.check_rounded),
-                    label: Text(
-                      _isEditing
-                          ? 'Simpan Perubahan'
-                          : 'Tambah Aset',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryBlue,
-                      foregroundColor: AppColors.white,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 15,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ==========================================================
-  // SAVE ASSET
-  // ==========================================================
-
-  void _saveAsset() {
-    if (!_formKey.currentState!.validate()) return;
-
-    if (_selectedCategory == null ||
-        _selectedBuilding == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Kategori dan gedung wajib dipilih.'),
-        ),
-      );
-      return;
-    }
-
-    final asset = AssetItem(
-      id: _idController.text.trim().toUpperCase(),
-      name: _nameController.text.trim(),
-      category: _selectedCategory!,
-      building: _selectedBuilding!,
-      room: _roomController.text.trim(),
-    );
-
-    Navigator.pop(context, asset);
-  }
-
-  // ==========================================================
-  // FORM LABEL
-  // ==========================================================
-
-  Widget _fieldLabel(String label) {
-    return Text(
-      label,
-      style: GoogleFonts.plusJakartaSans(
-        fontSize: 12,
-        fontWeight: FontWeight.w700,
-        color: AppColors.textPrimary,
-      ),
-    );
-  }
-
-  // ==========================================================
-  // TEXT FIELD DECORATION
-  // ==========================================================
-
-  InputDecoration _inputDecoration({
-    required String hint,
-    required IconData icon,
-  }) {
-    return InputDecoration(
-      hintText: hint,
-
-      hintStyle: GoogleFonts.plusJakartaSans(
-        fontSize: 11,
-        color: AppColors.textSecondary,
-      ),
-
-      prefixIcon: Icon(
-        icon,
-        size: 19,
-        color: AppColors.textSecondary,
-      ),
-
-      filled: true,
-      fillColor: const Color(0xFFF7F9FD),
-
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 13,
-        vertical: 14,
-      ),
-
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(13),
-        borderSide: const BorderSide(
-          color: AppColors.border,
-        ),
-      ),
-
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(13),
-        borderSide: const BorderSide(
-          color: AppColors.border,
-        ),
-      ),
-
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(13),
-        borderSide: const BorderSide(
-          color: AppColors.primaryBlue,
-          width: 1.5,
-        ),
-      ),
-    );
-  }
-
-  // ==========================================================
-  // FORM DROPDOWN
-  // ==========================================================
-
-  Widget _buildFormDropdown({
-    required String? value,
-    required String hint,
-    required List<String> items,
-    required IconData icon,
-    required ValueChanged<String?> onChanged,
-  }) {
-    return DropdownButtonFormField<String>(
-      initialValue: value,
-
-      isExpanded: true,
-
-      decoration: InputDecoration(
-        prefixIcon: Icon(
-          icon,
-          size: 19,
-          color: AppColors.textSecondary,
-        ),
-
-        filled: true,
-        fillColor: const Color(0xFFF7F9FD),
-
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 13,
-          vertical: 13,
-        ),
-
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(13),
-          borderSide: const BorderSide(
-            color: AppColors.border,
-          ),
-        ),
-
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(13),
-          borderSide: const BorderSide(
-            color: AppColors.border,
-          ),
-        ),
-      ),
-
-      hint: Text(
-        hint,
-        style: GoogleFonts.plusJakartaSans(
-          fontSize: 11,
-          color: AppColors.textSecondary,
-        ),
-      ),
-
-      items: items.map((item) {
-        return DropdownMenuItem(
-          value: item,
-          child: Text(
-            item,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 11,
-              color: AppColors.textPrimary,
-            ),
-          ),
-        );
-      }).toList(),
-
-      onChanged: onChanged,
-
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'Pilihan wajib diisi.';
-        }
-
-        return null;
-      },
-    );
-  }
-}
-
-// ============================================================
-// QR ASSET SCREEN
-// ============================================================
-
-class QRAssetScreen extends StatefulWidget {
-  final AssetItem asset;
-
-  const QRAssetScreen({
-    super.key,
+  const _AssetListTile({
     required this.asset,
+    required this.onTap,
+    required this.onQrTap,
   });
 
   @override
-  State<QRAssetScreen> createState() => _QRAssetScreenState();
-}
-
-class _QRAssetScreenState extends State<QRAssetScreen> {
-  // KEY UNTUK MENANGKAP GAMBAR QR
-  final GlobalKey _qrKey = GlobalKey();
-
-  bool _isProcessing = false;
-
-  // ==========================================================
-  // BUILD
-  // ==========================================================
-
-  @override
   Widget build(BuildContext context) {
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light.copyWith(
-        statusBarColor: AppColors.primaryBlue,
-        systemNavigationBarColor: AppColors.white,
-        systemNavigationBarIconBrightness: Brightness.dark,
-      ),
-
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-
-        appBar: AppBar(
-          backgroundColor: AppColors.primaryBlue,
-          foregroundColor: AppColors.white,
-          elevation: 0,
-          centerTitle: true,
-
-          title: Text(
-            'QR Aset',
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-              color: AppColors.white,
-            ),
-          ),
-        ),
-
-        body: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-
-          padding: const EdgeInsets.fromLTRB(
-            18,
-            18,
-            18,
-            25,
-          ),
-
-          child: Column(
-            children: [
-              // INFORMASI ASET
-              _buildAssetInformation(),
-
-              const SizedBox(height: 18),
-
-              // QR CODE
-              _buildQrContainer(),
-
-              const SizedBox(height: 16),
-
-              // INFORMASI QR
-              _buildInformationBox(),
+    return Material(
+      color: AppColors.white,
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: const Color(0xFFE8EEF6)),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
             ],
           ),
-        ),
-
-        // BUTTON SAVE DAN SHARE
-        bottomNavigationBar: _buildBottomActions(),
-      ),
-    );
-  }
-
-  // ==========================================================
-  // INFORMASI ASET
-  // ==========================================================
-
-  Widget _buildAssetInformation() {
-    final asset = widget.asset;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(17),
-
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(19),
-        border: Border.all(
-          color: AppColors.border,
-        ),
-      ),
-
-      child: Column(
-        children: [
-          Row(
+          child: Row(
             children: [
-              // ICON
+              // Icon Kategori
               Container(
-                width: 72,
-                height: 75,
+                width: 52,
+                height: 52,
                 decoration: BoxDecoration(
                   color: AppColors.statusDoneBg,
-                  borderRadius: BorderRadius.circular(15),
+                  borderRadius: BorderRadius.circular(14),
                 ),
                 alignment: Alignment.center,
                 child: Icon(
-                  asset.icon,
+                  getAssetCategoryIcon(asset.kategori),
                   color: AppColors.primaryBlue,
-                  size: 38,
+                  size: 26,
                 ),
               ),
+              const SizedBox(width: 12),
 
-              const SizedBox(width: 14),
-
-              // NAMA ASET
+              // Nama Aset, Kategori, & Lokasi
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
+                        horizontal: 8.5,
+                        vertical: 2.5,
                       ),
                       decoration: BoxDecoration(
                         color: AppColors.statusDoneBg,
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        asset.id,
+                        asset.kategori,
                         style: GoogleFonts.plusJakartaSans(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
                           color: AppColors.primaryBlue,
                         ),
                       ),
                     ),
-
-                    const SizedBox(height: 9),
-
+                    const SizedBox(height: 5),
                     Text(
-                      asset.name,
+                      asset.nama,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.plusJakartaSans(
-                        fontSize: 15,
+                        fontSize: 14,
                         fontWeight: FontWeight.w800,
                         color: AppColors.textPrimary,
                       ),
                     ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.location_on_outlined,
+                          size: 14,
+                          color: AppColors.textSecondary,
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            asset.lokasiLengkap,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
-            ],
-          ),
+              const SizedBox(width: 10),
 
-          const SizedBox(height: 16),
-
-          _assetDetailRow(
-            icon: Icons.folder_outlined,
-            label: 'Kategori',
-            value: asset.category,
-          ),
-
-          _divider(),
-
-          _assetDetailRow(
-            icon: Icons.apartment_rounded,
-            label: 'Gedung',
-            value: asset.building,
-          ),
-
-          _divider(),
-
-          _assetDetailRow(
-            icon: Icons.location_on_outlined,
-            label: 'Ruangan',
-            value: asset.room,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _assetDetailRow({
-    required IconData icon,
-    required String label,
-    required String value,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 9),
-
-      child: Row(
-        children: [
-          Icon(
-            icon,
-            size: 19,
-            color: const Color(0xFF475569),
-          ),
-
-          const SizedBox(width: 12),
-
-          SizedBox(
-            width: 95,
-            child: Text(
-              label,
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 11,
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ),
-
-          Expanded(
-            child: Text(
-              value,
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _divider() {
-    return const Divider(
-      color: AppColors.border,
-      height: 1,
-    );
-  }
-
-  // ==========================================================
-  // QR CONTAINER
-  // ==========================================================
-
-  Widget _buildQrContainer() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: AppColors.border,
-        ),
-      ),
-
-      child: RepaintBoundary(
-        key: _qrKey,
-
-        child: Container(
-          width: double.infinity,
-          color: AppColors.white,
-
-          padding: const EdgeInsets.symmetric(
-            vertical: 15,
-          ),
-
-          child: Column(
-            children: [
-              // QR IMAGE
-              QrImageView(
-                data: widget.asset.id,
-                version: QrVersions.auto,
-                size: 235,
-                backgroundColor: Colors.white,
-                errorCorrectionLevel: QrErrorCorrectLevel.H,
-                semanticsLabel: 'QR Code ${widget.asset.id}',
-              ),
-
-              const SizedBox(height: 12),
-
-              // ASSET ID
-              Text(
-                widget.asset.id,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary,
-                  letterSpacing: 0.5,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ==========================================================
-  // QR INFORMATION
-  // ==========================================================
-
-  Widget _buildInformationBox() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-
-      decoration: BoxDecoration(
-        color: const Color(0xFFEAF2FF),
-        borderRadius: BorderRadius.circular(15),
-      ),
-
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(
-            Icons.info_outline_rounded,
-            color: AppColors.primaryBlue,
-            size: 21,
-          ),
-
-          const SizedBox(width: 10),
-
-          Expanded(
-            child: Text(
-              'QR Code ini berisi ID Aset (${widget.asset.id}) '
-              'yang digunakan untuk pelaporan dan identifikasi fasilitas.',
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: AppColors.textPrimary,
-                height: 1.5,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ==========================================================
-  // CAPTURE QR IMAGE
-  // ==========================================================
-
-  Future<Uint8List> _captureQrImage() async {
-    // Tunggu frame selesai dirender
-    await WidgetsBinding.instance.endOfFrame;
-
-    final renderObject =
-        _qrKey.currentContext?.findRenderObject();
-
-    if (renderObject is! RenderRepaintBoundary) {
-      throw Exception('QR Code gagal diproses.');
-    }
-
-    // Resolusi tinggi untuk kebutuhan cetak
-    final ui.Image image = await renderObject.toImage(
-      pixelRatio: 4,
-    );
-
-    final byteData = await image.toByteData(
-      format: ui.ImageByteFormat.png,
-    );
-
-    image.dispose();
-
-    if (byteData == null) {
-      throw Exception('Gagal menghasilkan gambar QR.');
-    }
-
-    return byteData.buffer.asUint8List();
-  }
-
-  // ==========================================================
-  // SHARE QR IMAGE
-  // ==========================================================
-
-  Future<void> _shareQrImage() async {
-    if (_isProcessing) return;
-
-    setState(() {
-      _isProcessing = true;
-    });
-
-    try {
-      final bytes = await _captureQrImage();
-
-      await Share.shareXFiles(
-        [
-          XFile.fromData(
-            bytes,
-            mimeType: 'image/png',
-            name: 'QR_${widget.asset.id}.png',
-          ),
-        ],
-        text:
-            'QR Code Aset ${widget.asset.name} (${widget.asset.id})',
-        subject: 'QR Code Aset ${widget.asset.id}',
-      );
-    } catch (error) {
-      if (mounted) {
-        _showMessage(
-          'Gagal membagikan QR Code.',
-          isError: true,
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isProcessing = false;
-        });
-      }
-    }
-  }
-
-  // ==========================================================
-  // SAVE QR IMAGE
-  // ==========================================================
-
-  Future<void> _saveQrImage() async {
-    if (_isProcessing) return;
-
-    setState(() {
-      _isProcessing = true;
-    });
-
-    try {
-      final bytes = await _captureQrImage();
-
-      await Gal.putImageBytes(bytes);
-
-      if (mounted) {
-        _showMessage(
-          'QR Code berhasil disimpan ke galeri.',
-        );
-      }
-    } on GalException catch (error) {
-      if (mounted) {
-        _showMessage(
-          error.type.message,
-          isError: true,
-        );
-      }
-    } catch (error) {
-      if (mounted) {
-        _showMessage(
-          'Gagal menyimpan QR Code.',
-          isError: true,
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isProcessing = false;
-        });
-      }
-    }
-  }
-
-  // ==========================================================
-  // BOTTOM ACTION BUTTONS
-  // ==========================================================
-
-  Widget _buildBottomActions() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(
-        16,
-        14,
-        16,
-        14,
-      ),
-
-      decoration: const BoxDecoration(
-        color: AppColors.white,
-        border: Border(
-          top: BorderSide(
-            color: AppColors.border,
-          ),
-        ),
-      ),
-
-      child: SafeArea(
-        top: false,
-        child: Row(
-          children: [
-            // BAGIKAN QR
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: _isProcessing
-                    ? null
-                    : _shareQrImage,
-
-                icon: const Icon(
-                  Icons.share_rounded,
-                  size: 19,
-                ),
-
-                label: Text(
-                  'Bagikan QR',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.primaryBlue,
-
-                  side: const BorderSide(
-                    color: AppColors.primaryBlue,
-                  ),
-
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 15,
-                  ),
-
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(13),
-                  ),
-                ),
-              ),
-            ),
-
-            const SizedBox(width: 10),
-
-            // SIMPAN QR
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: _isProcessing
-                    ? null
-                    : _saveQrImage,
-
-                icon: _isProcessing
-                    ? const SizedBox(
-                        width: 17,
-                        height: 17,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : const Icon(
-                        Icons.download_rounded,
-                        size: 20,
+              // Tombol Pintasan QR
+              Tooltip(
+                message: 'Lihat QR Aset',
+                child: InkWell(
+                  onTap: onQrTap,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF3F8FF),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppColors.primaryBlue.withValues(alpha: 0.25),
                       ),
-
-                label: Text(
-                  'Simpan QR',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryBlue,
-                  foregroundColor: AppColors.white,
-                  elevation: 0,
-
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 15,
-                  ),
-
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(13),
+                    ),
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.qr_code_2_rounded,
+                      color: AppColors.primaryBlue,
+                      size: 22,
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
-  }
-
-  // ==========================================================
-  // SNACKBAR
-  // ==========================================================
-
-  void _showMessage(
-    String message, {
-    bool isError = false,
-  }) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(
-            message,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 11,
-            ),
-          ),
-
-          backgroundColor: isError
-              ? AppColors.statusRejectedText
-              : const Color(0xFF15803D),
-
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
   }
 }

@@ -5,7 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:tubes_pemob/constants/app_colors.dart';
 import 'package:tubes_pemob/models/report_model.dart';
 import 'package:tubes_pemob/models/technician_task_item.dart';
-import 'package:tubes_pemob/screens/teknisi/detail_laporan_screen.dart';
+import 'package:tubes_pemob/screens/shared/detail_laporan_screen.dart';
 
 // ============================================================
 // DAFTAR TUGAS SCREEN

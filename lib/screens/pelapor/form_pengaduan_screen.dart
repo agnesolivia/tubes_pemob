@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -9,6 +10,8 @@ import 'package:tubes_pemob/models/user_model.dart';
 import 'package:tubes_pemob/services/auth_service.dart';
 import 'package:tubes_pemob/services/report_service.dart';
 import 'package:tubes_pemob/services/storage_service.dart';
+import 'package:tubes_pemob/models/report_model.dart';
+import 'package:tubes_pemob/services/asset_service.dart';
 
 class CreateReportScreen extends StatefulWidget {
   final AssetModel? selectedAsset;
@@ -71,12 +74,41 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
 
   String? _selectedCategory;
   String? _selectedBuilding;
+  AssetModel? _selectedAsset;
+  List<AssetModel> _allAssets = [];
+  StreamSubscription<List<AssetModel>>? _assetsSub;
+
+  /// Gabungan gedung unik (case-insensitive) dari Firestore `assets` + daftar USU
+  List<String> get _buildingOptions {
+    final seen = <String>{};
+    final result = <String>[];
+    for (final b in [
+      ..._allAssets.map((a) => a.gedung.trim()),
+      ..._usuBuildings,
+    ]) {
+      final key = b.toLowerCase();
+      if (b.isNotEmpty && seen.add(key)) {
+        result.add(b);
+      }
+    }
+    return result;
+  }
+
+  /// Daftar aset di gedung yang sedang dipilih (case-insensitive)
+  List<AssetModel> get _assetsInSelectedBuilding {
+    if (_selectedBuilding == null) return const [];
+    final target = _selectedBuilding!.trim().toLowerCase();
+    return _allAssets
+        .where((a) => a.gedung.trim().toLowerCase() == target)
+        .toList();
+  }
 
   @override
   void initState() {
     super.initState();
     final asset = widget.selectedAsset;
     if (asset != null) {
+      _selectedAsset = asset;
       _titleController.text = asset.nama;
       _selectedBuilding = asset.gedung;
       _detailLocationController.text = asset.ruangan;
@@ -84,10 +116,14 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
         _selectedCategory = asset.kategori;
       }
     }
+    _assetsSub = AssetService.instance.streamAllAssets().listen((assets) {
+      if (mounted) setState(() => _allAssets = assets);
+    });
   }
 
   @override
   void dispose() {
+    _assetsSub?.cancel();
     _titleController.dispose();
     _detailLocationController.dispose();
     _descriptionController.dispose();
@@ -136,7 +172,7 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
-            final filteredBuildings = _usuBuildings
+            final filteredBuildings = _buildingOptions
                 .where(
                   (building) => building.toLowerCase().contains(
                     searchQuery.toLowerCase(),
@@ -250,6 +286,9 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                                   : null,
                               onTap: () {
                                 setState(() {
+                                  if (_selectedBuilding?.toLowerCase() != building.toLowerCase()) {
+                                    _selectedAsset = null;
+                                  }
                                   _selectedBuilding = building;
                                 });
                                 Navigator.pop(context);
@@ -257,6 +296,217 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                             );
                           },
                         ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showAssetPicker() {
+    if (_selectedBuilding == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Pilih gedung terlebih dahulu.')),
+      );
+      return;
+    }
+
+    String searchQuery = '';
+    final buildingAssets = _assetsInSelectedBuilding;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final q = searchQuery.trim().toLowerCase();
+            final filtered = buildingAssets.where((a) {
+              if (q.isEmpty) return true;
+              return a.nama.toLowerCase().contains(q) ||
+                  a.ruangan.toLowerCase().contains(q) ||
+                  a.kategori.toLowerCase().contains(q);
+            }).toList();
+
+            return DraggableScrollableSheet(
+              initialChildSize: 0.65,
+              minChildSize: 0.45,
+              maxChildSize: 0.88,
+              expand: false,
+              builder: (context, scrollController) {
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFCBD5E1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Pilih Aset di $_selectedBuilding',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF0A0D14),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        onChanged: (v) => setModalState(() => searchQuery = v),
+                        style: GoogleFonts.plusJakartaSans(fontSize: 13.5),
+                        decoration: InputDecoration(
+                          hintText: 'Cari ruangan atau nama aset (mis. Kursi#01)...',
+                          hintStyle: GoogleFonts.plusJakartaSans(
+                            fontSize: 13,
+                            color: const Color(0xFF8A94A6),
+                          ),
+                          prefixIcon: const Icon(
+                            Icons.search_rounded,
+                            color: AppColors.primaryBlue,
+                            size: 20,
+                          ),
+                          filled: true,
+                          fillColor: const Color(0xFFF4F7FC),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(24),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      // Opsi Resmi: Fasilitas Lainnya / Tidak Terdaftar (assetId: null)
+                      ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 6),
+                        leading: const Icon(
+                          Icons.add_circle_outline_rounded,
+                          color: AppColors.accentOrange,
+                        ),
+                        title: Text(
+                          'Fasilitas Lainnya / Tidak Terdaftar',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF0A0D14),
+                          ),
+                        ),
+                        subtitle: Text(
+                          'Isi nama fasilitas & ruangan secara manual',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11.5,
+                            color: const Color(0xFF64748B),
+                          ),
+                        ),
+                        trailing: _selectedAsset == null
+                            ? const Icon(
+                                Icons.check_circle_rounded,
+                                color: AppColors.primaryBlue,
+                                size: 20,
+                              )
+                            : null,
+                        onTap: () {
+                          setState(() => _selectedAsset = null);
+                          Navigator.pop(context);
+                        },
+                      ),
+                      const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                      Expanded(
+                        child: filtered.isEmpty
+                            ? Center(
+                                child: Text(
+                                  'Belum ada aset terdaftar di gedung ini.\nGunakan opsi "Fasilitas Lainnya" di atas.',
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 12.5,
+                                    color: const Color(0xFF64748B),
+                                  ),
+                                ),
+                              )
+                            : ListView.separated(
+                                controller: scrollController,
+                                itemCount: filtered.length,
+                                separatorBuilder: (_, __) => const Divider(
+                                  height: 1,
+                                  color: Color(0xFFF1F5F9),
+                                ),
+                                itemBuilder: (context, index) {
+                                  final asset = filtered[index];
+                                  final isSelected =
+                                      _selectedAsset?.id == asset.id;
+                                  return ListTile(
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    leading: Icon(
+                                      Icons.inventory_2_outlined,
+                                      color: isSelected
+                                          ? AppColors.primaryBlue
+                                          : const Color(0xFF64748B),
+                                      size: 20,
+                                    ),
+                                    title: Text(
+                                      asset.nama,
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 13.5,
+                                        fontWeight: isSelected
+                                            ? FontWeight.w700
+                                            : FontWeight.w600,
+                                        color: isSelected
+                                            ? AppColors.primaryBlue
+                                            : const Color(0xFF0A0D14),
+                                      ),
+                                    ),
+                                    subtitle: Text(
+                                      '${asset.ruangan} • ${asset.kategori}',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 11.5,
+                                        color: const Color(0xFF64748B),
+                                      ),
+                                    ),
+                                    trailing: isSelected
+                                        ? const Icon(
+                                            Icons.check_circle_rounded,
+                                            color: AppColors.primaryBlue,
+                                            size: 20,
+                                          )
+                                        : null,
+                                    onTap: () {
+                                      setState(() {
+                                        _selectedAsset = asset;
+                                        _titleController.text = asset.nama;
+                                        _detailLocationController.text =
+                                            asset.ruangan;
+                                        if (_categories
+                                            .contains(asset.kategori)) {
+                                          _selectedCategory = asset.kategori;
+                                        }
+                                      });
+                                      Navigator.pop(context);
+                                    },
+                                  );
+                                },
+                              ),
                       ),
                     ],
                   ),
@@ -303,22 +553,24 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
             createdAt: DateTime.now(),
           );
 
-      final assetToReport = widget.selectedAsset ??
-          AssetModel(
-            id: 'MANUAL-${DateTime.now().millisecondsSinceEpoch}',
-            nama: _titleController.text.trim(),
-            kategori: _selectedCategory!,
-            gedung: _selectedBuilding!,
-            ruangan: _detailLocationController.text.trim(),
-            createdAt: DateTime.now(),
-          );
-
-      await ReportService.instance.createReport(
-        asset: assetToReport,
-        pelapor: pelapor,
-        deskripsi: _descriptionController.text.trim(),
-        fotoSebelumBase64: _uploadedPhotos.first,
-      );
+      if (_selectedAsset != null) {
+        await ReportService.instance.createReport(
+          asset: _selectedAsset,
+          pelapor: pelapor,
+          deskripsi: _descriptionController.text.trim(),
+          fotoSebelumBase64: _uploadedPhotos.first,
+        );
+      } else {
+        await ReportService.instance.createReport(
+          asset: null,
+          assetNama: _titleController.text.trim(),
+          assetLokasi:
+              '${_selectedBuilding!} - ${_detailLocationController.text.trim()}',
+          pelapor: pelapor,
+          deskripsi: _descriptionController.text.trim(),
+          fotoSebelumBase64: _uploadedPhotos.first,
+        );
+      }
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -737,7 +989,7 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
 
                             const SizedBox(height: 18),
 
-                            // 4. Lokasi (Pilih Gedung di USU)
+                            // 4a. Lokasi (Pilih Gedung di USU)
                             _buildRequiredLabel('Lokasi'),
                             const SizedBox(height: 8),
                             InkWell(
@@ -785,6 +1037,103 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                                 ),
                               ),
                             ),
+
+                            const SizedBox(height: 18),
+
+                            // 4b. Pilih Aset di Gedung Tersebut (dari Firestore `assets` atau Fasilitas Lainnya)
+                            Text(
+                              'Aset / Fasilitas di Gedung Ini',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF0A0D14),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            InkWell(
+                              onTap: _showAssetPicker,
+                              borderRadius: BorderRadius.circular(28),
+                              child: Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 18,
+                                  vertical: 15,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.inputFill,
+                                  borderRadius: BorderRadius.circular(28),
+                                  border: Border.all(
+                                    color: const Color(0xFFD5DFEF),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.inventory_2_outlined,
+                                      color: AppColors.primaryBlue,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        _selectedAsset != null
+                                            ? _selectedAsset!.nama
+                                            : (_selectedBuilding == null
+                                                ? 'Pilih gedung terlebih dahulu'
+                                                : 'Fasilitas Lainnya / Pilih aset terdaftar'),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 13.5,
+                                          fontWeight: _selectedAsset != null
+                                              ? FontWeight.w600
+                                              : FontWeight.w400,
+                                          color: _selectedAsset != null
+                                              ? const Color(0xFF0A0D14)
+                                              : const Color(0xFF8A94A6),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            if (_selectedAsset != null)
+                              StreamBuilder<List<ReportModel>>(
+                                stream: ReportService.instance
+                                    .streamActiveReportsByAsset(
+                                  _selectedAsset!.id,
+                                ),
+                                builder: (context, snap) {
+                                  final activeCount = snap.data?.length ?? 0;
+                                  if (activeCount == 0) {
+                                    return const SizedBox.shrink();
+                                  }
+                                  return Padding(
+                                    padding: const EdgeInsets.only(top: 8),
+                                    child: Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 9,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFEF3C7),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Text(
+                                        'Info: Aset ini sedang memiliki $activeCount laporan aktif yang sedang ditangani.',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: const Color(0xFFB45309),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
 
                             const SizedBox(height: 18),
 

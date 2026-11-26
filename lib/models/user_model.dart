@@ -66,6 +66,7 @@ class UserModel {
     String? email,
     UserRole? role,
     DateTime? createdAt,
+    String? photoBase64,
   }) {
     return UserModel(
       uid: uid ?? this.uid,
@@ -73,7 +74,7 @@ class UserModel {
       email: email ?? this.email,
       role: role ?? this.role,
       createdAt: createdAt ?? this.createdAt,
-      photoBase64: photoBase64 ?? photoBase64,
+      photoBase64: photoBase64 ?? this.photoBase64,
     );
   }
 }

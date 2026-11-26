@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:tubes_pemob/models/user_model.dart';
-import 'package:tubes_pemob/screens/pelapor/form_pengaduan_screen.dart';
 import 'package:tubes_pemob/screens/pelapor/history_laporan_screen.dart';
 import 'package:tubes_pemob/screens/pelapor/pelapor_home_screen.dart';
 import 'package:tubes_pemob/screens/shared/notification_screen.dart';
 import 'package:tubes_pemob/screens/shared/profile_screen.dart';
 import 'package:tubes_pemob/widgets/bottom_navbar.dart';
+import 'package:tubes_pemob/screens/shared/scan_qr_screen.dart';
 
 class PelaporMainScreen extends StatefulWidget {
   const PelaporMainScreen({super.key});
@@ -27,7 +27,7 @@ class _PelaporMainScreenState extends State<PelaporMainScreen> {
   void _onCreateReportPressed() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => const CreateReportScreen(),
+        builder: (_) => const ScanQrScreen(mode: ScanQrMode.asset),
       ),
     );
   }

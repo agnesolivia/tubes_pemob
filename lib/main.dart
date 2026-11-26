@@ -11,7 +11,7 @@ import 'screens/teknisi/teknisi_main_screen.dart';
 import 'screens/shared/notification_screen.dart';
 import 'services/auth_service.dart';
 import 'package:google_fonts/google_fonts.dart';
-// import 'utils/firestore_seeder.dart';
+import 'utils/firestore_seeder.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,7 +21,7 @@ void main() async {
   );
 
   await AuthService.instance.initialize();
-  // await FirestoreSeeder.seedAll();
+  await FirestoreSeeder.seedAll();
 
   runApp(const MyApp());
 }

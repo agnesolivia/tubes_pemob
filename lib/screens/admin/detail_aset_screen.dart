@@ -9,7 +9,9 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:tubes_pemob/constants/app_colors.dart';
 import 'package:tubes_pemob/models/asset_model.dart';
+import 'package:tubes_pemob/models/user_model.dart';
 import 'package:tubes_pemob/screens/admin/kelola_aset_screen.dart';
+import 'package:tubes_pemob/screens/shared/history_asset_screen.dart';
 import 'package:tubes_pemob/services/asset_service.dart';
 
 class DetailAsetScreen extends StatefulWidget {
@@ -372,35 +374,81 @@ class _DetailAsetScreenState extends State<DetailAsetScreen> {
                   ),
                   const SizedBox(height: 14),
 
-                  // 3. INFO PENJELASAN STIKER QR
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEAF2FF),
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(
-                          Icons.info_outline_rounded,
-                          color: AppColors.primaryBlue,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            'Kode QR terhubung ke ID dokumen ($qrPayload). Label nama aset dan lokasi dicetak di bawah QR agar pelapor tetap bisa melapor manual bila kamera bermasalah.',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w500,
-                              color: AppColors.textPrimary,
-                              height: 1.5,
+                  // 3. KARTU PINTASAN RIWAYAT KERUSAKAN ASET
+                  Material(
+                    color: AppColors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(18),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => HistoryAssetScreen(
+                              assetId: currentAsset.id,
+                              initialAsset: currentAsset,
+                              fallbackNama: currentAsset.nama,
+                              fallbackLokasi: currentAsset.lokasiLengkap,
+                              userRole: UserRole.admin,
                             ),
                           ),
+                        );
+                      },
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(15),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: AppColors.border),
                         ),
-                      ],
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: AppColors.statusDoneBg,
+                                borderRadius: BorderRadius.circular(13),
+                              ),
+                              child: const Icon(
+                                Icons.history_rounded,
+                                color: AppColors.primaryBlue,
+                                size: 22,
+                              ),
+                            ),
+                            const SizedBox(width: 13),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Riwayat Kerusakan Aset',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 13.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Lihat rekam jejak laporan & perbaikan unit ini',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w500,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(
+                              Icons.chevron_right_rounded,
+                              color: AppColors.textSecondary,
+                              size: 22,
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ],

@@ -497,7 +497,7 @@ class _TambahAsetScreenState extends State<TambahAsetScreen> {
                   color: AppColors.textPrimary,
                 ),
                 decoration: _inputDecoration(
-                  hint: 'Contoh: Ruang 204 (kosongkan jika tanpa ruangan)',
+                  hint: 'Contoh: R204 (kosongkan jika tanpa ruangan)',
                   icon: Icons.meeting_room_outlined,
                 ),
               );

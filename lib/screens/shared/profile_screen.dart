@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:tubes_pemob/constants/app_colors.dart';
 import 'package:tubes_pemob/models/user_model.dart';
 import 'package:tubes_pemob/services/auth_service.dart';
@@ -38,9 +39,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message, style: GoogleFonts.plusJakartaSans()),
-        backgroundColor: isError
-            ? _ProfileColors.danger
-            : _ProfileColors.primary,
+        backgroundColor:
+            isError ? _ProfileColors.danger : _ProfileColors.primary,
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -159,47 +159,179 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   },
                 ),
                 if ((user.photoBase64?.isNotEmpty ?? false) ||
-                  (AuthService.instance.currentUser?.photoURL?.isNotEmpty ??
-                      false)) ...[
-                const Divider(height: 1, color: Color(0xFFF1F5F9)),
-                ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-                  leading: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFEBEE),
-                      borderRadius: BorderRadius.circular(12),
+                    (AuthService.instance.currentUser?.photoURL?.isNotEmpty ??
+                        false)) ...[
+                  const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                  ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                    leading: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFEBEE),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.delete_outline_rounded,
+                        color: _ProfileColors.danger,
+                        size: 20,
+                      ),
                     ),
-                    child: const Icon(
-                      Icons.delete_outline_rounded,
-                      color: _ProfileColors.danger,
-                      size: 20,
+                    title: Text(
+                      'Hapus Foto',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: _ProfileColors.danger,
+                      ),
                     ),
+                    onTap: () async {
+                      Navigator.pop(sheetContext);
+                      try {
+                        await AuthService.instance.updateProfilePhoto(
+                          uid: user.uid,
+                          photoBase64: null,
+                        );
+                        _showSnackBar('Foto profil dihapus.');
+                      } catch (e) {
+                        _showSnackBar('Gagal menghapus foto: $e',
+                            isError: true);
+                      }
+                    },
                   ),
-                  title: Text(
-                    'Hapus Foto',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: _ProfileColors.danger,
-                    ),
-                  ),
-                  onTap: () async {
-                    Navigator.pop(sheetContext);
-                    try {
-                      await AuthService.instance.updateProfilePhoto(
-                        uid: user.uid,
-                        photoBase64: null,
-                      );
-                      _showSnackBar('Foto profil dihapus.');
-                    } catch (e) {
-                      _showSnackBar('Gagal menghapus foto: $e',
-                          isError: true);
-                    }
-                  },
-                ),
+                ],
               ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showQrProfileSheet(UserModel user) {
+    final description = switch (user.role) {
+      UserRole.pelapor =>
+        'Tunjukkan QR ini kepada Admin untuk verifikasi atau aktivasi peran teknisi.',
+      UserRole.teknisi =>
+        'Kartu identitas digital akun Teknisi SnaFix kamu.',
+      UserRole.admin =>
+        'Kartu identitas digital akun Admin SnaFix kamu.',
+    };
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFCBD5E1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  'Kode QR Profil',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: _ProfileColors.textDark,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  description,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12.5,
+                    color: _ProfileColors.textGrey,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: AppColors.white,
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(color: _ProfileColors.border, width: 1.5),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x0D000000),
+                        blurRadius: 14,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      QrImageView(
+                        data: 'USER:${user.uid}',
+                        version: QrVersions.auto,
+                        size: 210,
+                        backgroundColor: AppColors.white,
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        user.nama,
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: _ProfileColors.textDark,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        user.email,
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          color: _ProfileColors.textGrey,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      _chip(
+                        user.role.label,
+                        const Color(0xFFE3EEFF),
+                        _ProfileColors.primary,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  height: 46,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(sheetContext),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _ProfileColors.primary,
+                      foregroundColor: AppColors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: Text(
+                      'Tutup',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -541,8 +673,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // PROFILE CARD
   Widget _buildProfileCard(UserModel user) {
     return _card(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           GestureDetector(
             onTap: () => _showPhotoPicker(user),
@@ -550,8 +683,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               clipBehavior: Clip.none,
               children: [
                 Container(
-                  width: 80,
-                  height: 80,
+                  width: 66,
+                  height: 66,
                   decoration: BoxDecoration(
                     color: const Color(0xFFE6EFFF),
                     shape: BoxShape.circle,
@@ -565,8 +698,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       return ClipOval(
                         child: Image.memory(
                           bytes,
-                          width: 76,
-                          height: 76,
+                          width: 62,
+                          height: 62,
                           fit: BoxFit.cover,
                         ),
                       );
@@ -577,13 +710,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       return ClipOval(
                         child: Image.network(
                           photoUrl,
-                          width: 76,
-                          height: 76,
+                          width: 62,
+                          height: 62,
                           fit: BoxFit.cover,
                           errorBuilder: (_, __, ___) => Text(
                             _getInitial(user.nama),
                             style: GoogleFonts.plusJakartaSans(
-                              fontSize: 32,
+                              fontSize: 26,
                               fontWeight: FontWeight.w800,
                               color: _ProfileColors.primary,
                             ),
@@ -595,27 +728,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     return Text(
                       _getInitial(user.nama),
                       style: GoogleFonts.plusJakartaSans(
-                        fontSize: 32,
+                        fontSize: 26,
                         fontWeight: FontWeight.w800,
                         color: _ProfileColors.primary,
                       ),
                     );
                   }(),
-                  ),
+                ),
                 Positioned(
                   right: -2,
                   bottom: -2,
                   child: Container(
-                    width: 26,
-                    height: 26,
+                    width: 22,
+                    height: 22,
                     decoration: BoxDecoration(
                       color: _ProfileColors.primary,
                       shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.white, width: 2),
+                      border: Border.all(color: AppColors.white, width: 1.8),
                     ),
                     child: const Icon(
                       Icons.photo_camera,
-                      size: 13,
+                      size: 11,
                       color: AppColors.white,
                     ),
                   ),
@@ -623,15 +756,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   user.nama,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.plusJakartaSans(
-                    fontSize: 18,
+                    fontSize: 16.5,
                     fontWeight: FontWeight.w800,
                     color: _ProfileColors.textDark,
                   ),
@@ -639,9 +774,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(height: 2),
                 Text(
                   user.email,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.plusJakartaSans(
-                    fontSize: 13,
+                    fontSize: 12,
                     color: _ProfileColors.textGrey,
+                    height: 1.3,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -651,6 +789,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _ProfileColors.primary,
                 ),
               ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Tooltip(
+            message: 'Tampilkan QR Profil',
+            child: Material(
+              color: const Color(0xFFE6EFFF),
+              borderRadius: BorderRadius.circular(11),
+              child: InkWell(
+                onTap: () => _showQrProfileSheet(user),
+                borderRadius: BorderRadius.circular(11),
+                child: const SizedBox(
+                  width: 38,
+                  height: 38,
+                  child: Icon(
+                    Icons.qr_code_2_rounded,
+                    color: _ProfileColors.primary,
+                    size: 21,
+                  ),
+                ),
+              ),
             ),
           ),
         ],

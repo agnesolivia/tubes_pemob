@@ -73,7 +73,7 @@ class UserModel {
       email: email ?? this.email,
       role: role ?? this.role,
       createdAt: createdAt ?? this.createdAt,
-      photoBase64: photoBase64 ?? this.photoBase64,
+      photoBase64: photoBase64 ?? photoBase64,
     );
   }
 }

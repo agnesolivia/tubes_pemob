@@ -20,8 +20,7 @@ class AdminDashboardScreen extends StatefulWidget {
   });
 
   @override
-  State<AdminDashboardScreen> createState() =>
-      _AdminDashboardScreenState();
+  State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
 }
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
@@ -123,193 +122,175 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ),
             ),
 
-            // 2. Konten Utama
-            Column(
-              children: [
-                // Header Dashboard Admin
-                SafeArea(
-                  bottom: false,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      22,
-                      12,
-                      22,
-                      18,
-                    ),
-                    child: Column(
-                      children: [
-                        // Logo SnaFix dan Avatar Admin
-                        Row(
-                          mainAxisAlignment:
-                              MainAxisAlignment.spaceBetween,
-                          children: [
-                            Image.asset(
-                              'assets/images/snafix_logo.png',
-                              width: size.width * 0.28,
-                              fit: BoxFit.contain,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Text(
-                                  'SnaFix',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.w800,
-                                    color: AppColors.white,
-                                  ),
-                                );
-                              },
+            // 2. Konten Scrollable: Top Bar Pinned + Hero Collapsible + Sheet Putih
+            CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics(),
+              ),
+              slivers: [
+                // Bilah Atas Pinned (Logo SnaFix, Badge Admin, Avatar)
+                SliverAppBar(
+                  pinned: true,
+                  elevation: 0,
+                  scrolledUnderElevation: 0,
+                  backgroundColor: AppColors.primaryBlue,
+                  automaticallyImplyLeading: false,
+                  toolbarHeight: 64,
+                  titleSpacing: 22,
+                  title: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Image.asset(
+                        'assets/images/snafix_logo.png',
+                        width: size.width * 0.28,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Text(
+                            'SnaFix',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.white,
                             ),
-
-                            Row(
+                          );
+                        },
+                      ),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 7,
+                            ),
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: AppColors.white.withValues(alpha: 0.45),
+                              ),
+                              borderRadius: BorderRadius.circular(25),
+                            ),
+                            child: Row(
                               children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 8,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    border: Border.all(
-                                      color: AppColors.white
-                                          .withValues(alpha: 0.45),
-                                    ),
-                                    borderRadius: BorderRadius.circular(25),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      const Icon(
-                                        Icons.verified_user_rounded,
-                                        size: 15,
-                                        color: AppColors.white,
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        'Admin',
-                                        style:
-                                            GoogleFonts.plusJakartaSans(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w700,
-                                          color: AppColors.white,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                                const Icon(
+                                  Icons.verified_user_rounded,
+                                  size: 15,
+                                  color: AppColors.white,
                                 ),
-
-                                const SizedBox(width: 10),
-
-                                GestureDetector(
-                                  onTap: _onProfilePressed,
-                                  child: Container(
-                                    width: 42,
-                                    height: 42,
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF5B5CE6),
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: AppColors.white
-                                            .withValues(alpha: 0.4),
-                                        width: 1.5,
-                                      ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black
-                                              .withValues(alpha: 0.12),
-                                          blurRadius: 8,
-                                          offset: const Offset(0, 3),
-                                        ),
-                                      ],
-                                    ),
-                                    alignment: Alignment.center,
-                                    child: StreamBuilder<UserModel?>(
-                                      stream: AuthService.instance.currentUser ==
-                                              null
-                                          ? null
-                                          : AuthService.instance.streamUserData(
-                                              AuthService
-                                                  .instance.currentUser!.uid,
-                                            ),
-                                      builder: (context, snapshot) {
-                                        final nama = snapshot.data?.nama ??
-                                            AuthService.instance.currentUser
-                                                ?.displayName ??
-                                            'A';
-                                        final initial = nama.trim().isEmpty
-                                            ? 'A'
-                                            : nama.trim()[0].toUpperCase();
-                                        return Text(
-                                          initial,
-                                          style: GoogleFonts.plusJakartaSans(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w700,
-                                            color: AppColors.white,
-                                          ),
-                                        );
-                                      },
-                                    ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Admin',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.white,
                                   ),
                                 ),
                               ],
                             ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // Hero Text dan Ilustrasi Dashboard
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Expanded(
-                              flex: 54,
-                              child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Dashboard\nPantauan',
-                                    style:
-                                        GoogleFonts.plusJakartaSans(
-                                      fontSize: 25,
-                                      fontWeight: FontWeight.w800,
-                                      color: AppColors.white,
-                                      height: 1.2,
-                                      letterSpacing: -0.4,
-                                    ),
-                                  ),
-
-                                  const SizedBox(height: 10),
-
-                                  Text(
-                                    'Pantau laporan,\npenanganan fasilitas,\ndan status SLA.',
-                                    style:
-                                        GoogleFonts.plusJakartaSans(
-                                      fontSize: 13.5,
-                                      fontWeight: FontWeight.w400,
-                                      color: AppColors.white
-                                          .withValues(alpha: 0.9),
-                                      height: 1.4,
-                                    ),
+                          ),
+                          const SizedBox(width: 10),
+                          GestureDetector(
+                            onTap: _onProfilePressed,
+                            child: Container(
+                              width: 42,
+                              height: 42,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF5B5CE6),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: AppColors.white.withValues(alpha: 0.4),
+                                  width: 1.5,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.12),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 3),
                                   ),
                                 ],
                               ),
-                            ),
-
-                            const SizedBox(width: 8),
-
-                            Expanded(
-                              flex: 46,
-                              child: DashboardHeroIllustration(
-                                height: size.height * 0.165,
+                              alignment: Alignment.center,
+                              child: StreamBuilder<UserModel?>(
+                                stream: AuthService.instance.currentUser == null
+                                    ? null
+                                    : AuthService.instance.streamUserData(
+                                        AuthService.instance.currentUser!.uid,
+                                      ),
+                                builder: (context, snapshot) {
+                                  final nama = snapshot.data?.nama ??
+                                      AuthService
+                                          .instance.currentUser?.displayName ??
+                                      'A';
+                                  final initial = nama.trim().isEmpty
+                                      ? 'A'
+                                      : nama.trim()[0].toUpperCase();
+                                  return Text(
+                                    initial,
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.white,
+                                    ),
+                                  );
+                                },
                               ),
                             ),
-                          ],
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Bagian Hero (Ikut tergulung & tertutup sheet putih saat scroll ke atas)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(22, 6, 22, 20),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          flex: 54,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Dashboard\nPantauan',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 25,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.white,
+                                  height: 1.2,
+                                  letterSpacing: -0.4,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                'Pantau laporan,\npenanganan fasilitas,\ndan status SLA.',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w400,
+                                  color: AppColors.white.withValues(alpha: 0.9),
+                                  height: 1.4,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          flex: 46,
+                          child: DashboardHeroIllustration(
+                            height: size.height * 0.165,
+                          ),
                         ),
                       ],
                     ),
                   ),
                 ),
 
-                // 3. Bagian Bawah: Container Putih
-                Expanded(
+                // Container Putih Melengkung (Menutup area hero saat di-scroll ke atas)
+                SliverFillRemaining(
+                  hasScrollBody: false,
                   child: Container(
                     width: double.infinity,
                     decoration: const BoxDecoration(
@@ -319,70 +300,34 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         topRight: Radius.circular(32),
                       ),
                     ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Bar Aksi Cepat Atas (Mirip area CTA Pelapor)
+                        _buildQuickActionsBar(),
 
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(
-                        20,
-                        22,
-                        20,
-                        115,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Ringkasan Tiket
-                          _buildSummarySection(),
+                        // Konten Utama Dashboard
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 18, 20, 115),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Ringkasan Tiket
+                              _buildSummarySection(),
 
-                          const SizedBox(height: 24),
+                              const SizedBox(height: 22),
 
-                          // Tombol Kelola Teknisi
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton.icon(
-                              onPressed: _onManageTechniciansPressed,
-                              icon: const Icon(
-                                Icons.engineering_rounded,
-                                size: 18,
-                              ),
-                              label: Text(
-                                'Kelola Teknisi',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
+                              // Peringatan Overdue SLA
+                              _buildOverdueSection(),
+
+                              const SizedBox(height: 22),
+
+                              // Aktivitas Terbaru
+                              _buildRecentActivitySection(),
+                            ],
                           ),
-
-                          // Tombol Kelola Aset
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton.icon(
-                              onPressed: _onManageAssetsPressed,
-                              icon: const Icon(
-                                Icons.inventory_2_outlined,
-                                size: 18,
-                              ),
-                              label: Text(
-                                'Kelola Aset',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                          ),
-
-                          // Peringatan Overdue SLA
-                          _buildOverdueSection(),
-
-                          const SizedBox(height: 24),
-
-                          // Aktivitas Terbaru
-                          _buildRecentActivitySection(),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -390,6 +335,117 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  // ==========================================================
+  // QUICK ACTIONS BAR (KELOLA TEKNISI & KELOLA ASET)
+  // ==========================================================
+
+  Widget _buildQuickActionsBar() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+      decoration: const BoxDecoration(
+        color: Color(0xFFFAFBFD),
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(32),
+          topRight: Radius.circular(32),
+        ),
+        border: Border(
+          bottom: BorderSide(
+            color: Color(0xFFEEF2F7),
+            width: 1,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          // Tombol Kelola Teknisi
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(30),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primaryBlue.withValues(alpha: 0.20),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: ElevatedButton.icon(
+                onPressed: _onManageTechniciansPressed,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryBlue,
+                  foregroundColor: AppColors.white,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 12.5,
+                  ),
+                  side: const BorderSide(
+                    color: Color(0xFFFFB800),
+                    width: 1.8,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                ),
+                icon: const Icon(Icons.engineering_rounded, size: 18),
+                label: Flexible(
+                  child: Text(
+                    'Kelola Teknisi',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(width: 12),
+
+          // Tombol Kelola Aset
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: _onManageAssetsPressed,
+              style: OutlinedButton.styleFrom(
+                backgroundColor: AppColors.white,
+                foregroundColor: AppColors.primaryBlue,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12.5,
+                ),
+                side: BorderSide(
+                  color: AppColors.primaryBlue.withValues(alpha: 0.35),
+                  width: 1.5,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+              ),
+              icon: const Icon(Icons.inventory_2_outlined, size: 18),
+              label: Flexible(
+                child: Text(
+                  'Kelola Aset',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -413,7 +469,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 color: const Color(0xFF0A0D14),
               ),
             ),
-
             GestureDetector(
               onTap: _onViewAllTicketsPressed,
               child: Text(
@@ -442,9 +497,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 icon: Icons.campaign_outlined,
               ),
             ),
-
             const SizedBox(width: 10),
-
             Expanded(
               child: _SummaryTicketCard(
                 badgeText: 'Diproses',
@@ -454,9 +507,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 icon: Icons.handyman_outlined,
               ),
             ),
-
             const SizedBox(width: 10),
-
             Expanded(
               child: _SummaryTicketCard(
                 badgeText: 'Selesai',
@@ -490,9 +541,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   size: 20,
                   color: Color(0xFFDC2626),
                 ),
-
                 const SizedBox(width: 7),
-
                 Text(
                   'Peringatan Overdue SLA',
                   style: GoogleFonts.plusJakartaSans(
@@ -503,7 +552,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
               ],
             ),
-
             Text(
               '$_overdueCount Tiket',
               style: GoogleFonts.plusJakartaSans(
@@ -549,7 +597,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 color: const Color(0xFF0A0D14),
               ),
             ),
-
             GestureDetector(
               onTap: _onViewAllTicketsPressed,
               child: Text(
@@ -641,17 +688,13 @@ class _SummaryTicketCard extends StatelessWidget {
               ),
             ),
           ),
-
           const SizedBox(height: 10),
-
           Icon(
             icon,
             size: 23,
             color: badgeTextColor,
           ),
-
           const SizedBox(height: 5),
-
           Text(
             count,
             style: GoogleFonts.plusJakartaSans(
@@ -717,9 +760,7 @@ class _EmptyStateCard extends StatelessWidget {
               size: 23,
             ),
           ),
-
           const SizedBox(width: 12),
-
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -732,9 +773,7 @@ class _EmptyStateCard extends StatelessWidget {
                     color: const Color(0xFF1E293B),
                   ),
                 ),
-
                 const SizedBox(height: 5),
-
                 Text(
                   description,
                   style: GoogleFonts.plusJakartaSans(
@@ -813,9 +852,7 @@ class DashboardHeroIllustration extends StatelessWidget {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 8),
-
                   Text(
                     'Laporan',
                     style: GoogleFonts.plusJakartaSans(
@@ -824,9 +861,7 @@ class DashboardHeroIllustration extends StatelessWidget {
                       color: AppColors.textSecondary,
                     ),
                   ),
-
                   const SizedBox(height: 7),
-
                   Expanded(
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.end,
@@ -851,9 +886,7 @@ class DashboardHeroIllustration extends StatelessWidget {
                       ],
                     ),
                   ),
-
                   const SizedBox(height: 5),
-
                   Container(
                     height: 4,
                     decoration: BoxDecoration(

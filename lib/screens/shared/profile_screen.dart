@@ -456,8 +456,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             children: [
                               _buildProfileCard(user),
                               const SizedBox(height: 18),
-                              _buildAccountInfo(user),
-                              const SizedBox(height: 18),
                               _buildSettings(user),
                               const SizedBox(height: 22),
                               _buildLogoutButton(),
@@ -657,29 +655,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  // INFORMASI AKUN
-  Widget _buildAccountInfo(UserModel user) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _sectionTitle('Informasi Akun'),
-        const SizedBox(height: 10),
-        _card(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: Column(
-            children: [
-              _infoRow('Nama lengkap', user.nama),
-              const Divider(height: 1, color: _ProfileColors.border),
-              _infoRow('Peran (Role)', user.role.label),
-              const Divider(height: 1, color: _ProfileColors.border),
-              _infoRow('Email', user.email),
-            ],
-          ),
-        ),
-      ],
     );
   }
 

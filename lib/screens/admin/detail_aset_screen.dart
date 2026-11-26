@@ -555,7 +555,10 @@ class _DetailAsetScreenState extends State<DetailAsetScreen> {
           _detailRow(
             icon: Icons.meeting_room_outlined,
             label: 'Ruangan',
-            value: asset.ruangan,
+            value: asset.hasRuangan
+                ? asset.ruangan
+                : 'Tidak ada (Area gedung)',
+            isMuted: !asset.hasRuangan,
           ),
           const Divider(color: AppColors.border, height: 1),
           _detailRow(
@@ -572,6 +575,7 @@ class _DetailAsetScreenState extends State<DetailAsetScreen> {
     required IconData icon,
     required String label,
     required String value,
+    bool isMuted = false,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
@@ -594,8 +598,10 @@ class _DetailAsetScreenState extends State<DetailAsetScreen> {
               value,
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 12.5,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
+                fontWeight: isMuted ? FontWeight.w500 : FontWeight.w700,
+                fontStyle: isMuted ? FontStyle.italic : FontStyle.normal,
+                color:
+                    isMuted ? AppColors.textSecondary : AppColors.textPrimary,
               ),
             ),
           ),
@@ -803,7 +809,7 @@ class _EditAssetSheetState extends State<_EditAssetSheet> {
                 ),
                 const SizedBox(height: 14),
 
-                _label('Ruangan'),
+                _label('Ruangan (Opsional)'),
                 const SizedBox(height: 6),
                 TextFormField(
                   controller: _ruanganController,
@@ -813,11 +819,9 @@ class _EditAssetSheetState extends State<_EditAssetSheet> {
                     color: AppColors.textPrimary,
                   ),
                   decoration: _decoration(
-                    hint: 'Contoh: Ruang 204',
+                    hint: 'Kosongkan jika berada di area gedung',
                     icon: Icons.meeting_room_outlined,
                   ),
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Wajib diisi.' : null,
                 ),
                 const SizedBox(height: 22),
 

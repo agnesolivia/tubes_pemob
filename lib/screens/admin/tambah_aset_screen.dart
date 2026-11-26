@@ -88,7 +88,7 @@ class _TambahAsetScreenState extends State<TambahAsetScreen> {
     final gLower = gedung.trim().toLowerCase();
     final rLower = ruangan.trim().toLowerCase();
     final bLower = baseName.trim().toLowerCase();
-    if (gLower.isEmpty || rLower.isEmpty || bLower.isEmpty) return 0;
+    if (gLower.isEmpty || bLower.isEmpty) return 0;
 
     final suffixPattern = RegExp(r'^(.+)#(\d+)$');
     int maxNum = 0;
@@ -115,8 +115,8 @@ class _TambahAsetScreenState extends State<TambahAsetScreen> {
     if (_isSaving) return;
     if (!_formKey.currentState!.validate()) return;
 
-    if (_gedung.trim().isEmpty || _ruangan.trim().isEmpty) {
-      _showSnackBar('Gedung dan ruangan wajib diisi.', isError: true);
+    if (_gedung.trim().isEmpty) {
+      _showSnackBar('Nama gedung wajib diisi.', isError: true);
       return;
     }
 
@@ -149,8 +149,12 @@ class _TambahAsetScreenState extends State<TambahAsetScreen> {
 
       if (!mounted) return;
 
+      final lokasiLabel = _ruangan.trim().isEmpty
+          ? _gedung.trim()
+          : '${_gedung.trim()} - ${_ruangan.trim()}';
+
       _showSnackBar(
-        '${createdAssets.length} aset berhasil ditambahkan ke ${_gedung.trim()} - ${_ruangan.trim()}.',
+        '${createdAssets.length} aset berhasil ditambahkan ke $lokasiLabel.',
       );
 
       if (createdAssets.length == 1) {
@@ -309,9 +313,12 @@ class _TambahAsetScreenState extends State<TambahAsetScreen> {
                       width: double.infinity,
                       child: OutlinedButton.icon(
                         onPressed: _addRow,
-                        icon: const Icon(Icons.add_circle_outline_rounded, size: 19),
+                        icon: const Icon(
+                          Icons.add_circle_outline_rounded,
+                          size: 19,
+                        ),
                         label: Text(
-                          'Tambah Jenis Barang Lain di Ruangan Ini',
+                          'Tambah Jenis Barang Lain di Lokasi Ini',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 12.5,
                             fontWeight: FontWeight.w700,
@@ -415,15 +422,16 @@ class _TambahAsetScreenState extends State<TambahAsetScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            'Pilih dari saran yang sudah ada atau ketik gedung/ruangan baru.',
+            'Pilih gedung yang sudah ada atau ketik baru. Kosongkan ruangan jika aset berada di area umum gedung.',
             style: GoogleFonts.plusJakartaSans(
               fontSize: 11,
               color: AppColors.textSecondary,
+              height: 1.4,
             ),
           ),
           const SizedBox(height: 14),
 
-          // GEDUNG AUTOCOMPLETE
+          // GEDUNG AUTOCOMPLETE (WAJIB)
           _fieldLabel('Gedung'),
           const SizedBox(height: 6),
           Autocomplete<String>(
@@ -463,8 +471,8 @@ class _TambahAsetScreenState extends State<TambahAsetScreen> {
           ),
           const SizedBox(height: 14),
 
-          // RUANGAN AUTOCOMPLETE
-          _fieldLabel('Ruangan'),
+          // RUANGAN AUTOCOMPLETE (OPSIONAL)
+          _fieldLabel('Ruangan (Opsional)'),
           const SizedBox(height: 6),
           Autocomplete<String>(
             initialValue: TextEditingValue(text: _ruangan),
@@ -489,15 +497,9 @@ class _TambahAsetScreenState extends State<TambahAsetScreen> {
                   color: AppColors.textPrimary,
                 ),
                 decoration: _inputDecoration(
-                  hint: 'Contoh: Ruang 204',
+                  hint: 'Contoh: Ruang 204 (kosongkan jika tanpa ruangan)',
                   icon: Icons.meeting_room_outlined,
                 ),
-                validator: (val) {
-                  if (val == null || val.trim().isEmpty) {
-                    return 'Nama ruangan wajib diisi.';
-                  }
-                  return null;
-                },
               );
             },
           ),

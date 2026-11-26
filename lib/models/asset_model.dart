@@ -13,11 +13,14 @@ class AssetModel {
     required this.nama,
     required this.kategori,
     required this.gedung,
-    required this.ruangan,
+    this.ruangan = '',
     required this.createdAt,
   });
 
-  String get lokasiLengkap => '$gedung - $ruangan';
+  bool get hasRuangan => ruangan.trim().isNotEmpty;
+
+  String get lokasiLengkap =>
+      hasRuangan ? '${gedung.trim()} - ${ruangan.trim()}' : gedung.trim();
 
   factory AssetModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>? ?? {};

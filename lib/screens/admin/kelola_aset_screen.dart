@@ -36,6 +36,8 @@ class _KelolaAsetScreenState extends State<KelolaAsetScreen> {
   String _selectedRoom = 'Semua Ruangan';
   String _selectedCategory = 'Semua Kategori';
 
+  static const String _noRoomFilterLabel = 'Tanpa Ruangan';
+
   static const List<String> _defaultCategories = [
     'Elektronik',
     'Inventaris',
@@ -79,20 +81,39 @@ class _KelolaAsetScreenState extends State<KelolaAsetScreen> {
         assets,
         effectiveBuilding,
       );
-      return ['Semua Ruangan', ...rooms];
+      final hasNoRoom = assets.any(
+        (asset) =>
+            asset.gedung.trim().toLowerCase() ==
+                effectiveBuilding.trim().toLowerCase() &&
+            !asset.hasRuangan,
+      );
+      return [
+        'Semua Ruangan',
+        if (hasNoRoom) _noRoomFilterLabel,
+        ...rooms,
+      ];
     }
 
     final Map<String, String> allRoomsMap = {};
+    bool hasAnyNoRoom = false;
+
     for (final asset in assets) {
-      final clean = asset.ruangan.trim();
-      if (clean.isNotEmpty) {
-        allRoomsMap.putIfAbsent(clean.toLowerCase(), () => clean);
+      if (!asset.hasRuangan) {
+        hasAnyNoRoom = true;
+        continue;
       }
+      final clean = asset.ruangan.trim();
+      allRoomsMap.putIfAbsent(clean.toLowerCase(), () => clean);
     }
+
     final sorted = allRoomsMap.values.toList()
       ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
 
-    return ['Semua Ruangan', ...sorted];
+    return [
+      'Semua Ruangan',
+      if (hasAnyNoRoom) _noRoomFilterLabel,
+      ...sorted,
+    ];
   }
 
   bool _hasActiveFilter({
@@ -135,8 +156,10 @@ class _KelolaAsetScreenState extends State<KelolaAsetScreen> {
               effectiveBuilding.trim().toLowerCase();
 
       final matchesRoom = effectiveRoom == 'Semua Ruangan' ||
-          asset.ruangan.trim().toLowerCase() ==
-              effectiveRoom.trim().toLowerCase();
+          (effectiveRoom == _noRoomFilterLabel
+              ? !asset.hasRuangan
+              : asset.ruangan.trim().toLowerCase() ==
+                  effectiveRoom.trim().toLowerCase());
 
       final matchesCategory = effectiveCategory == 'Semua Kategori' ||
           asset.kategori.trim().toLowerCase() ==

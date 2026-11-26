@@ -75,11 +75,12 @@ class AssetService {
     return created.first;
   }
 
-  /// Tambah banyak aset sekaligus (campuran satuan & batch) dalam satu ruangan
+  /// Tambah banyak aset sekaligus (campuran satuan & batch) dalam satu gedung/ruangan
   /// menggunakan WriteBatch Firestore (maksimal 500 total unit per simpan).
+  /// Parameter [ruangan] bersifat opsional (boleh kosong untuk area umum gedung).
   Future<List<AssetModel>> createMultipleAssets({
     required String gedung,
-    required String ruangan,
+    String ruangan = '',
     required List<AssetBatchItem> items,
   }) async {
     final normalizedGedung = _normalizeText(gedung);
@@ -87,9 +88,6 @@ class AssetService {
 
     if (normalizedGedung.isEmpty) {
       throw Exception('Nama gedung tidak boleh kosong.');
-    }
-    if (normalizedRuangan.isEmpty) {
-      throw Exception('Nama ruangan tidak boleh kosong.');
     }
     if (items.isEmpty) {
       throw Exception('Daftar aset yang akan ditambahkan tidak boleh kosong.');
@@ -110,7 +108,7 @@ class AssetService {
     }
 
     // Ambil snapshot aset sekali untuk mencocokkan ejaan gedung/ruangan
-    // sekaligus mengecek duplikat nama & nomor urut terakhir di ruangan terkait.
+    // sekaligus mengecek duplikat nama & nomor urut terakhir di lokasi terkait.
     final snapshot = await _assetsRef.get();
 
     String canonicalGedung = normalizedGedung;
@@ -123,7 +121,8 @@ class AssetService {
 
       if (existingGedung.toLowerCase() == normalizedGedung.toLowerCase()) {
         canonicalGedung = existingGedung;
-        if (existingRuangan.toLowerCase() == normalizedRuangan.toLowerCase()) {
+        if (normalizedRuangan.isNotEmpty &&
+            existingRuangan.toLowerCase() == normalizedRuangan.toLowerCase()) {
           canonicalRuangan = existingRuangan;
           break;
         }
@@ -162,6 +161,7 @@ class AssetService {
     final WriteBatch batch = FirebaseFirestore.instance.batch();
     final List<AssetModel> createdAssets = [];
     final DateTime now = DateTime.now();
+    final lokasiLabel = _formatLokasi(canonicalGedung, canonicalRuangan);
 
     for (final item in items) {
       final cleanNama = _normalizeText(item.nama);
@@ -179,7 +179,7 @@ class AssetService {
         final namaLower = cleanNama.toLowerCase();
         if (existingNamesLower.contains(namaLower)) {
           throw Exception(
-            'Aset "$cleanNama" sudah terdaftar di $canonicalGedung - $canonicalRuangan.',
+            'Aset "$cleanNama" sudah terdaftar di $lokasiLabel.',
           );
         }
 
@@ -229,7 +229,7 @@ class AssetService {
 
           if (existingNamesLower.contains(generatedLower)) {
             throw Exception(
-              'Aset "$generatedName" sudah terdaftar di $canonicalGedung - $canonicalRuangan.',
+              'Aset "$generatedName" sudah terdaftar di $lokasiLabel.',
             );
           }
 
@@ -257,8 +257,8 @@ class AssetService {
     return createdAssets;
   }
 
-  /// Perbarui data detail aset (Nama, Kategori, Gedung, Ruangan)
-  /// dengan normalisasi lokasi & validasi nama unik per ruangan.
+  /// Perbarui data detail aset (Nama, Kategori, Gedung, dan Ruangan opsional)
+  /// dengan normalisasi lokasi & validasi nama unik per lokasi.
   Future<void> updateAsset(AssetModel asset) async {
     final cleanNama = _normalizeText(asset.nama);
     final cleanKategori = _normalizeText(asset.kategori);
@@ -267,9 +267,8 @@ class AssetService {
 
     if (cleanNama.isEmpty ||
         cleanKategori.isEmpty ||
-        normalizedGedung.isEmpty ||
-        normalizedRuangan.isEmpty) {
-      throw Exception('Semua field aset wajib diisi.');
+        normalizedGedung.isEmpty) {
+      throw Exception('Nama aset, kategori, dan gedung wajib diisi.');
     }
 
     final snapshot = await _assetsRef.get();
@@ -284,12 +283,15 @@ class AssetService {
 
       if (existingGedung.toLowerCase() == normalizedGedung.toLowerCase()) {
         canonicalGedung = existingGedung;
-        if (existingRuangan.toLowerCase() == normalizedRuangan.toLowerCase()) {
+        if (normalizedRuangan.isNotEmpty &&
+            existingRuangan.toLowerCase() == normalizedRuangan.toLowerCase()) {
           canonicalRuangan = existingRuangan;
           break;
         }
       }
     }
+
+    final lokasiLabel = _formatLokasi(canonicalGedung, canonicalRuangan);
 
     // Pastikan nama baru tidak bentrok dengan aset lain di (gedung, ruangan) yang sama
     for (final doc in snapshot.docs) {
@@ -304,7 +306,7 @@ class AssetService {
           existingRuangan.toLowerCase() == canonicalRuangan.toLowerCase() &&
           existingNama.toLowerCase() == cleanNama.toLowerCase()) {
         throw Exception(
-          'Aset "$cleanNama" sudah terdaftar di $canonicalGedung - $canonicalRuangan.',
+          'Aset "$cleanNama" sudah terdaftar di $lokasiLabel.',
         );
       }
     }
@@ -334,7 +336,7 @@ class AssetService {
       ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
   }
 
-  /// Helper UI: Ekstrak daftar ruangan unik di dalam [gedung] tertentu (case-insensitive).
+  /// Helper UI: Ekstrak daftar ruangan unik non-kosong di dalam [gedung] tertentu (case-insensitive).
   List<String> extractUniqueRuangan(List<AssetModel> assets, String gedung) {
     final targetGedungLower = gedung.trim().toLowerCase();
     if (targetGedungLower.isEmpty) return [];
@@ -348,6 +350,10 @@ class AssetService {
     }
     return uniqueMap.values.toList()
       ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+  }
+
+  String _formatLokasi(String gedung, String ruangan) {
+    return ruangan.trim().isEmpty ? gedung : '$gedung - $ruangan';
   }
 
   /// Merapikan spasi berlebih & mengkapitalisasi awal tiap kata tanpa merusak singkatan (misal: "AC", "PC").

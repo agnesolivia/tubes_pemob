@@ -5,6 +5,7 @@ import 'package:tubes_pemob/models/user_model.dart';
 import 'package:tubes_pemob/screens/admin/admin_dashboard_screen.dart';
 import 'package:tubes_pemob/screens/admin/kelola_laporan_screen.dart';
 import 'package:tubes_pemob/screens/shared/profile_screen.dart';
+import 'package:tubes_pemob/screens/shared/scan_qr_screen.dart';
 import 'package:tubes_pemob/widgets/bottom_navbar.dart';
 
 class AdminMainScreen extends StatefulWidget {
@@ -25,21 +26,14 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
   }
 
   void _onScanQrPressed() {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(
-            'Halaman Scan QR belum dihubungkan.',
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 2),
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const ScanQrScreen(
+          mode: ScanQrMode.all,
+          role: UserRole.admin,
         ),
-      );
+      ),
+    );
   }
 
   @override
@@ -51,6 +45,7 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
         children: [
           AdminDashboardScreen(onSwitchTab: _onTabSelected),
           const _AdminTiketTabScreen(),
+          // TODO: Ganti dengan const NotificationScreen() setelah screens/shared/notification_screen.dart dibuat
           const _AdminNotifikasiPlaceholderScreen(),
           const ProfileScreen(),
         ],
@@ -117,7 +112,7 @@ class _AdminTiketTabScreen extends StatelessWidget {
           Expanded(
             child: Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 110),
               decoration: const BoxDecoration(
                 color: AppColors.background,
                 borderRadius: BorderRadius.vertical(
@@ -178,7 +173,7 @@ class _AdminNotifikasiPlaceholderScreen extends StatelessWidget {
       backgroundColor: AppColors.background,
       body: Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 110),
           child: Text(
             'Halaman Notifikasi belum tersedia.',
             textAlign: TextAlign.center,

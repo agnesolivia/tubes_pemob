@@ -2,15 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:tubes_pemob/constants/app_colors.dart';
+import 'package:tubes_pemob/models/asset_model.dart';
+import 'package:tubes_pemob/models/user_model.dart';
 import 'package:tubes_pemob/screens/pelapor/form_pengaduan_screen.dart';
+import 'package:tubes_pemob/screens/teknisi/daftar_tugas_screen.dart';
 import 'package:tubes_pemob/services/asset_service.dart';
+import 'package:tubes_pemob/services/auth_service.dart';
 
-enum ScanQrMode { asset, user }
+enum ScanQrMode { asset, user, all }
 
 class ScanQrScreen extends StatefulWidget {
   final ScanQrMode mode;
+  final UserRole role;
 
-  const ScanQrScreen({super.key, this.mode = ScanQrMode.asset});
+  const ScanQrScreen({
+    super.key,
+    this.mode = ScanQrMode.asset,
+    this.role = UserRole.pelapor,
+  });
 
   @override
   State<ScanQrScreen> createState() => _ScanQrScreenState();
@@ -41,16 +50,55 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
   }
 
   Future<void> _toggleTorch() async {
-    await _controller.toggleTorch();
-    if (!mounted) return;
-    setState(() => _isTorchOn = !_isTorchOn);
+    try {
+      await _controller.toggleTorch();
+      if (!mounted) return;
+      setState(() => _isTorchOn = !_isTorchOn);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Lampu kilat tidak tersedia pada perangkat ini.',
+            style: GoogleFonts.plusJakartaSans(),
+          ),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   Future<void> _switchCamera() async {
-    await _controller.switchCamera();
+    try {
+      await _controller.switchCamera();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Kamera lain tidak tersedia pada perangkat ini.',
+            style: GoogleFonts.plusJakartaSans(),
+          ),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
-  void _showErrorAndResume(String message) {
+  void _resumeScanner() {
+    if (!mounted) return;
+    setState(() {
+      _statusMessage = null;
+      _isProcessing = false;
+    });
+    _controller.start();
+  }
+
+  Future<void> _showErrorAndResume(String message) async {
     if (!mounted) return;
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
@@ -64,7 +112,12 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
       _statusMessage = message;
       _isProcessing = false;
     });
-    _controller.start();
+
+    // Jeda singkat agar kamera tidak langsung menembak QR salah yang sama berulang kali
+    await Future.delayed(const Duration(milliseconds: 1200));
+    if (mounted && !_isProcessing) {
+      await _controller.start();
+    }
   }
 
   Future<void> _onDetect(BarcodeCapture capture) async {
@@ -86,23 +139,62 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
     });
     await _controller.stop();
 
-    if (widget.mode == ScanQrMode.asset) {
-      await _handleAssetQr(rawValue);
-    } else {
-      _handleUserQr(rawValue);
+    switch (widget.mode) {
+      case ScanQrMode.asset:
+        await _handleAssetQr(rawValue);
+        break;
+      case ScanQrMode.user:
+        await _handleUserQrForReturn(rawValue);
+        break;
+      case ScanQrMode.all:
+        await _handleUniversalAdminQr(rawValue);
+        break;
     }
+  }
+
+  Future<void> _handleUniversalAdminQr(String rawValue) async {
+    if (widget.role != UserRole.admin) {
+      await _showErrorAndResume(
+        'Mode pemindaian universal hanya tersedia untuk Admin.',
+      );
+      return;
+    }
+
+    if (rawValue.startsWith(_userPrefix)) {
+      final uid = rawValue.substring(_userPrefix.length).trim();
+      if (uid.isEmpty) {
+        await _showErrorAndResume('UID pengguna pada QR tidak valid.');
+        return;
+      }
+      await _handleAdminUserPromotion(uid);
+      return;
+    }
+
+    if (rawValue.startsWith(_assetPrefix)) {
+      final assetId = rawValue.substring(_assetPrefix.length).trim();
+      if (assetId.isEmpty) {
+        await _showErrorAndResume('ID aset pada QR kosong atau tidak valid.');
+        return;
+      }
+      await _fetchAndRouteAsset(assetId);
+      return;
+    }
+
+    await _showErrorAndResume(
+      'Format QR tidak dikenali. Pindai QR Fasilitas (ASSET) atau QR Profil (USER) resmi SnaFix.',
+    );
   }
 
   Future<void> _handleAssetQr(String rawValue) async {
     if (rawValue.startsWith(_userPrefix)) {
-      _showErrorAndResume(
+      await _showErrorAndResume(
         'Ini adalah QR Profil Pengguna, bukan QR Aset. Pindai stiker QR pada fasilitas.',
       );
       return;
     }
 
     if (!rawValue.startsWith(_assetPrefix)) {
-      _showErrorAndResume(
+      await _showErrorAndResume(
         'Format QR tidak dikenali. Pastikan memindai stiker QR resmi SnaFix.',
       );
       return;
@@ -110,41 +202,58 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
 
     final assetId = rawValue.substring(_assetPrefix.length).trim();
     if (assetId.isEmpty) {
-      _showErrorAndResume('ID aset pada QR kosong atau tidak valid.');
+      await _showErrorAndResume('ID aset pada QR kosong atau tidak valid.');
       return;
     }
 
+    await _fetchAndRouteAsset(assetId);
+  }
+
+  Future<void> _fetchAndRouteAsset(String assetId) async {
     try {
       final asset = await AssetService.instance.getAssetById(assetId);
       if (!mounted) return;
 
       if (asset == null) {
-        _showErrorAndResume(
+        await _showErrorAndResume(
           'Aset tidak ditemukan di database. Gunakan Lapor Manual jika aset belum terdaftar.',
         );
         return;
       }
 
-      // TODO: Arahkan ke HistoryAssetScreen(asset: asset) terlebih dahulu
+      // TODO: Arahkan seluruh role ke HistoryAssetScreen(asset: asset)
       // setelah halaman lib/screens/shared/history_asset_screen.dart selesai dibuat.
-      await Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => CreateReportScreen(selectedAsset: asset),
-        ),
-      );
+      if (widget.role == UserRole.pelapor) {
+        await Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => CreateReportScreen(selectedAsset: asset),
+          ),
+        );
+        return;
+      }
+
+      await _showAssetQuickPreviewSheet(asset);
+      _resumeScanner();
     } catch (e) {
-      _showErrorAndResume('Gagal memuat data aset: $e');
+      await _showErrorAndResume('Gagal memuat data aset: $e');
     }
   }
 
-  void _handleUserQr(String rawValue) {
+  Future<void> _handleUserQrForReturn(String rawValue) async {
+    if (widget.role != UserRole.admin) {
+      await _showErrorAndResume(
+        'Akses ditolak: hanya Admin yang dapat memindai QR Profil pengguna.',
+      );
+      return;
+    }
+
     if (rawValue.startsWith(_assetPrefix)) {
-      _showErrorAndResume('Ini adalah QR Aset, bukan QR Profil Pengguna.');
+      await _showErrorAndResume('Ini adalah QR Aset, bukan QR Profil Pengguna.');
       return;
     }
 
     if (!rawValue.startsWith(_userPrefix)) {
-      _showErrorAndResume(
+      await _showErrorAndResume(
         'Format QR tidak dikenali. Pastikan memindai QR Profil pengguna.',
       );
       return;
@@ -152,17 +261,340 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
 
     final uid = rawValue.substring(_userPrefix.length).trim();
     if (uid.isEmpty) {
-      _showErrorAndResume('UID pengguna pada QR tidak valid.');
+      await _showErrorAndResume('UID pengguna pada QR tidak valid.');
       return;
     }
 
+    if (!mounted) return;
     Navigator.of(context).pop<String>(uid);
   }
 
+  Future<void> _handleAdminUserPromotion(String uid) async {
+    if (widget.role != UserRole.admin) {
+      await _showErrorAndResume(
+        'Akses ditolak: hanya Admin yang dapat mengubah role pengguna.',
+      );
+      return;
+    }
+
+    try {
+      final targetUser = await AuthService.instance.getUserData(uid);
+      if (!mounted) return;
+
+      if (targetUser == null) {
+        await _showErrorAndResume('Akun pengguna tidak ditemukan di database.');
+        return;
+      }
+
+      if (targetUser.role != UserRole.pelapor) {
+        await showDialog<void>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: Text(
+              'Informasi Akun',
+              style: GoogleFonts.plusJakartaSans(
+                fontWeight: FontWeight.w800,
+                fontSize: 17,
+              ),
+            ),
+            content: Text(
+              'Akun ${targetUser.nama} (${targetUser.email}) saat ini sudah berstatus ${targetUser.role.label}.',
+              style: GoogleFonts.plusJakartaSans(fontSize: 13.5),
+            ),
+            actions: [
+              ElevatedButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryBlue,
+                  foregroundColor: AppColors.white,
+                ),
+                child: Text(
+                  'Mengerti',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+        _resumeScanner();
+        return;
+      }
+
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Text(
+            'Angkat Jadi Teknisi?',
+            style: GoogleFonts.plusJakartaSans(
+              fontWeight: FontWeight.w800,
+              fontSize: 17,
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Pastikan identitas akun berikut sudah sesuai sebelum memberikan akses Teknisi:',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 13,
+                  color: const Color(0xFF475569),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      targetUser.nama,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF0F172A),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      targetUser.email,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12.5,
+                        color: const Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(
+                'Batal',
+                style: GoogleFonts.plusJakartaSans(
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF64748B),
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryBlue,
+                foregroundColor: AppColors.white,
+              ),
+              child: Text(
+                'Jadikan Teknisi',
+                style: GoogleFonts.plusJakartaSans(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed == true) {
+        await AuthService.instance.updateUserRole(
+          uid: targetUser.uid,
+          newRole: UserRole.teknisi,
+        );
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '${targetUser.nama} berhasil diangkat menjadi Teknisi.',
+              style: GoogleFonts.plusJakartaSans(),
+            ),
+            backgroundColor: const Color(0xFF16A34A),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+
+      _resumeScanner();
+    } catch (e) {
+      await _showErrorAndResume('Gagal memproses QR pengguna: $e');
+    }
+  }
+
+  Future<void> _showAssetQuickPreviewSheet(AssetModel asset) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(22, 12, 22, 22),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFCBD5E1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE6EFFF),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.inventory_2_outlined,
+                        color: AppColors.primaryBlue,
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            asset.nama,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 16.5,
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF0F172A),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${asset.gedung} • ${asset.ruangan}',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12.5,
+                              color: const Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE3EEFF),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    'Kategori: ${asset.kategori}',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primaryBlue,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(sheetContext),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: Text(
+                          'Scan Lagi',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (widget.role == UserRole.teknisi) ...[
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(sheetContext);
+                            final uid =
+                                AuthService.instance.currentUser?.uid ?? '';
+                            Navigator.of(context).pushReplacement(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    DaftarTugasScreen(currentUserUid: uid),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primaryBlue,
+                            foregroundColor: AppColors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          child: Text(
+                            'Buka Daftar Tugas',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  String get _appBarTitle => switch (widget.mode) {
+        ScanQrMode.asset => 'Scan QR Aset',
+        ScanQrMode.user => 'Scan QR Pengguna',
+        ScanQrMode.all => 'Scan QR SnaFix',
+      };
+
+  String get _defaultHintText => switch (widget.mode) {
+        ScanQrMode.asset => 'Arahkan kamera ke stiker QR fasilitas kampus',
+        ScanQrMode.user => 'Arahkan kamera ke QR Profil pelapor',
+        ScanQrMode.all => 'Pindai QR Fasilitas kampus atau QR Profil pengguna',
+      };
+
   @override
   Widget build(BuildContext context) {
-    final isAssetMode = widget.mode == ScanQrMode.asset;
-
     return Scaffold(
       backgroundColor: const Color(0xFF0A1931),
       appBar: AppBar(
@@ -171,7 +603,7 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
         elevation: 0,
         centerTitle: true,
         title: Text(
-          isAssetMode ? 'Scan QR Aset' : 'Scan QR Pengguna',
+          _appBarTitle,
           style: GoogleFonts.plusJakartaSans(
             fontSize: 17,
             fontWeight: FontWeight.w700,
@@ -254,10 +686,7 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
                   ],
                   Flexible(
                     child: Text(
-                      _statusMessage ??
-                          (isAssetMode
-                              ? 'Arahkan kamera ke stiker QR fasilitas kampus'
-                              : 'Arahkan kamera ke QR Profil pelapor'),
+                      _statusMessage ?? _defaultHintText,
                       textAlign: TextAlign.center,
                       style: GoogleFonts.plusJakartaSans(
                         color: Colors.white,

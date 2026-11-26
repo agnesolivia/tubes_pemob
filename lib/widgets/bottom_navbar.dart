@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:tubes_pemob/constants/app_colors.dart';
 import 'package:tubes_pemob/models/user_model.dart';
-import 'package:tubes_pemob/screens/pelapor/form_pengaduan_screen.dart';
 import 'package:tubes_pemob/screens/pelapor/history_laporan_screen.dart';
 import 'package:tubes_pemob/screens/shared/profile_screen.dart';
+import 'package:tubes_pemob/screens/shared/scan_qr_screen.dart';
 import 'package:tubes_pemob/screens/teknisi/daftar_tugas_screen.dart';
 import 'package:tubes_pemob/services/auth_service.dart';
 
@@ -59,11 +59,7 @@ class BottomNavbar extends StatelessWidget {
     ];
   }
 
-  IconData get _centerIcon {
-    return role == UserRole.pelapor
-        ? Icons.camera_alt_outlined
-        : Icons.qr_code_scanner_rounded;
-  }
+  IconData get _centerIcon => Icons.qr_code_scanner_rounded;
 
   void _handleDefaultTap(BuildContext context, int index) {
     if (index == selectedIndex) return;
@@ -116,14 +112,17 @@ class BottomNavbar extends StatelessWidget {
   }
 
   void _handleDefaultCenterPress(BuildContext context) {
-    if (role == UserRole.pelapor) {
-      Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const CreateReportScreen()),
-      );
-      return;
-    }
+    final scanMode =
+        role == UserRole.admin ? ScanQrMode.all : ScanQrMode.asset;
 
-    _showUnavailableMessage(context, 'Fitur pemindaian QR belum tersedia.');
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ScanQrScreen(
+          mode: scanMode,
+          role: role,
+        ),
+      ),
+    );
   }
 
   @override

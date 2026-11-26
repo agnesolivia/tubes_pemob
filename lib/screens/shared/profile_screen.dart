@@ -658,35 +658,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _infoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 14),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 13,
-              color: _ProfileColors.textGrey,
-            ),
-          ),
-          Flexible(
-            child: Text(
-              value,
-              textAlign: TextAlign.right,
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: _ProfileColors.textDark,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   // PENGATURAN
   Widget _buildSettings(UserModel user) {
     final (notifTitle, notifSubtitle) = switch (user.role) {

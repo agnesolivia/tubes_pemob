@@ -30,7 +30,14 @@ Dokumen ini berisi rincian **apa saja yang bisa dilakukan oleh masing-masing akt
 
 * **Catatan Akun Admin & Teknisi:** Tidak ada opsi memilih role saat registrasi mandiri. Akun `admin` pertama diatur manual di Firebase Console, sedangkan akun `teknisi` (petugas internal kampus) diaktifkan oleh Admin melalui menu kelola teknisi.
 
-### B. Detail Laporan (`detail_laporan_screen.dart`)
+### B. Pemindai QR Code Lintas Role (`scan_qr_screen.dart`)
+
+Satu halaman kamera pemindai bersama (`screens/shared/scan_qr_screen.dart`) yang digunakan oleh ketiga role dengan parameter mode pemindaian:
+
+* **Mode Aset (`ASSET:<assetId>` — Pelapor, Admin, & Teknisi):** Memastikan teks QR diawali `ASSET:` (jika berawalan `USER:` atau format lain, tampilkan pesan error yang sesuai), melepas prefix `ASSET:` untuk mendapatkan Auto-ID dokumen aset, mencocokkan ke koleksi `assets`, lalu membuka `HistoryAssetScreen` (Pelapor lanjut membuat laporan, Admin melihat detail/riwayat aset, dan Teknisi melihat riwayat servis serta tiket aktif pada fasilitas tersebut).
+* **Mode Pengguna (`USER:<uid>` — Khusus Admin dari `KelolaTeknisiScreen`):** Memastikan teks QR diawali `USER:`, melepas prefix untuk mendapatkan `uid` kandidat, mengambil data `UserModel`, lalu menampilkan dialog konfirmasi pengangkatan role menjadi `teknisi`.
+
+### C. Detail Laporan (`detail_laporan_screen.dart`)
 
 Satu halaman bersama untuk melihat detail tiket (`ReportModel`), berisi informasi aset, lokasi, deskripsi, foto kerusakan (`fotoSebelum`), foto hasil perbaikan (`fotoSesudah` jika sudah selesai), indikator SLA, lencana status konfirmasi (`isConfirmed`), dan riwayat perubahan status.
 
@@ -50,7 +57,7 @@ Satu halaman bersama untuk melihat detail tiket (`ReportModel`), berisi informas
 
   * Tombol **Lihat Riwayat Aset** selalu tampil aktif dan seragam untuk **semua role** (Pelapor, Admin, dan Teknisi) serta untuk semua kondisi tiket (`assetId != null` maupun `assetId == null`), mengarahkan pengguna ke `HistoryAssetScreen` dengan membawa `assetId` beserta data *fallback* `assetNama` dan `assetLokasi`.
 
-### C. Riwayat Aset / Ruangan (`history_asset_screen.dart`)
+### D. Riwayat Aset / Ruangan (`history_asset_screen.dart`)
 
 Halaman ini menerima parameter `assetId` yang bersifat *nullable* (`String?`) beserta data *fallback* (`fallbackNama` dan `fallbackLokasi`) untuk menangani dua skenario berikut:
 
@@ -68,7 +75,7 @@ Halaman ini menerima parameter `assetId` yang bersifat *nullable* (`String?`) be
 
    * **Khusus Admin (`user.isAdmin`):** Tepat di bawah pesan tersebut, tampilkan tombol aksi **"Daftarkan sebagai Aset Baru"** untuk membuka form tambah aset di `KelolaAsetScreen` dengan nama aset (`fallbackNama`) dan informasi lokasi (`fallbackLokasi`) sudah terisi otomatis (*pre-filled*).
 
-### D. Notifikasi Dalam Aplikasi (`notification_screen.dart`)
+### E. Notifikasi Dalam Aplikasi (`notification_screen.dart`)
 
 * Menampilkan daftar dokumen dari koleksi `notifications` milik `recipientId == currentUser.uid`, diurutkan dari yang terbaru.
 
@@ -78,7 +85,7 @@ Halaman ini menerima parameter `assetId` yang bersifat *nullable* (`String?`) be
 
   2. Pengguna langsung diarahkan ke `DetailLaporanScreen` sesuai `reportId` yang tersimpan di notifikasi.
 
-### E. Profil Pengguna (`profile_screen.dart`)
+### F. Profil Pengguna (`profile_screen.dart`)
 
 * **Semua Role:** Melihat informasi akun (Nama, Email, Role), mengubah nama tampilan, mengubah/menghapus foto profil (`photoBase64` di `users/{uid}`), menampilkan **QR Code Profil Akun** (`USER:${user.uid}` untuk keperluan aktivasi teknisi oleh Admin), dan tombol **Logout**. Halaman ini tidak memuat `bottomNavigationBar` sendiri sehingga dapat langsung disematkan ke dalam `IndexedStack` milik `PelaporMainScreen`, `AdminMainScreen`, maupun `TeknisiMainScreen`.
 
@@ -94,7 +101,7 @@ Aktor: Sivitas Akademika dan Pengunjung/Tamu Kampus.
 
    * Di beranda, Pelapor melihat ringkasan jumlah laporan pribadi (*Menunggu*, *Diproses*, *Selesai*), daftar laporan aktif, serta tombol cepat **Buat Laporan Baru** / **Scan QR**.
 
-2. **Jalur 1 — Scan QR (`scan_qr_screen.dart`):**
+2. **Jalur 1 — Scan QR (`screens/shared/scan_qr_screen.dart`):**
 
    * Kamera memindai QR Code pada stiker ruangan/aset dengan format `ASSET:<assetId>` (berisi Auto-ID dokumen aset di Firestore).
 
@@ -140,7 +147,7 @@ Aktor: Pengelola Sarana & Prasarana Kampus.
 
 1. **Navigasi Utama (`admin_main_screen.dart`) & Dashboard Pantauan (`admin_dashboard_screen.dart`):**
 
-   * `AdminMainScreen` membungkus 4 halaman tab (`Beranda`, `Tiket`, `Notifikasi`, `Profil`) menggunakan `IndexedStack` dan 1 `BottomNavbar` permanen di bawah (dengan tombol tengah pemindai QR aset/profil).
+   * `AdminMainScreen` membungkus 4 halaman tab (`Beranda`, `Tiket`, `Notifikasi`, `Profil`) menggunakan `IndexedStack` dan 1 `BottomNavbar` permanen di bawah (dengan tombol tengah membuka `screens/shared/scan_qr_screen.dart` untuk memindai QR profil calon teknisi `USER:<uid>` maupun QR stiker aset `ASSET:<id>`).
 
    * Di dashboard, Admin melihat statistik tiket berdasarkan status (`reported`, `verified`/`assigned`/`inProgress`, `resolved`) serta daftar peringatan tiket **Overdue SLA** (tiket belum `resolved` dan waktu sekarang sudah melewati `deadlineAt` / `report.isOverdue`).
 
@@ -208,7 +215,7 @@ Aktor: Pengelola Sarana & Prasarana Kampus.
 
      1. **Pencarian Email / Nama (Jarak Jauh):** Filter kandidat hanya untuk `role == pelapor`, serta wajib menampilkan **Email** secara jelas di bawah nama sebagai pembeda unik agar tidak tertukar jika terdapat nama yang sama.
 
-     2. **Scan QR Profil Akun (Tatap Muka / Screenshot):** Memindai QR Code dari `ProfileScreen` pengguna yang berawalan `USER:<uid>` (dapat menggunakan ulang `ScanQrScreen` dengan mode pemindaian user).
+     2. **Scan QR Profil Akun (Tatap Muka / Screenshot):** Memindai QR Code dari `ProfileScreen` pengguna yang berawalan `USER:<uid>` menggunakan `screens/shared/scan_qr_screen.dart` dalam mode pemindaian user.
 
      * *Dialog Konfirmasi Wajib:* Sebelum mengubah role, tampilkan dialog konfirmasi yang mencantumkan **Nama dan Email** lengkap pengguna tersebut.
 
@@ -222,7 +229,7 @@ Aktor: Petugas Perbaikan Lapangan (Staf Internal Kampus).
 
 1. **Navigasi Utama (`teknisi_main_screen.dart`) & Beranda Teknisi (`teknisi_home_screen.dart`):**
 
-   * `TeknisiMainScreen` membungkus 4 halaman tab (`Beranda`, `Tugas`, `Notifikasi`, `Profil`) menggunakan `IndexedStack` dan 1 `BottomNavbar` permanen di bawah (dengan tombol tengah pemindai QR aset untuk akses cepat tiket ruangan).
+   * `TeknisiMainScreen` membungkus 4 halaman tab (`Beranda`, `Tugas`, `Notifikasi`, `Profil`) menggunakan `IndexedStack` dan 1 `BottomNavbar` permanen di bawah (dengan tombol tengah membuka `screens/shared/scan_qr_screen.dart` untuk memindai QR stiker fasilitas di lapangan dan langsung mengecek `HistoryAssetScreen`).
 
    * Di beranda, Teknisi melihat ringkasan jumlah tugas pribadi (*Baru Ditugaskan*, *Sedang Dikerjakan*, *Selesai*) serta daftar tugas aktif yang **diurutkan otomatis berdasarkan batas SLA terdekat / paling mendesak** (termasuk tiket *re-open* yang sudah melewati SLA awal).
 
@@ -372,21 +379,21 @@ Agar seluruh anggota tim bisa mengerjakan tugas secara bersamaan tanpa saling me
 
 * [x] `screens/auth/auth_wrapper.dart` (*Auto-routing* sesuai verifikasi email & `user.role`)
 
+* [ ] `screens/shared/scan_qr_screen.dart` (Pemindai kamera QR lintas role & validasi prefix `ASSET:` / `USER:`)
+
 * [ ] `screens/shared/detail_laporan_screen.dart` (Detail tiket + tombol aksi kondisional per kombinasi role & status, termasuk konfirmasi & *re-open*)
 
 * [ ] `screens/shared/history_asset_screen.dart` (Info aset terdaftar & riwayat kerusakan non-`rejected`, atau tampilan fasilitas belum terdaftar + opsi daftar aset baru untuk Admin)
 
 * [ ] `screens/shared/notification_screen.dart` (Daftar notifikasi *real-time* & tandai sudah dibaca)
 
-* [ ] `screens/shared/profile_screen.dart` (Info profil, edit nama, QR Code profil `USER:<uid>`, & logout)
+* [ ] `screens/shared/profile_screen.dart` (Info profil, edit nama & foto, QR Code profil `USER:<uid>`, & logout)
 
 ### Jalur D — Modul Pelapor (`screens/pelapor/`)
 
 * [ ] `screens/pelapor/pelapor_main_screen.dart` (*Shell* utama dengan `IndexedStack` & `BottomNavbar` untuk tab Pelapor)
 
 * [ ] `screens/pelapor/pelapor_home_screen.dart` (Ringkasan status pribadi, laporan kampus terkini, & tombol QR/Manual)
-
-* [ ] `screens/pelapor/scan_qr_screen.dart` (Pemindai kamera QR & validasi prefix `ASSET:` / `USER:`)
 
 * [ ] `screens/pelapor/form_pengaduan_screen.dart` (Form dual-mode: otomatis dari QR, pilihan berjenjang manual + pencarian, & opsi *Fasilitas Lainnya* dengan `assetId: null`)
 

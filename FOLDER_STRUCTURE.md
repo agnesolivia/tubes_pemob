@@ -42,6 +42,7 @@ lib/
     │   └── email_verification_screen.dart # Halaman tunggu verifikasi email & kirim ulang tautan verifikasi
     │
     ├── shared/                           # Halaman lintas role (dipakai 2 atau 3 role sekaligus)
+    │   ├── scan_qr_screen.dart           # Pemindai kamera QR Code lintas role (ASSET:<id> & USER:<uid>)
     │   ├── detail_laporan_screen.dart    # Detail tiket lengkap + tombol aksi dinamis sesuai role
     │   ├── history_asset_screen.dart     # Info aset/ruangan & rekam jejak seluruh kerusakannya
     │   ├── notification_screen.dart      # Daftar notifikasi real-time lintas role
@@ -50,7 +51,6 @@ lib/
     ├── pelapor/                          # Khusus Sivitas Akademika & Pengunjung Kampus
     │   ├── pelapor_main_screen.dart      # Shell utama dengan IndexedStack & BottomNavbar tab Pelapor
     │   ├── pelapor_home_screen.dart      # Beranda pelapor, ringkasan status, & tombol Scan QR / Lapor
-    │   ├── scan_qr_screen.dart           # Pemindai kamera QR Code (mode aset ASSET:<id> & mode user USER:<uid>)
     │   ├── form_pengaduan_screen.dart    # Form buat laporan (otomatis dari QR, dropdown manual, & opsi lainnya)
     │   └── history_laporan_screen.dart   # Daftar riwayat laporan milik pelapor + filter status
     │
@@ -99,6 +99,7 @@ Berisi komponen UI tanpa `Scaffold` yang digunakan di lebih dari satu halaman—
 Berisi tampilan halaman penuh (`Scaffold`). Dikelompokkan berdasarkan aktor pengguna agar setiap anggota tim bisa fokus mengerjakan foldernya masing-masing tanpa saling menimpa file.
 
 * **Pola Shell `*MainScreen` & `IndexedStack`:** Setiap role memiliki satu halaman induk (`PelaporMainScreen`, `AdminMainScreen`, dan `TeknisiMainScreen`) yang memegang `Scaffold`, `BottomNavbar`, dan `IndexedStack`. Keempat halaman tab utama (*Beranda*, *Riwayat/Tiket/Tugas*, *Notifikasi*, *Profil*) **tidak memasang `bottomNavigationBar` sendiri** agar navbar tetap diam di tempat (tidak ikut berkedip/tergeser) saat berpindah tab dan `ProfileScreen` dapat dipakai bersama lintas role tanpa duplikasi kode.
+* **Pemindai QR Lintas Role (`screens/shared/scan_qr_screen.dart`):** Satu halaman pemindai kamera bersama yang mendukung mode pemindaian berdasarkan peran pemanggil (Pelapor memindai `ASSET:<id>` untuk melapor, Admin memindai `USER:<uid>` untuk aktivasi teknisi maupun `ASSET:<id>` untuk cek histori aset, dan Teknisi memindai `ASSET:<id>` untuk mengakses riwayat & tiket fasilitas di lapangan).
 
 ## 3. Alur Inti & Skenario Lintas Role
 
@@ -130,13 +131,13 @@ Saat Admin memverifikasi tiket dan memilih prioritas, sistem otomatis mengisi fi
 
 ```
 pelapor_home_screen
-  ├──► [Scan QR]      ──► scan_qr_screen ──► history_asset_screen ──► form_pengaduan_screen (aset terisi)
-  └──► [Lapor Manual] ──────────────────────────────────────────────► form_pengaduan_screen (pilih dropdown)
+  ├──► [Scan QR]      ──► shared/scan_qr_screen ──► history_asset_screen ──► form_pengaduan_screen (aset terisi)
+  └──► [Lapor Manual] ─────────────────────────────────────────────────────► form_pengaduan_screen (pilih dropdown)
 ```
 
 * **Standar Prefix & Stiker QR Code:** Seluruh QR Code menggunakan awalan tipe agar pemindai langsung bisa membedakan jenis QR secara otomatis:
   * **QR Fasilitas / Aset:** Payload QR berisi `ASSET:<assetId>` (menggunakan Auto-ID dokumen Firestore pada koleksi `assets`), sedangkan teks cetak pada stiker menampilkan **`asset.nama`** (misal `Kursi#01`) dan lokasi (`Gedung - Ruangan`) agar tetap bisa dipilih di jalur **Lapor Manual** jika kamera bermasalah.
-  * **QR Profil Akun:** Payload QR berisi `USER:<uid>` (ditampilkan di `profile_screen.dart` untuk dipindai Admin di `kelola_teknisi_screen.dart`).
+  * **QR Profil Akun:** Payload QR berisi `USER:<uid>` (ditampilkan di `profile_screen.dart` untuk dipindai Admin via `shared/scan_qr_screen.dart`).
 
 ### D. Sistem Notifikasi Dalam Aplikasi (*In-App Notification*)
 

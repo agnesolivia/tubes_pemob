@@ -335,7 +335,7 @@ class ReportService {
 
     final initialHistory = StatusHistoryItem(
       status: ReportStatus.reported,
-      catatan: 'Laporan kerusakan dikirim oleh pelapor.',
+      catatan: 'Laporan kerusakan dikirim.',
       updatedBy: pelapor.nama,
       timestamp: now,
     );
@@ -410,9 +410,7 @@ class ReportService {
         'isConfirmed': true,
         'riwayatStatus': _historyUnion(
           status: ReportStatus.resolved,
-          catatan: actor.isAdmin
-              ? 'Hasil perbaikan dikonfirmasi selesai oleh Admin.'
-              : 'Hasil perbaikan telah dikonfirmasi selesai oleh pelapor.',
+          catatan: 'Hasil perbaikan dikonfirmasi.',
           updatedBy: actor.nama,
           timestamp: now,
         ),
@@ -464,9 +462,7 @@ class ReportService {
         'resolvedAt': null,
         'riwayatStatus': _historyUnion(
           status: ReportStatus.assigned,
-          catatan: actor.isAdmin
-              ? 'Diajukan ulang oleh Admin (belum beres): $cleanReason'
-              : 'Diajukan ulang oleh pelapor (belum beres): $cleanReason',
+          catatan: 'Diajukan ulang: $cleanReason',
           updatedBy: actor.nama,
           timestamp: now,
         ),
@@ -519,8 +515,8 @@ class ReportService {
         'riwayatStatus': _historyUnion(
           status: nextStatus,
           catatan: hasTechnician
-              ? 'Diverifikasi (Prioritas ${prioritas.label}) & ditugaskan ke ${teknisi.nama}.'
-              : 'Laporan diverifikasi dengan prioritas ${prioritas.label}. Menunggu penugasan teknisi.',
+              ? 'Prioritas ${prioritas.label} • Teknisi: ${teknisi.nama}.'
+              : 'Prioritas ${prioritas.label} • Menunggu penugasan teknisi.',
           updatedBy: adminNama,
           timestamp: now,
         ),
@@ -587,8 +583,8 @@ class ReportService {
           'riwayatStatus': _historyUnion(
             status: ReportStatus.assigned,
             catatan: isReassign
-                ? 'Tugas dialihkan dari ${r.teknisiNama} ke ${teknisi.nama}.'
-                : 'Ditugaskan kepada teknisi ${teknisi.nama}.',
+                ? 'Dialihkan dari ${r.teknisiNama ?? 'teknisi sebelumnya'} ke ${teknisi.nama}.'
+                : 'Teknisi: ${teknisi.nama}.',
             updatedBy: adminNama,
             timestamp: now,
           ),
@@ -650,7 +646,7 @@ class ReportService {
         'rejectionReason': cleanReason,
         'riwayatStatus': _historyUnion(
           status: ReportStatus.rejected,
-          catatan: 'Laporan ditolak: $cleanReason',
+          catatan: 'Alasan: $cleanReason',
           updatedBy: adminNama,
           timestamp: now,
         ),
@@ -692,7 +688,7 @@ class ReportService {
         'status': ReportStatus.inProgress.value,
         'riwayatStatus': _historyUnion(
           status: ReportStatus.inProgress,
-          catatan: 'Teknisi mulai mengerjakan perbaikan di lokasi.',
+          catatan: 'Mulai perbaikan di lokasi.',
           updatedBy: teknisi.nama,
           timestamp: now,
         ),
@@ -744,7 +740,7 @@ class ReportService {
         'resolvedAt': Timestamp.fromDate(now),
         'riwayatStatus': _historyUnion(
           status: ReportStatus.resolved,
-          catatan: 'Perbaikan selesai: $cleanNote',
+          catatan: 'Catatan: $cleanNote',
           updatedBy: teknisi.nama,
           timestamp: now,
         ),

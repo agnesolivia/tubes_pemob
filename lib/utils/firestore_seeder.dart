@@ -203,7 +203,7 @@ class FirestoreSeeder {
         riwayatStatus: [
           StatusHistoryItem(
             status: ReportStatus.reported,
-            catatan: 'Laporan kerusakan dikirim oleh pelapor.',
+            catatan: 'Laporan kerusakan dikirim.',
             updatedBy: pelaporNama,
             timestamp: now.subtract(const Duration(hours: 2)),
           ),
@@ -227,7 +227,7 @@ class FirestoreSeeder {
         riwayatStatus: [
           StatusHistoryItem(
             status: ReportStatus.reported,
-            catatan: 'Laporan kerusakan dikirim oleh pelapor.',
+            catatan: 'Laporan kerusakan dikirim.',
             updatedBy: pelaporNama,
             timestamp: now.subtract(const Duration(hours: 1)),
           ),
@@ -253,14 +253,13 @@ class FirestoreSeeder {
         riwayatStatus: [
           StatusHistoryItem(
             status: ReportStatus.reported,
-            catatan: 'Laporan kerusakan dikirim oleh pelapor.',
+            catatan: 'Laporan kerusakan dikirim.',
             updatedBy: pelaporNama,
             timestamp: now.subtract(const Duration(hours: 12)),
           ),
           StatusHistoryItem(
             status: ReportStatus.verified,
-            catatan:
-                'Laporan diverifikasi dengan prioritas Sedang. Menunggu penugasan teknisi.',
+            catatan: 'Prioritas Sedang • Menunggu penugasan teknisi.',
             updatedBy: adminNama,
             timestamp: now.subtract(const Duration(hours: 10)),
           ),
@@ -287,14 +286,13 @@ class FirestoreSeeder {
         riwayatStatus: [
           StatusHistoryItem(
             status: ReportStatus.reported,
-            catatan: 'Laporan kerusakan dikirim oleh pelapor.',
+            catatan: 'Laporan kerusakan dikirim.',
             updatedBy: pelaporNama,
             timestamp: now.subtract(const Duration(hours: 6)),
           ),
           StatusHistoryItem(
             status: ReportStatus.assigned,
-            catatan:
-                'Diverifikasi (Prioritas Tinggi) & ditugaskan ke $teknisiNama.',
+            catatan: 'Prioritas Tinggi • Teknisi: $teknisiNama.',
             updatedBy: adminNama,
             timestamp: now.subtract(const Duration(hours: 5)),
           ),
@@ -325,34 +323,32 @@ class FirestoreSeeder {
         riwayatStatus: [
           StatusHistoryItem(
             status: ReportStatus.reported,
-            catatan: 'Laporan kerusakan dikirim oleh pelapor.',
+            catatan: 'Laporan kerusakan dikirim.',
             updatedBy: pelaporNama,
             timestamp: now.subtract(const Duration(days: 4)),
           ),
           StatusHistoryItem(
             status: ReportStatus.assigned,
-            catatan:
-                'Diverifikasi (Prioritas Sedang) & ditugaskan ke $teknisiNama.',
+            catatan: 'Prioritas Sedang • Teknisi: $teknisiNama.',
             updatedBy: adminNama,
             timestamp: now.subtract(const Duration(days: 3, hours: 20)),
           ),
           StatusHistoryItem(
             status: ReportStatus.inProgress,
-            catatan: 'Teknisi mulai mengerjakan perbaikan di lokasi.',
+            catatan: 'Mulai perbaikan di lokasi.',
             updatedBy: teknisiNama,
             timestamp: now.subtract(const Duration(days: 2)),
           ),
           StatusHistoryItem(
             status: ReportStatus.resolved,
-            catatan:
-                'Perbaikan selesai: Kabel daya internal sudah dikencangkan ulang.',
+            catatan: 'Catatan: Kabel daya internal sudah dikencangkan ulang.',
             updatedBy: teknisiNama,
             timestamp: now.subtract(const Duration(days: 1, hours: 12)),
           ),
           StatusHistoryItem(
             status: ReportStatus.assigned,
             catatan:
-                'Diajukan ulang oleh pelapor (belum beres): Setelah dinyalakan 10 menit layar kembali mati.',
+                'Diajukan ulang: Setelah dinyalakan 10 menit layar kembali mati.',
             updatedBy: pelaporNama,
             timestamp: now.subtract(const Duration(hours: 10)),
           ),
@@ -380,20 +376,19 @@ class FirestoreSeeder {
         riwayatStatus: [
           StatusHistoryItem(
             status: ReportStatus.reported,
-            catatan: 'Laporan kerusakan dikirim oleh pelapor.',
+            catatan: 'Laporan kerusakan dikirim.',
             updatedBy: pelaporNama,
             timestamp: now.subtract(const Duration(hours: 28)),
           ),
           StatusHistoryItem(
             status: ReportStatus.assigned,
-            catatan:
-                'Diverifikasi (Prioritas Tinggi) & ditugaskan ke $teknisiNama.',
+            catatan: 'Prioritas Tinggi • Teknisi: $teknisiNama.',
             updatedBy: adminNama,
             timestamp: now.subtract(const Duration(hours: 26)),
           ),
           StatusHistoryItem(
             status: ReportStatus.inProgress,
-            catatan: 'Teknisi mulai mengerjakan perbaikan di lokasi.',
+            catatan: 'Mulai perbaikan di lokasi.',
             updatedBy: teknisiNama,
             timestamp: now.subtract(const Duration(hours: 20)),
           ),
@@ -425,27 +420,26 @@ class FirestoreSeeder {
         riwayatStatus: [
           StatusHistoryItem(
             status: ReportStatus.reported,
-            catatan: 'Laporan kerusakan dikirim oleh pelapor.',
+            catatan: 'Laporan kerusakan dikirim.',
             updatedBy: pelaporNama,
             timestamp: now.subtract(const Duration(days: 2)),
           ),
           StatusHistoryItem(
             status: ReportStatus.assigned,
-            catatan:
-                'Diverifikasi (Prioritas Rendah) & ditugaskan ke $teknisiNama.',
+            catatan: 'Prioritas Rendah • Teknisi: $teknisiNama.',
             updatedBy: adminNama,
             timestamp: now.subtract(const Duration(days: 1, hours: 18)),
           ),
           StatusHistoryItem(
             status: ReportStatus.inProgress,
-            catatan: 'Teknisi mulai mengerjakan perbaikan di lokasi.',
+            catatan: 'Mulai perbaikan di lokasi.',
             updatedBy: teknisiNama,
             timestamp: now.subtract(const Duration(hours: 6)),
           ),
           StatusHistoryItem(
             status: ReportStatus.resolved,
             catatan:
-                'Perbaikan selesai: Baut engsel meja sudah diganti baru dan dikencangkan.',
+                'Catatan: Baut engsel meja sudah diganti baru dan dikencangkan.',
             updatedBy: teknisiNama,
             timestamp: now.subtract(const Duration(hours: 4)),
           ),
@@ -477,33 +471,32 @@ class FirestoreSeeder {
         riwayatStatus: [
           StatusHistoryItem(
             status: ReportStatus.reported,
-            catatan: 'Laporan kerusakan dikirim oleh pelapor.',
+            catatan: 'Laporan kerusakan dikirim.',
             updatedBy: pelaporNama,
             timestamp: now.subtract(const Duration(days: 14)),
           ),
           StatusHistoryItem(
             status: ReportStatus.assigned,
-            catatan:
-                'Diverifikasi (Prioritas Sedang) & ditugaskan ke $teknisiNama.',
+            catatan: 'Prioritas Sedang • Teknisi: $teknisiNama.',
             updatedBy: adminNama,
             timestamp: now.subtract(const Duration(days: 13, hours: 20)),
           ),
           StatusHistoryItem(
             status: ReportStatus.inProgress,
-            catatan: 'Teknisi mulai mengerjakan perbaikan di lokasi.',
+            catatan: 'Mulai perbaikan di lokasi.',
             updatedBy: teknisiNama,
             timestamp: now.subtract(const Duration(days: 12, hours: 3)),
           ),
           StatusHistoryItem(
             status: ReportStatus.resolved,
             catatan:
-                'Perbaikan selesai: Saluran pembuangan air dibersihkan dari lumut dan filter dicuci.',
+                'Catatan: Saluran pembuangan air dibersihkan dari lumut dan filter dicuci.',
             updatedBy: teknisiNama,
             timestamp: now.subtract(const Duration(days: 12)),
           ),
           StatusHistoryItem(
             status: ReportStatus.resolved,
-            catatan: 'Hasil perbaikan telah dikonfirmasi selesai oleh pelapor.',
+            catatan: 'Hasil perbaikan dikonfirmasi.',
             updatedBy: pelaporNama,
             timestamp: now.subtract(const Duration(days: 11, hours: 18)),
           ),
@@ -528,14 +521,14 @@ class FirestoreSeeder {
         riwayatStatus: [
           StatusHistoryItem(
             status: ReportStatus.reported,
-            catatan: 'Laporan kerusakan dikirim oleh pelapor.',
+            catatan: 'Laporan kerusakan dikirim.',
             updatedBy: pelaporNama,
             timestamp: now.subtract(const Duration(hours: 4)),
           ),
           StatusHistoryItem(
             status: ReportStatus.rejected,
             catatan:
-                'Laporan ditolak: Laporan duplikat dengan tiket aktif pada unit AC Daikin 2 PK yang sudah ditangani.',
+                'Alasan: Laporan duplikat dengan tiket aktif pada unit AC Daikin 2 PK yang sudah ditangani.',
             updatedBy: adminNama,
             timestamp: now.subtract(const Duration(hours: 3)),
           ),
@@ -562,14 +555,13 @@ class FirestoreSeeder {
         riwayatStatus: [
           StatusHistoryItem(
             status: ReportStatus.reported,
-            catatan: 'Laporan kerusakan dikirim oleh pelapor.',
+            catatan: 'Laporan kerusakan dikirim.',
             updatedBy: pelaporNama,
             timestamp: now.subtract(const Duration(days: 1)),
           ),
           StatusHistoryItem(
             status: ReportStatus.assigned,
-            catatan:
-                'Diverifikasi (Prioritas Rendah) & ditugaskan ke $teknisiNama.',
+            catatan: 'Prioritas Rendah • Teknisi: $teknisiNama.',
             updatedBy: adminNama,
             timestamp: now.subtract(const Duration(hours: 20)),
           ),

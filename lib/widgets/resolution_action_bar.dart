@@ -2,14 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:tubes_pemob/constants/app_colors.dart';
 import 'package:tubes_pemob/models/report_model.dart';
+import 'package:tubes_pemob/models/user_model.dart';
+import 'package:tubes_pemob/services/auth_service.dart';
+import 'package:tubes_pemob/services/report_service.dart';
 
 /// Komponen tombol tindak lanjut hasil perbaikan (status `resolved` & belum dikonfirmasi).
 /// Dipakai bersama oleh Pelapor (pembuat laporan) dan Admin (supervisor override).
 ///
-/// Mode saat ini masih UI-only: menyertakan dialog konfirmasi & dialog alasan
-/// ajukan ulang. Nantinya cukup isi callback [onConfirm] dan [onReopen] dengan
-/// pemanggilan `ReportService`.
-class ResolutionActionBar extends StatelessWidget {
+/// Secara default langsung terhubung ke [ReportService.confirmResolution] dan
+/// [ReportService.reopenReport]. Callback opsional [onConfirm] & [onReopen]
+/// tetap disediakan apabila pemanggil ingin menangani aksi secara kustom.
+class ResolutionActionBar extends StatefulWidget {
   final ReportModel report;
   final VoidCallback? onConfirm;
   final ValueChanged<String>? onReopen;
@@ -21,7 +24,31 @@ class ResolutionActionBar extends StatelessWidget {
     this.onReopen,
   });
 
-  void _showPreviewSnackBar(BuildContext context, String message) {
+  @override
+  State<ResolutionActionBar> createState() => _ResolutionActionBarState();
+}
+
+class _ResolutionActionBarState extends State<ResolutionActionBar> {
+  bool _isConfirming = false;
+  bool _isReopening = false;
+
+  bool get _isBusy => _isConfirming || _isReopening;
+
+  Future<UserModel> _resolveCurrentUser() async {
+    final firebaseUser = AuthService.instance.currentUser;
+    if (firebaseUser == null) {
+      throw Exception('Sesi login tidak ditemukan. Silakan masuk kembali.');
+    }
+
+    final user = await AuthService.instance.getUserData(firebaseUser.uid);
+    if (user == null) {
+      throw Exception('Data profil pengguna tidak ditemukan.');
+    }
+    return user;
+  }
+
+  void _showSnackBar(String message, {bool isError = false}) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
@@ -33,13 +60,17 @@ class ResolutionActionBar extends StatelessWidget {
               fontWeight: FontWeight.w500,
             ),
           ),
-          backgroundColor: AppColors.primaryBlue,
+          backgroundColor: isError
+              ? AppColors.statusRejectedText
+              : const Color(0xFF15803D),
           behavior: SnackBarBehavior.floating,
         ),
       );
   }
 
-  Future<void> _openConfirmDialog(BuildContext context) async {
+  Future<void> _openConfirmDialog() async {
+    if (_isBusy) return;
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -53,7 +84,7 @@ class ResolutionActionBar extends StatelessWidget {
           ),
         ),
         content: Text(
-          'Pastikan hasil perbaikan pada "${report.assetNama}" sudah sesuai. Setelah dikonfirmasi, laporan tidak dapat diajukan ulang.',
+          'Pastikan hasil perbaikan pada "${widget.report.assetNama}" sudah sesuai. Setelah dikonfirmasi, laporan tidak dapat diajukan ulang.',
           style: GoogleFonts.plusJakartaSans(
             fontSize: 12.5,
             color: AppColors.textSecondary,
@@ -87,35 +118,62 @@ class ResolutionActionBar extends StatelessWidget {
       ),
     );
 
-    if (confirmed != true || !context.mounted) return;
+    if (confirmed != true || !mounted) return;
 
-    if (onConfirm != null) {
-      onConfirm!();
-    } else {
-      // TODO: Sambungkan ke ReportService.instance.confirmResolution(...)
-      _showPreviewSnackBar(
-        context,
-        'UI Preview: Perbaikan "${report.assetNama}" dikonfirmasi selesai.',
+    if (widget.onConfirm != null) {
+      widget.onConfirm!();
+      return;
+    }
+
+    setState(() => _isConfirming = true);
+    try {
+      final actor = await _resolveCurrentUser();
+      await ReportService.instance.confirmResolution(
+        report: widget.report,
+        actor: actor,
       );
+      _showSnackBar('Perbaikan berhasil dikonfirmasi selesai.');
+    } catch (e) {
+      final cleanMsg = e.toString().replaceFirst('Exception: ', '');
+      _showSnackBar(cleanMsg, isError: true);
+    } finally {
+      if (mounted) {
+        setState(() => _isConfirming = false);
+      }
     }
   }
 
-  Future<void> _openReopenDialog(BuildContext context) async {
+  Future<void> _openReopenDialog() async {
+    if (_isBusy) return;
+
     final reason = await showDialog<String>(
       context: context,
       builder: (_) => const _ReopenReasonDialog(),
     );
 
-    if (reason == null || reason.isEmpty || !context.mounted) return;
+    if (reason == null || reason.isEmpty || !mounted) return;
 
-    if (onReopen != null) {
-      onReopen!(reason);
-    } else {
-      // TODO: Sambungkan ke ReportService.instance.reopenReport(...)
-      _showPreviewSnackBar(
-        context,
-        'UI Preview: Laporan diajukan ulang dengan alasan "$reason".',
+    if (widget.onReopen != null) {
+      widget.onReopen!(reason);
+      return;
+    }
+
+    setState(() => _isReopening = true);
+    try {
+      final actor = await _resolveCurrentUser();
+      await ReportService.instance.reopenReport(
+        report: widget.report,
+        actor: actor,
+        alasan: reason,
       );
+      _showSnackBar('Laporan diajukan ulang agar diperbaiki kembali.');
+    } catch (e) {
+      final cleanMsg = e.toString().replaceFirst('Exception: ', '');
+      _showSnackBar(cleanMsg, isError: true);
+    } finally {
+      if (mounted) {
+        setState(() => _isReopening = false);
+      }
     }
   }
 
@@ -125,10 +183,19 @@ class ResolutionActionBar extends StatelessWidget {
       children: [
         Expanded(
           child: OutlinedButton.icon(
-            onPressed: () => _openReopenDialog(context),
-            icon: const Icon(Icons.replay_rounded, size: 19),
+            onPressed: _isBusy ? null : _openReopenDialog,
+            icon: _isReopening
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppColors.statusProcessText,
+                    ),
+                  )
+                : const Icon(Icons.replay_rounded, size: 19),
             label: Text(
-              'Belum Beres',
+              _isReopening ? 'Memproses...' : 'Belum Beres',
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w800,
@@ -147,10 +214,19 @@ class ResolutionActionBar extends StatelessWidget {
         const SizedBox(width: 10),
         Expanded(
           child: ElevatedButton.icon(
-            onPressed: () => _openConfirmDialog(context),
-            icon: const Icon(Icons.verified_rounded, size: 19),
+            onPressed: _isBusy ? null : _openConfirmDialog,
+            icon: _isConfirming
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Icon(Icons.verified_rounded, size: 19),
             label: Text(
-              'Konfirmasi Selesai',
+              _isConfirming ? 'Menyimpan...' : 'Konfirmasi Selesai',
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w800,

@@ -31,11 +31,14 @@ class _KelolaLaporanScreenState extends State<KelolaLaporanScreen> {
   static const String _unregisteredStatusKey = 'unregistered';
 
   static const String _allBuildingsLabel = 'Semua Gedung';
+  static const String _allRoomsLabel = 'Semua Ruangan';
+  static const String _noRoomLabel = 'Tanpa Ruangan';
   static const String _allPrioritiesLabel = 'Semua Prioritas';
   static const String _noPriorityLabel = 'Belum Ditetapkan';
 
   String _selectedStatusFilter = _allStatusKey;
   String _selectedBuilding = _allBuildingsLabel;
+  String _selectedRoom = _allRoomsLabel;
   String _selectedPriority = _allPrioritiesLabel;
 
   @override
@@ -50,19 +53,24 @@ class _KelolaLaporanScreenState extends State<KelolaLaporanScreen> {
     super.dispose();
   }
 
-  String _extractBuilding(String assetLokasi) {
+  static ({String gedung, String ruangan}) _parseLocation(String assetLokasi) {
     final trimmed = assetLokasi.trim();
-    if (trimmed.isEmpty) return '';
-    final separatorIndex = trimmed.indexOf(' - ');
-    return separatorIndex != -1
-        ? trimmed.substring(0, separatorIndex).trim()
-        : trimmed;
+    if (trimmed.isEmpty) return (gedung: '', ruangan: '');
+
+    final match = RegExp(r'\s+[-–]\s+').firstMatch(trimmed);
+    if (match != null) {
+      final gedung = trimmed.substring(0, match.start).trim();
+      final ruangan = trimmed.substring(match.end).trim();
+      return (gedung: gedung, ruangan: ruangan);
+    }
+
+    return (gedung: trimmed, ruangan: '');
   }
 
-  List<String> _buildBuildingOptions(List<ReportModel> reports) {
+  static List<String> _buildBuildingOptions(List<ReportModel> reports) {
     final Map<String, String> uniqueMap = {};
     for (final report in reports) {
-      final gedung = _extractBuilding(report.assetLokasi);
+      final gedung = _parseLocation(report.assetLokasi).gedung;
       if (gedung.isNotEmpty) {
         uniqueMap.putIfAbsent(gedung.toLowerCase(), () => gedung);
       }
@@ -72,7 +80,37 @@ class _KelolaLaporanScreenState extends State<KelolaLaporanScreen> {
     return [_allBuildingsLabel, ...sorted];
   }
 
-  List<String> get _priorityOptions => [
+  static List<String> _buildRoomOptions(
+    List<ReportModel> reports, {
+    required String effectiveBuilding,
+  }) {
+    final Map<String, String> uniqueMap = {};
+    bool hasNoRoom = false;
+
+    for (final report in reports) {
+      final loc = _parseLocation(report.assetLokasi);
+      final matchesBuilding = effectiveBuilding == _allBuildingsLabel ||
+          loc.gedung.toLowerCase() == effectiveBuilding.toLowerCase();
+      if (!matchesBuilding) continue;
+
+      if (loc.ruangan.isEmpty) {
+        hasNoRoom = true;
+      } else {
+        uniqueMap.putIfAbsent(loc.ruangan.toLowerCase(), () => loc.ruangan);
+      }
+    }
+
+    final sorted = uniqueMap.values.toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+
+    return [
+      _allRoomsLabel,
+      if (hasNoRoom) _noRoomLabel,
+      ...sorted,
+    ];
+  }
+
+  static List<String> get _priorityOptions => [
         _allPrioritiesLabel,
         ReportPriority.tinggi.label,
         ReportPriority.sedang.label,
@@ -80,11 +118,28 @@ class _KelolaLaporanScreenState extends State<KelolaLaporanScreen> {
         _noPriorityLabel,
       ];
 
-  bool _hasActiveFilter(String effectiveBuilding) {
+  int _activeModalFilterCount({
+    required String effectiveBuilding,
+    required String effectiveRoom,
+  }) {
+    int count = 0;
+    if (effectiveBuilding != _allBuildingsLabel) count++;
+    if (effectiveRoom != _allRoomsLabel) count++;
+    if (_selectedPriority != _allPrioritiesLabel) count++;
+    return count;
+  }
+
+  bool _hasActiveFilter({
+    required String effectiveBuilding,
+    required String effectiveRoom,
+  }) {
     return _searchController.text.trim().isNotEmpty ||
         _selectedStatusFilter != _allStatusKey ||
-        effectiveBuilding != _allBuildingsLabel ||
-        _selectedPriority != _allPrioritiesLabel;
+        _activeModalFilterCount(
+              effectiveBuilding: effectiveBuilding,
+              effectiveRoom: effectiveRoom,
+            ) >
+            0;
   }
 
   void _resetAllFilters() {
@@ -92,6 +147,7 @@ class _KelolaLaporanScreenState extends State<KelolaLaporanScreen> {
     setState(() {
       _selectedStatusFilter = _allStatusKey;
       _selectedBuilding = _allBuildingsLabel;
+      _selectedRoom = _allRoomsLabel;
       _selectedPriority = _allPrioritiesLabel;
     });
   }
@@ -99,6 +155,7 @@ class _KelolaLaporanScreenState extends State<KelolaLaporanScreen> {
   List<ReportModel> _filterReports(
     List<ReportModel> reports, {
     required String effectiveBuilding,
+    required String effectiveRoom,
   }) {
     final query = _searchController.text.trim().toLowerCase();
 
@@ -117,9 +174,15 @@ class _KelolaLaporanScreenState extends State<KelolaLaporanScreen> {
         _ => report.status.value == _selectedStatusFilter,
       };
 
-      final reportBuilding = _extractBuilding(report.assetLokasi);
+      final loc = _parseLocation(report.assetLokasi);
       final matchesBuilding = effectiveBuilding == _allBuildingsLabel ||
-          reportBuilding.toLowerCase() == effectiveBuilding.toLowerCase();
+          loc.gedung.toLowerCase() == effectiveBuilding.toLowerCase();
+
+      final matchesRoom = switch (effectiveRoom) {
+        _allRoomsLabel => true,
+        _noRoomLabel => loc.ruangan.isEmpty,
+        _ => loc.ruangan.toLowerCase() == effectiveRoom.toLowerCase(),
+      };
 
       final matchesPriority = switch (_selectedPriority) {
         _allPrioritiesLabel => true,
@@ -130,8 +193,35 @@ class _KelolaLaporanScreenState extends State<KelolaLaporanScreen> {
       return matchesSearch &&
           matchesStatus &&
           matchesBuilding &&
+          matchesRoom &&
           matchesPriority;
     }).toList();
+  }
+
+  Future<void> _openFilterModal({
+    required List<ReportModel> allReports,
+    required String effectiveBuilding,
+    required String effectiveRoom,
+  }) async {
+    final result = await showModalBottomSheet<_ReportFilterSelection>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _ReportFilterBottomSheet(
+        allReports: allReports,
+        initialBuilding: effectiveBuilding,
+        initialRoom: effectiveRoom,
+        initialPriority: _selectedPriority,
+      ),
+    );
+
+    if (result == null || !mounted) return;
+    setState(() {
+      _selectedBuilding = result.building;
+      _selectedRoom = result.room;
+      _selectedPriority = result.priority;
+    });
   }
 
   void _openReportDetail(ReportModel report) {
@@ -219,31 +309,63 @@ class _KelolaLaporanScreenState extends State<KelolaLaporanScreen> {
                       ? _selectedBuilding
                       : _allBuildingsLabel;
 
-              final isFiltering = _hasActiveFilter(effectiveBuilding);
+              final roomOptions = _buildRoomOptions(
+                allReports,
+                effectiveBuilding: effectiveBuilding,
+              );
+              final effectiveRoom = roomOptions.contains(_selectedRoom)
+                  ? _selectedRoom
+                  : _allRoomsLabel;
+
+              final modalFilterCount = _activeModalFilterCount(
+                effectiveBuilding: effectiveBuilding,
+                effectiveRoom: effectiveRoom,
+              );
+              final isFiltering = _hasActiveFilter(
+                effectiveBuilding: effectiveBuilding,
+                effectiveRoom: effectiveRoom,
+              );
               final filteredReports = _filterReports(
                 allReports,
                 effectiveBuilding: effectiveBuilding,
+                effectiveRoom: effectiveRoom,
               );
 
               return Column(
                 children: [
+                  // Baris 1: Search + Tombol Modal Filter
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-                    child: Column(
+                    padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+                    child: Row(
                       children: [
-                        _buildSearchField(),
-                        const SizedBox(height: 12),
-                        _buildDropdownFilters(
-                          buildingOptions: buildingOptions,
-                          effectiveBuilding: effectiveBuilding,
-                          isFiltering: isFiltering,
+                        Expanded(child: _buildSearchField()),
+                        const SizedBox(width: 10),
+                        _buildFilterButton(
+                          activeCount: modalFilterCount,
+                          onTap: () => _openFilterModal(
+                            allReports: allReports,
+                            effectiveBuilding: effectiveBuilding,
+                            effectiveRoom: effectiveRoom,
+                          ),
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 12),
+
+                  // Baris 2: Chip Status Horizontal
                   _buildStatusFilterChips(allReports),
-                  const SizedBox(height: 14),
+
+                  // Ringkasan filter modal aktif (bisa dihapus langsung dengan 1 tap)
+                  if (modalFilterCount > 0) ...[
+                    const SizedBox(height: 10),
+                    _buildActiveModalFilterBar(
+                      effectiveBuilding: effectiveBuilding,
+                      effectiveRoom: effectiveRoom,
+                    ),
+                  ],
+
+                  const SizedBox(height: 12),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: _buildReportCount(
@@ -253,6 +375,8 @@ class _KelolaLaporanScreenState extends State<KelolaLaporanScreen> {
                     ),
                   ),
                   const SizedBox(height: 10),
+
+                  // Daftar Laporan
                   Expanded(
                     child: filteredReports.isEmpty
                         ? _buildEmptyState(isFiltering: isFiltering)
@@ -260,7 +384,7 @@ class _KelolaLaporanScreenState extends State<KelolaLaporanScreen> {
                             physics: const BouncingScrollPhysics(),
                             padding: EdgeInsets.fromLTRB(
                               20,
-                              4,
+                              2,
                               20,
                               widget.showBackButton ? 28 : 115,
                             ),
@@ -294,7 +418,7 @@ class _KelolaLaporanScreenState extends State<KelolaLaporanScreen> {
         color: AppColors.textPrimary,
       ),
       decoration: InputDecoration(
-        hintText: 'Cari aset, gedung, pelapor, atau teknisi...',
+        hintText: 'Cari aset, lokasi, atau teknisi...',
         hintStyle: GoogleFonts.plusJakartaSans(
           fontSize: 12.5,
           color: AppColors.textSecondary,
@@ -316,7 +440,7 @@ class _KelolaLaporanScreenState extends State<KelolaLaporanScreen> {
         filled: true,
         fillColor: AppColors.white,
         contentPadding: const EdgeInsets.symmetric(
-          vertical: 13,
+          vertical: 12.5,
           horizontal: 14,
         ),
         border: OutlineInputBorder(
@@ -338,130 +462,136 @@ class _KelolaLaporanScreenState extends State<KelolaLaporanScreen> {
     );
   }
 
-  Widget _buildDropdownFilters({
-    required List<String> buildingOptions,
-    required String effectiveBuilding,
-    required bool isFiltering,
+  Widget _buildFilterButton({
+    required int activeCount,
+    required VoidCallback onTap,
   }) {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildFilterDropdown(
-            value: effectiveBuilding,
-            items: buildingOptions,
-            prefixIcon: Icons.apartment_rounded,
-            isActive: effectiveBuilding != _allBuildingsLabel,
-            onChanged: (value) {
-              if (value == null) return;
-              setState(() => _selectedBuilding = value);
-            },
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _buildFilterDropdown(
-            value: _selectedPriority,
-            items: _priorityOptions,
-            prefixIcon: Icons.flag_outlined,
-            isActive: _selectedPriority != _allPrioritiesLabel,
-            onChanged: (value) {
-              if (value == null) return;
-              setState(() => _selectedPriority = value);
-            },
-          ),
-        ),
-        if (isFiltering) ...[
-          const SizedBox(width: 8),
-          Tooltip(
-            message: 'Reset Filter',
-            child: InkWell(
-              onTap: _resetAllFilters,
-              borderRadius: BorderRadius.circular(13),
-              child: Container(
-                height: 44,
-                width: 44,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEAF2FF),
-                  borderRadius: BorderRadius.circular(13),
-                  border: Border.all(
-                    color: AppColors.primaryBlue.withValues(alpha: 0.35),
-                  ),
-                ),
-                alignment: Alignment.center,
-                child: const Icon(
-                  Icons.restart_alt_rounded,
-                  size: 19,
-                  color: AppColors.primaryBlue,
+    final isActive = activeCount > 0;
+
+    return Tooltip(
+      message: 'Filter Lokasi & Prioritas',
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(15),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: isActive ? AppColors.primaryBlue : AppColors.white,
+                borderRadius: BorderRadius.circular(15),
+                border: Border.all(
+                  color: isActive ? AppColors.primaryBlue : AppColors.border,
                 ),
               ),
+              alignment: Alignment.center,
+              child: Icon(
+                Icons.tune_rounded,
+                size: 21,
+                color: isActive ? AppColors.white : AppColors.textPrimary,
+              ),
             ),
-          ),
-        ],
-      ],
+            if (isActive)
+              Positioned(
+                top: -4,
+                right: -4,
+                child: Container(
+                  width: 19,
+                  height: 19,
+                  decoration: BoxDecoration(
+                    color: AppColors.accentYellow,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.white, width: 1.8),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    '$activeCount',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildFilterDropdown({
-    required String value,
-    required List<String> items,
-    required IconData prefixIcon,
-    required bool isActive,
-    required ValueChanged<String?> onChanged,
+  Widget _buildActiveModalFilterBar({
+    required String effectiveBuilding,
+    required String effectiveRoom,
   }) {
-    return Container(
-      height: 44,
-      padding: const EdgeInsets.symmetric(horizontal: 11),
-      decoration: BoxDecoration(
-        color: isActive ? const Color(0xFFF3F8FF) : AppColors.white,
-        borderRadius: BorderRadius.circular(13),
-        border: Border.all(
-          color: isActive
-              ? AppColors.primaryBlue.withValues(alpha: 0.45)
-              : AppColors.border,
+    final pills = <({String label, VoidCallback onRemove})>[
+      if (effectiveBuilding != _allBuildingsLabel)
+        (
+          label: effectiveBuilding,
+          onRemove: () => setState(() {
+                _selectedBuilding = _allBuildingsLabel;
+                _selectedRoom = _allRoomsLabel;
+              }),
         ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            prefixIcon,
-            size: 16,
-            color: isActive ? AppColors.primaryBlue : AppColors.textSecondary,
-          ),
-          const SizedBox(width: 7),
-          Expanded(
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: value,
-                isExpanded: true,
-                icon: Icon(
-                  Icons.keyboard_arrow_down_rounded,
-                  color: isActive
-                      ? AppColors.primaryBlue
-                      : AppColors.textSecondary,
-                  size: 19,
+      if (effectiveRoom != _allRoomsLabel)
+        (
+          label: effectiveRoom,
+          onRemove: () => setState(() => _selectedRoom = _allRoomsLabel),
+        ),
+      if (_selectedPriority != _allPrioritiesLabel)
+        (
+          label: 'Prioritas: $_selectedPriority',
+          onRemove: () =>
+              setState(() => _selectedPriority = _allPrioritiesLabel),
+        ),
+    ];
+
+    return SizedBox(
+      height: 30,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        itemCount: pills.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 7),
+        itemBuilder: (context, index) {
+          final pill = pills[index];
+          return InkWell(
+            onTap: pill.onRemove,
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEAF2FF),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: AppColors.primaryBlue.withValues(alpha: 0.3),
                 ),
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 11.5,
-                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
-                  color: isActive
-                      ? AppColors.primaryBlue
-                      : AppColors.textPrimary,
-                ),
-                items: items.map((item) {
-                  return DropdownMenuItem<String>(
-                    value: item,
-                    child: Text(
-                      item,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    pill.label,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primaryBlue,
                     ),
-                  );
-                }).toList(),
-                onChanged: onChanged,
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(
+                    Icons.close_rounded,
+                    size: 14,
+                    color: AppColors.primaryBlue,
+                  ),
+                ],
               ),
             ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -584,7 +714,7 @@ class _KelolaLaporanScreenState extends State<KelolaLaporanScreen> {
           GestureDetector(
             onTap: _resetAllFilters,
             child: Text(
-              'Reset Filter',
+              'Reset Semua',
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 11.5,
                 fontWeight: FontWeight.w700,
@@ -638,7 +768,7 @@ class _KelolaLaporanScreenState extends State<KelolaLaporanScreen> {
             const SizedBox(height: 8),
             Text(
               isFiltering
-                  ? 'Tidak ada laporan yang sesuai dengan pencarian atau filter status, gedung, dan prioritas saat ini.'
+                  ? 'Tidak ada laporan yang sesuai dengan pencarian atau filter lokasi, prioritas, dan status saat ini.'
                   : 'Seluruh laporan kerusakan fasilitas kampus dari pelapor akan muncul di sini.',
               textAlign: TextAlign.center,
               style: GoogleFonts.plusJakartaSans(
@@ -674,6 +804,330 @@ class _KelolaLaporanScreenState extends State<KelolaLaporanScreen> {
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ============================================================
+// MODAL BOTTOM SHEET: FILTER LOKASI & PRIORITAS
+// ============================================================
+
+class _ReportFilterSelection {
+  final String building;
+  final String room;
+  final String priority;
+
+  const _ReportFilterSelection({
+    required this.building,
+    required this.room,
+    required this.priority,
+  });
+}
+
+class _ReportFilterBottomSheet extends StatefulWidget {
+  final List<ReportModel> allReports;
+  final String initialBuilding;
+  final String initialRoom;
+  final String initialPriority;
+
+  const _ReportFilterBottomSheet({
+    required this.allReports,
+    required this.initialBuilding,
+    required this.initialRoom,
+    required this.initialPriority,
+  });
+
+  @override
+  State<_ReportFilterBottomSheet> createState() =>
+      _ReportFilterBottomSheetState();
+}
+
+class _ReportFilterBottomSheetState extends State<_ReportFilterBottomSheet> {
+  late String _building;
+  late String _room;
+  late String _priority;
+
+  @override
+  void initState() {
+    super.initState();
+    _building = widget.initialBuilding;
+    _room = widget.initialRoom;
+    _priority = widget.initialPriority;
+  }
+
+  void _resetLocal() {
+    setState(() {
+      _building = _KelolaLaporanScreenState._allBuildingsLabel;
+      _room = _KelolaLaporanScreenState._allRoomsLabel;
+      _priority = _KelolaLaporanScreenState._allPrioritiesLabel;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final buildingOptions =
+        _KelolaLaporanScreenState._buildBuildingOptions(widget.allReports);
+    final effectiveBuilding = buildingOptions.contains(_building)
+        ? _building
+        : _KelolaLaporanScreenState._allBuildingsLabel;
+
+    final roomOptions = _KelolaLaporanScreenState._buildRoomOptions(
+      widget.allReports,
+      effectiveBuilding: effectiveBuilding,
+    );
+    final effectiveRoom = roomOptions.contains(_room)
+        ? _room
+        : _KelolaLaporanScreenState._allRoomsLabel;
+
+    final priorityOptions = _KelolaLaporanScreenState._priorityOptions;
+
+    return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.80,
+      ),
+      decoration: const BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: Container(
+                  width: 42,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDCE3ED),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Filter Laporan',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(
+                      Icons.close_rounded,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+
+              // Gedung
+              _sectionLabel('Gedung'),
+              const SizedBox(height: 8),
+              _buildModalDropdown(
+                value: effectiveBuilding,
+                items: buildingOptions,
+                prefixIcon: Icons.apartment_rounded,
+                onChanged: (value) {
+                  if (value == null) return;
+                  setState(() {
+                    _building = value;
+                    _room = _KelolaLaporanScreenState._allRoomsLabel;
+                  });
+                },
+              ),
+              const SizedBox(height: 14),
+
+              // Ruangan
+              _sectionLabel('Ruangan'),
+              const SizedBox(height: 8),
+              _buildModalDropdown(
+                value: effectiveRoom,
+                items: roomOptions,
+                prefixIcon: Icons.meeting_room_outlined,
+                onChanged: (value) {
+                  if (value == null) return;
+                  setState(() => _room = value);
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // Prioritas (Chip tap langsung)
+              _sectionLabel('Prioritas'),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: priorityOptions.map((option) {
+                  final isSelected = _priority == option;
+                  return InkWell(
+                    onTap: () => setState(() => _priority = option),
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 13,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? AppColors.primaryBlue
+                            : const Color(0xFFF7F9FD),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: isSelected
+                              ? AppColors.primaryBlue
+                              : AppColors.border,
+                        ),
+                      ),
+                      child: Text(
+                        option,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: isSelected
+                              ? AppColors.white
+                              : AppColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 24),
+
+              // Tombol Aksi Modal
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: _resetLocal,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.textPrimary,
+                        side: const BorderSide(color: AppColors.border),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(13),
+                        ),
+                      ),
+                      child: Text(
+                        'Reset',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    flex: 2,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(
+                          context,
+                          _ReportFilterSelection(
+                            building: effectiveBuilding,
+                            room: effectiveRoom,
+                            priority: _priority,
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryBlue,
+                        foregroundColor: AppColors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(13),
+                        ),
+                      ),
+                      child: Text(
+                        'Terapkan Filter',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _sectionLabel(String text) {
+    return Text(
+      text,
+      style: GoogleFonts.plusJakartaSans(
+        fontSize: 12.5,
+        fontWeight: FontWeight.w700,
+        color: AppColors.textPrimary,
+      ),
+    );
+  }
+
+  Widget _buildModalDropdown({
+    required String value,
+    required List<String> items,
+    required IconData prefixIcon,
+    required ValueChanged<String?> onChanged,
+  }) {
+    return Container(
+      height: 48,
+      padding: const EdgeInsets.symmetric(horizontal: 13),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF7F9FD),
+        borderRadius: BorderRadius.circular(13),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          Icon(prefixIcon, size: 18, color: AppColors.textSecondary),
+          const SizedBox(width: 10),
+          Expanded(
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: value,
+                isExpanded: true,
+                icon: const Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  color: AppColors.textSecondary,
+                ),
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+                items: items.map((item) {
+                  return DropdownMenuItem<String>(
+                    value: item,
+                    child: Text(
+                      item,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  );
+                }).toList(),
+                onChanged: onChanged,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

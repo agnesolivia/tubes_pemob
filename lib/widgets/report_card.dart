@@ -6,10 +6,16 @@ import 'package:tubes_pemob/widgets/status_badge.dart';
 
 enum _ReportCardVariant { compact, overdue, activity }
 
-/// Kartu ringkasan laporan bergaya ringkas (compact) yang dipakai lintas halaman:
+/// Kartu ringkasan laporan bergaya ringkas (compact) yang seragam di seluruh halaman:
 /// - `ReportCard(...)`: daftar laporan umum (Kelola Laporan, Riwayat, Tugas)
 /// - `ReportCard.overdue(...)`: peringatan Overdue SLA di Dashboard
 /// - `ReportCard.activity(...)`: aktivitas terbaru di Dashboard
+///
+/// Struktur 4 baris konsisten di semua varian:
+/// 1. Badge status/tag (kiri) + Waktu (kanan atas)
+/// 2. Nama Aset (1 baris tebal) + Panah (kanan)
+/// 3. Ikon & Lokasi (1 baris) + SLA singkat (jika aktif pada mode daftar)
+/// 4. Ringkasan kontekstual (deskripsi / teknisi / log aktivitas terbaru)
 class ReportCard extends StatelessWidget {
   final ReportModel report;
   final VoidCallback onTap;
@@ -48,14 +54,12 @@ class ReportCard extends StatelessWidget {
     'Des',
   ];
 
-  String _formatShortDate(DateTime date, {bool includeYear = false}) {
+  String _formatShortDate(DateTime date) {
     final day = date.day.toString().padLeft(2, '0');
     final month = _months[date.month - 1];
     final hour = date.hour.toString().padLeft(2, '0');
     final minute = date.minute.toString().padLeft(2, '0');
-    return includeYear
-        ? '$day $month ${date.year}, $hour:$minute'
-        : '$day $month, $hour:$minute';
+    return '$day$month, $hour:$minute';
   }
 
   String _overdueLabel(DateTime? deadlineAt) {
@@ -82,6 +86,14 @@ class ReportCard extends StatelessWidget {
     if (diff.inDays >= 1) return 'SLA ${diff.inDays}h';
     if (diff.inHours >= 1) return 'SLA ${diff.inHours}j';
     return 'SLA <1j';
+  }
+
+  DateTime get _headerTime {
+    if (_variant == _ReportCardVariant.activity &&
+        report.riwayatStatus.isNotEmpty) {
+      return report.riwayatStatus.last.timestamp;
+    }
+    return report.createdAt;
   }
 
   @override
@@ -115,211 +127,227 @@ class ReportCard extends StatelessWidget {
               ),
             ],
           ),
-          child: switch (_variant) {
-            _ReportCardVariant.compact => _buildCompactContent(),
-            _ReportCardVariant.overdue => _buildOverdueContent(),
-            _ReportCardVariant.activity => _buildActivityContent(),
-          },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 1. HEADER: Badge (kiri) + Waktu (kanan atas)
+              _buildHeaderRow(),
+              const SizedBox(height: 8),
+
+              // 2. NAMA ASET (terpisah dari lokasi agar tidak terpotong) + Panah
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      report.assetNama,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    size: 19,
+                    color: AppColors.textSecondary,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 3),
+
+              // 3. LOKASI + Indikator SLA singkat (mode daftar)
+              _buildLocationRow(),
+              const SizedBox(height: 6),
+
+              // 4. RINGKASAN KONTEKSTUAL (tanpa nama pelapor)
+              _buildFooterContent(),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  // ==========================================================
-  // VARIANT 1: COMPACT LIST (KELOLA LAPORAN / DAFTAR TIKET)
-  // ==========================================================
+  Widget _buildHeaderRow() {
+    final badges = switch (_variant) {
+      _ReportCardVariant.compact => <Widget>[
+          StatusBadge(status: report.status),
+          if (report.prioritas != null)
+            PriorityBadge(priority: report.prioritas!),
+          if (report.isOverdue)
+            const ReportBadgeChip(
+              label: 'Overdue',
+              backgroundColor: AppColors.statusRejectedBg,
+              foregroundColor: AppColors.statusRejectedText,
+            ),
+          if (!report.hasRegisteredAsset)
+            const ReportBadgeChip(
+              label: 'Belum Terdaftar',
+              backgroundColor: AppColors.statusProcessBg,
+              foregroundColor: AppColors.statusProcessText,
+            ),
+          if (report.isConfirmed)
+            const ReportBadgeChip(
+              label: 'Terkonfirmasi',
+              backgroundColor: AppColors.inputFill,
+              foregroundColor: AppColors.primaryBlue,
+            )
+          else if (report.isAwaitingConfirmation)
+            const ReportBadgeChip(
+              label: 'Perlu Konfirmasi',
+              backgroundColor: AppColors.statusProcessBg,
+              foregroundColor: AppColors.statusProcessText,
+            ),
+        ],
+      _ReportCardVariant.overdue => <Widget>[
+          ReportBadgeChip(
+            label: _overdueLabel(report.deadlineAt),
+            icon: Icons.access_time_filled_rounded,
+            backgroundColor: AppColors.statusRejectedBg,
+            foregroundColor: AppColors.statusRejectedText,
+          ),
+          StatusBadge(status: report.status),
+        ],
+      _ReportCardVariant.activity => <Widget>[
+          StatusBadge(status: report.status),
+          if (report.isAwaitingConfirmation)
+            const ReportBadgeChip(
+              label: 'Perlu Konfirmasi',
+              backgroundColor: AppColors.statusProcessBg,
+              foregroundColor: AppColors.statusProcessText,
+              fontSize: 9.5,
+            ),
+        ],
+    };
 
-  Widget _buildCompactContent() {
-    final slaText = _slaShortText();
-    final hasTeknisi =
-        report.teknisiNama != null && report.teknisiNama!.trim().isNotEmpty;
-    final actorLabel = hasTeknisi
-        ? '${report.pelaporNama} • ${report.teknisiNama}'
-        : report.pelaporNama;
-
-    return Column(
+    return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Baris 1: Status, Prioritas, & Tag Penting + Panah
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Wrap(
-                spacing: 6,
-                runSpacing: 5,
-                children: [
-                  StatusBadge(status: report.status),
-                  if (report.prioritas != null)
-                    PriorityBadge(priority: report.prioritas!),
-                  if (report.isOverdue)
-                    const ReportBadgeChip(
-                      label: 'Overdue',
-                      backgroundColor: AppColors.statusRejectedBg,
-                      foregroundColor: AppColors.statusRejectedText,
-                    ),
-                  if (!report.hasRegisteredAsset)
-                    const ReportBadgeChip(
-                      label: 'Belum Terdaftar',
-                      backgroundColor: AppColors.statusProcessBg,
-                      foregroundColor: AppColors.statusProcessText,
-                    ),
-                  if (report.isConfirmed)
-                    const ReportBadgeChip(
-                      label: 'Terkonfirmasi',
-                      backgroundColor: AppColors.inputFill,
-                      foregroundColor: AppColors.primaryBlue,
-                    )
-                  else if (report.isAwaitingConfirmation)
-                    const ReportBadgeChip(
-                      label: 'Perlu Konfirmasi',
-                      backgroundColor: AppColors.statusProcessBg,
-                      foregroundColor: AppColors.statusProcessText,
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 4),
-            const Icon(
-              Icons.chevron_right_rounded,
-              size: 19,
-              color: AppColors.textSecondary,
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-
-        // Baris 2: Nama Aset • Lokasi + Indikator SLA singkat
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                '${report.assetNama} • ${report.assetLokasi}',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-            ),
-            if (slaText.isNotEmpty) ...[
-              const SizedBox(width: 8),
-              Icon(
-                Icons.access_time_rounded,
-                size: 12.5,
-                color: report.isOverdue
-                    ? AppColors.statusRejectedText
-                    : AppColors.primaryBlue,
-              ),
-              const SizedBox(width: 3),
-              Text(
-                slaText,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w700,
-                  color: report.isOverdue
-                      ? AppColors.statusRejectedText
-                      : AppColors.primaryBlue,
-                ),
-              ),
-            ],
-          ],
-        ),
-        const SizedBox(height: 4),
-
-        // Baris 3: Deskripsi 1 baris agar tinggi kartu tetap padat
-        Text(
-          report.deskripsi,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 11.5,
-            fontWeight: FontWeight.w500,
-            color: AppColors.textSecondary,
+        Expanded(
+          child: Wrap(
+            spacing: 6,
+            runSpacing: 5,
+            children: badges,
           ),
         ),
-        const SizedBox(height: 7),
-
-        // Baris 4: Pelapor • Teknisi & Tanggal
-        Row(
-          children: [
-            const Icon(
-              Icons.person_outline_rounded,
-              size: 13.5,
+        const SizedBox(width: 8),
+        Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: Text(
+            _formatShortDate(_headerTime),
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w500,
               color: AppColors.textSecondary,
             ),
-            const SizedBox(width: 4),
-            Expanded(
-              child: Text(
-                actorLabel,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              _formatShortDate(report.createdAt),
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 10.5,
-                fontWeight: FontWeight.w500,
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ],
+          ),
         ),
       ],
     );
   }
 
-  // ==========================================================
-  // VARIANT 2: OVERDUE SLA (DASHBOARD ADMIN)
-  // ==========================================================
+  Widget _buildLocationRow() {
+    final slaText =
+        _variant == _ReportCardVariant.compact ? _slaShortText() : '';
 
-  Widget _buildOverdueContent() {
+    return Row(
+      children: [
+        const Icon(
+          Icons.location_on_outlined,
+          size: 13.5,
+          color: AppColors.textSecondary,
+        ),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Text(
+            report.assetLokasi,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ),
+        if (slaText.isNotEmpty) ...[
+          const SizedBox(width: 8),
+          Icon(
+            Icons.access_time_rounded,
+            size: 12.5,
+            color: report.isOverdue
+                ? AppColors.statusRejectedText
+                : AppColors.primaryBlue,
+          ),
+          const SizedBox(width: 3),
+          Text(
+            slaText,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w700,
+              color: report.isOverdue
+                  ? AppColors.statusRejectedText
+                  : AppColors.primaryBlue,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildFooterContent() {
     final hasTeknisi =
         report.teknisiNama != null && report.teknisiNama!.trim().isNotEmpty;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
+    switch (_variant) {
+      case _ReportCardVariant.compact:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ReportBadgeChip(
-              label: _overdueLabel(report.deadlineAt),
-              icon: Icons.access_time_filled_rounded,
-              backgroundColor: AppColors.statusRejectedBg,
-              foregroundColor: AppColors.statusRejectedText,
+            Text(
+              report.deskripsi,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textSecondary,
+              ),
             ),
-            const SizedBox(width: 6),
-            StatusBadge(status: report.status),
-            const Spacer(),
-            const Icon(
-              Icons.chevron_right_rounded,
-              size: 19,
-              color: AppColors.textSecondary,
-            ),
+            if (hasTeknisi) ...[
+              const SizedBox(height: 5),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.engineering_outlined,
+                    size: 13.5,
+                    color: AppColors.textSecondary,
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      'Teknisi: ${report.teknisiNama}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
-        ),
-        const SizedBox(height: 8),
-        Text(
-          '${report.assetNama} • ${report.assetLokasi}',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 13.5,
-            fontWeight: FontWeight.w800,
-            color: AppColors.textPrimary,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Row(
+        );
+
+      case _ReportCardVariant.overdue:
+        return Row(
           children: [
             const Icon(
               Icons.engineering_outlined,
@@ -348,79 +376,17 @@ class ReportCard extends StatelessWidget {
               PriorityBadge(priority: report.prioritas!),
             ],
           ],
-        ),
-      ],
-    );
-  }
+        );
 
-  // ==========================================================
-  // VARIANT 3: AKTIVITAS TERBARU (DASHBOARD ADMIN)
-  // ==========================================================
+      case _ReportCardVariant.activity:
+        final latestLog =
+            report.riwayatStatus.isNotEmpty ? report.riwayatStatus.last : null;
+        final subtitleText =
+            (latestLog != null && latestLog.catatan.trim().isNotEmpty)
+                ? latestLog.catatan.trim()
+                : report.deskripsi;
 
-  Widget _buildActivityContent() {
-    final latestLog =
-        report.riwayatStatus.isNotEmpty ? report.riwayatStatus.last : null;
-    final activityTime = latestLog?.timestamp ?? report.createdAt;
-    final subtitleText =
-        (latestLog != null && latestLog.catatan.trim().isNotEmpty)
-            ? latestLog.catatan.trim()
-            : report.deskripsi;
-    final actorName =
-        (latestLog != null && latestLog.updatedBy.trim().isNotEmpty)
-            ? latestLog.updatedBy.trim()
-            : report.pelaporNama;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            StatusBadge(status: report.status),
-            if (report.isAwaitingConfirmation) ...[
-              const SizedBox(width: 6),
-              const ReportBadgeChip(
-                label: 'Perlu Konfirmasi',
-                backgroundColor: AppColors.statusProcessBg,
-                foregroundColor: AppColors.statusProcessText,
-                fontSize: 9.5,
-              ),
-            ],
-            const Spacer(),
-            Text(
-              _formatShortDate(activityTime),
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 10.5,
-                fontWeight: FontWeight.w500,
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                '${report.assetNama} • ${report.assetLokasi}',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-            ),
-            const SizedBox(width: 6),
-            const Icon(
-              Icons.chevron_right_rounded,
-              size: 19,
-              color: AppColors.textSecondary,
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text(
+        return Text(
           subtitleText,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -429,19 +395,7 @@ class ReportCard extends StatelessWidget {
             fontWeight: FontWeight.w500,
             color: AppColors.textSecondary,
           ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Oleh $actorName',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 10.5,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textSecondary,
-          ),
-        ),
-      ],
-    );
+        );
+    }
   }
 }

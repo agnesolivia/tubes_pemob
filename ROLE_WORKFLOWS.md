@@ -40,17 +40,17 @@ Satu halaman kamera pemindai bersama (`screens/shared/scan_qr_screen.dart`) yang
 
 ### C. Detail Laporan (`detail_laporan_screen.dart` & Modular Action Widgets)
 
-Satu halaman bersama untuk melihat detail tiket (`ReportModel`), berisi informasi aset, lokasi, deskripsi, foto kerusakan (`fotoSebelum`), foto hasil perbaikan (`fotoSesudah` jika sudah selesai — keduanya mendukung *tap-to-zoom* layar penuh), indikator SLA, lencana status konfirmasi (`isConfirmed`), dan timeline riwayat perubahan status (`riwayatStatus`).
+Satu halaman bersama untuk melihat detail tiket (`ReportModel`), berisi informasi aset, lokasi, deskripsi, foto kerusakan (`fotoSebelum`), foto hasil perbaikan (`fotoSesudah` & `catatanTeknisi` hanya tampil saat `status == ReportStatus.resolved` agar bukti lama tidak muncul ketika tiket di-*reopen* — kedua foto mendukung *tap-to-zoom* layar penuh), indikator SLA, lencana status konfirmasi (`isConfirmed`), dan timeline riwayat perubahan status (`riwayatStatus`).
 
 * **Pemisahan Komponen Aksi per Role (Modular UI):** Agar `detail_laporan_screen.dart` tetap ringkas dan tidak menimbulkan *merge conflict*, halaman utama hanya merender isi laporan yang seragam untuk semua role, sedangkan *sticky bottom action bar* beserta modal/dialog-nya dipisahkan ke folder masing-masing role:
 
   * **Pelapor:** `screens/pelapor/widgets/pelapor_report_actions.dart` (tombol & dialog **Batalkan Laporan** untuk status `reported`, serta `ResolutionActionBar` untuk status `resolved`).
 
-  * **Admin:** `screens/admin/widgets/admin_report_actions.dart` (dialog **Tolak**, *modal bottom sheet* **Verifikasi & Tetapkan SLA**, *modal bottom sheet* **Tugaskan / Alihkan Teknisi**, serta `ResolutionActionBar`).
+  * **Admin:** `screens/admin/widgets/admin_report_actions.dart` (terhubung ke `ReportService` & `AuthService`: dialog **Tolak**, *modal bottom sheet* **Verifikasi & Tetapkan SLA**, *modal bottom sheet* **Tugaskan / Alihkan Teknisi**, serta `ResolutionActionBar`).
 
   * **Teknisi:** `screens/teknisi/widgets/teknisi_report_actions.dart` (tombol **Mulai Kerjakan**, tombol **Selesaikan Tugas** menuju halaman penuh `FormPenyelesaianScreen`, dan status selesai).
 
-  * **Komponen Bersama:** `widgets/resolution_action_bar.dart` digunakan oleh Pelapor dan Admin untuk aksi **Konfirmasi Selesai** & **Belum Beres**.
+  * **Komponen Bersama:** `widgets/resolution_action_bar.dart` (terhubung ke `ReportService`) digunakan oleh Pelapor dan Admin untuk aksi **Konfirmasi Selesai** & **Belum Beres**.
 
 * **Aturan Konfirmasi Selesai & Sanggahan (*Re-open*) pada Status `resolved`:**
 
@@ -162,11 +162,11 @@ Aktor: Pengelola Sarana & Prasarana Kampus.
 
    * `AdminMainScreen` membungkus 4 halaman tab (`Beranda`, `Tiket`, `Notifikasi`, `Profil`) menggunakan `IndexedStack` dan 1 `BottomNavbar` permanen di bawah (dengan tombol tengah membuka `screens/shared/scan_qr_screen.dart` untuk memindai QR profil calon teknisi `USER:<uid>` maupun QR stiker aset `ASSET:<id>`).
 
-   * Di dashboard, Admin melihat statistik tiket berdasarkan status (`reported`, `verified`/`assigned`/`inProgress`, `resolved`) serta daftar peringatan tiket **Overdue SLA** (tiket belum `resolved` dan waktu sekarang sudah melewati `deadlineAt` / `report.isOverdue`).
+   * Di dashboard, Admin melihat statistik tiket berdasarkan status (`reported`, `verified`/`assigned`/`inProgress`, `resolved`), daftar peringatan tiket **Overdue SLA** (tiket belum `resolved` dan waktu sekarang sudah melewati `deadlineAt` / `report.isOverdue`), serta daftar **Aktivitas Terbaru** yang langsung membuka `DetailLaporanScreen` saat diketuk.
 
 2. **Verifikasi, Penolakan & Penugasan (`kelola_laporan_screen.dart`, `detail_laporan_screen.dart`, & `admin_report_actions.dart`):**
 
-   * Admin memfilter daftar seluruh laporan masuk berdasarkan status, gedung, atau tingkat prioritas (termasuk kemampuan memantau tiket dari jalur *Fasilitas Lainnya* dengan `assetId == null`).
+   * Admin memfilter daftar seluruh laporan masuk berdasarkan status (termasuk `Overdue` dan `Belum Terdaftar` untuk `assetId == null`), gedung, ruangan (termasuk `Tanpa Ruangan`), dan tingkat prioritas.
 
    * **Penanganan Laporan Tanpa ID Aset (`assetId == null`):** Laporan yang dikirim lewat opsi *Fasilitas Lainnya* tetap masuk ke antrean `reported` secara normal. Admin dapat langsung memverifikasi dan menugaskan teknisi **tanpa wajib membuat data baru di `TambahAsetScreen`**. Jika objek tersebut merupakan unit inventaris yang sering dilaporkan dan perlu stiker QR, Admin dapat membuka **Lihat Riwayat Aset** dari `DetailLaporanScreen` lalu menekan tombol **"Daftarkan sebagai Aset Baru"** di dalam `HistoryAssetScreen`.
 
@@ -218,7 +218,7 @@ Aktor: Pengelola Sarana & Prasarana Kampus.
 
    * **Detail Aset, Ubah/Hapus, Riwayat, & Generator Stiker QR (`detail_aset_screen.dart`):**
 
-     * Menampilkan rincian lengkap aset (`nama`, `kategori`, `gedung`, `ruangan` atau keterangan *"Tidak ada (Area gedung)"* bila kosong, dan tanggal terdaftar), tombol **Ubah** (*bottom sheet* edit dengan `gedung` wajib, `ruangan` opsional, serta validasi unik per lokasi) dan **Hapus** (dengan dialog konfirmasi) di AppBar.
+     * Menampilkan rincian lengkap aset (`nama`, `kategori`, `gedung`, `ruangan` atau keterangan *"Tidak ada (Area gedung)"* bila kosong, dan tanggal terdaftar), tombol **Ubah** (*bottom sheet* edit dengan `Autocomplete` lokasi, `gedung` wajib, `ruangan` opsional, serta validasi unik per lokasi) dan **Hapus** (dengan dialog konfirmasi) di AppBar.
 
      * **Generator & Label Stiker QR Code:** Payload QR Code men-encode **`ASSET:${asset.id}`** (Auto-ID dokumen Firestore) menggunakan `qr_flutter` dengan tombol **Simpan QR** (ke galeri perangkat) dan **Bagikan QR** (PNG resolusi tinggi). Tampilan stiker QR menampilkan teks label **`asset.nama`** (misalnya `Kursi#01` atau `APAR#01`) beserta lokasi (`asset.lokasiLengkap`, yaitu `Gedung - Ruangan` atau `Gedung` saja bila tanpa ruangan) di bawah kode QR—bukan Auto-ID mentah—sehingga apabila kamera perangkat tidak berfungsi, Pelapor tetap dapat membaca nama unit dan lokasinya pada stiker lalu memilihnya melalui jalur **Lapor Manual**.
 
@@ -342,7 +342,6 @@ Agar seluruh anggota tim bisa mengerjakan tugas secara bersamaan tanpa saling me
 >
 > * **Klaim sebelum *coding*:** Tandai nama/inisial di samping item yang diambil (atau infokan di grup/GitHub Issue) sebelum membuat *branch* baru agar tidak terjadi tabrakan file.
 >
->
 > * **UI bisa berjalan lebih dulu:** Selama *method* atau integrasi belum selesai, halaman UI tetap bisa dikerjakan dan diuji menggunakan objek `Model` sementara (*mock object*) atau callback *preview*.
 
 ### Tahap 0 — Fondasi & Kontrak Data (Prioritas Pertama)
@@ -377,13 +376,13 @@ Agar seluruh anggota tim bisa mengerjakan tugas secara bersamaan tanpa saling me
 
 * [x] `widgets/bottom_navbar.dart` (Navigasi bawah reusable lintas role dengan tombol aksi tengah)
 
-* [x] `widgets/resolution_action_bar.dart` (Tombol & dialog Konfirmasi Selesai / Belum Beres bersama Pelapor & Admin — *UI-only, siap disambungkan ke `ReportService`*)
+* [x] `widgets/resolution_action_bar.dart` (Tombol & dialog Konfirmasi Selesai / Belum Beres bersama Pelapor & Admin — *tersambung ke `ReportService`*)
 
-* [ ] `widgets/status_badge.dart` (Label warna otomatis per status tiket)
+* [x] `widgets/status_badge.dart` (`StatusBadge`, `PriorityBadge`, & helper warna status/prioritas)
 
 * [ ] `widgets/sla_indicator.dart` (Indikator sisa waktu / label *Overdue* berdasarkan `deadlineAt`)
 
-* [ ] `widgets/report_card.dart` (Kartu ringkasan laporan untuk daftar di seluruh role)
+* [x] `widgets/report_card.dart` (Kartu ringkasan laporan reusable untuk daftar, *Overdue SLA*, & aktivitas terbaru)
 
 * [ ] `widgets/base64_image_viewer.dart` (Komponen render gambar dari string Base64 + tampilan saat error/kosong)
 
@@ -395,9 +394,9 @@ Agar seluruh anggota tim bisa mengerjakan tugas secara bersamaan tanpa saling me
 
 * [x] `screens/auth/auth_wrapper.dart` (*Auto-routing* sesuai verifikasi email & `user.role`)
 
-* [ ] `screens/shared/scan_qr_screen.dart` (Pemindai kamera QR lintas role & validasi prefix `ASSET:` / `USER:`)
+* [ ] `screens/shared/scan_qr_screen.dart` (Pemindai kamera QR lintas role & validasi prefix `ASSET:` / `USER:` — *mode `ASSET:` sudah terhubung ke `HistoryAssetScreen`*)
 
-* [x] `screens/shared/detail_laporan_screen.dart` (Struktur inti detail tiket lintas role, *zoom* foto, timeline status, & anti-loop `fromAssetHistory` selesai; tombol aksi per role dipisah ke `screens/<role>/widgets/*_report_actions.dart` dalam mode *UI-only*)
+* [x] `screens/shared/detail_laporan_screen.dart` (Struktur inti lintas role, *zoom* foto, timeline status, & anti-loop `fromAssetHistory`; aksi Admin & `ResolutionActionBar` sudah tersambung Firestore, aksi Pelapor & Teknisi siap disambungkan)
 
 * [x] `screens/shared/history_aset_screen.dart` (Tersambung Firestore *real-time*, filter status, navigasi ke `DetailLaporanScreen` & `TambahAsetScreen` *pre-filled*; sisa `// TODO` sambung tombol Pelapor ke `FormPengaduanScreen`)
 
@@ -407,7 +406,7 @@ Agar seluruh anggota tim bisa mengerjakan tugas secara bersamaan tanpa saling me
 
 ### Jalur D — Modul Pelapor (`screens/pelapor/`)
 
-* [x] `screens/pelapor/widgets/pelapor_report_actions.dart` (Tombol & dialog Batalkan Laporan + `ResolutionActionBar` — *UI-only, siap disambungkan ke `ReportService`*)
+* [x] `screens/pelapor/widgets/pelapor_report_actions.dart` (Tombol & dialog Batalkan Laporan *UI-only* + `ResolutionActionBar` tersambung `ReportService`)
 
 * [ ] `screens/pelapor/pelapor_main_screen.dart` (*Shell* utama dengan `IndexedStack` & `BottomNavbar` untuk tab Pelapor)
 
@@ -419,21 +418,23 @@ Agar seluruh anggota tim bisa mengerjakan tugas secara bersamaan tanpa saling me
 
 ### Jalur E — Modul Admin (`screens/admin/`)
 
-* [x] `screens/admin/widgets/admin_report_actions.dart` (Dialog Tolak, *Modal Bottom Sheet* Verifikasi/SLA & Pilih/Alihkan Teknisi + `ResolutionActionBar` — *UI-only, siap disambungkan ke `ReportService`*)
+* [x] `screens/admin/widgets/admin_report_actions.dart` (Tersambung `ReportService` & `AuthService`: Dialog Tolak, *Modal Bottom Sheet* Verifikasi/SLA & Pilih/Alihkan Teknisi + `ResolutionActionBar`)
 
-* [ ] `screens/admin/admin_main_screen.dart` (*Shell* utama dengan `IndexedStack` & `BottomNavbar` untuk tab Admin)
+* [x] `screens/admin/widgets/dashboard_hero_illustration.dart` (Sub-widget ilustrasi hero khusus `AdminDashboardScreen`)
 
-* [ ] `screens/admin/admin_dashboard_screen.dart` (Statistik tiket & daftar peringatan *Overdue SLA*)
+* [x] `screens/admin/admin_main_screen.dart` (*Shell* utama dengan `IndexedStack`, `BottomNavbar`, & tab `KelolaLaporanScreen`; sisa ganti placeholder tab Notifikasi)
 
-* [ ] `screens/admin/kelola_laporan_screen.dart` (Filter semua laporan & navigasi ke detail/verifikasi)
+* [x] `screens/admin/admin_dashboard_screen.dart` (Tersambung `ReportService`: statistik tiket, daftar *Overdue SLA*, & aktivitas terbaru via `ReportCard`)
+
+* [x] `screens/admin/kelola_laporan_screen.dart` (Tersambung `ReportService`: filter status, gedung, ruangan, prioritas, & daftar tiket via `ReportCard`)
 
 * [x] `screens/admin/kelola_aset_screen.dart` (Daftar master aset, filter berjenjang Gedung/Ruangan/Kategori termasuk `Tanpa Ruangan`, & pintasan QR)
 
 * [x] `screens/admin/tambah_aset_screen.dart` (Form tambah aset satuan & batch multi-item `#` dengan `Gedung` wajib, `Ruangan` opsional, & `Autocomplete` lokasi)
 
-* [x] `screens/admin/detail_aset_screen.dart` (Detail aset, edit/hapus data, simpan/bagikan stiker QR Code `ASSET:<id>` berlabel `asset.nama`, & pintasan **Riwayat Kerusakan Aset**)
+* [x] `screens/admin/detail_aset_screen.dart` (Detail aset, edit/hapus data dengan `Autocomplete` lokasi, simpan/bagikan stiker QR Code `ASSET:<id>` berlabel `asset.nama`, & pintasan **Riwayat Kerusakan Aset**)
 
-* [ ] `screens/admin/kelola_teknisi_screen.dart` (Daftar teknisi, beban tugas aktif, & ubah role `pelapor` $\leftrightarrow$ `teknisi` via Search Email/Nama atau Scan QR Profil)
+* [ ] `screens/admin/kelola_teknisi_screen.dart` (*UI-only selesai:* daftar teknisi, pintasan Scan QR Profil, & cabut akses; siap disambungkan ke `AuthService` & `ReportService`)
 
 ### Jalur F — Modul Teknisi (`screens/teknisi/`)
 

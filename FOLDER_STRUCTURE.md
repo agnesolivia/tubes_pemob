@@ -4,7 +4,7 @@ Dokumen ini menjadi acuan teknis bagi seluruh anggota tim dalam mengembangkan **
 
 ## 1. Peta Lengkap Direktori `lib/`
 
-Proyek ini menggunakan pola **Layer-First** yang dikombinasikan dengan pemisahan halaman berdasarkan *role* (`pelapor`, `admin`, `teknisi`) di dalam `screens/`. Seluruh file halaman penuh di dalam `screens/` wajib menggunakan akhiran `_screen.dart`, sedangkan komponen aksi/UI khusus per *role* diletakkan di subfolder `widgets/` milik *role* terkait.
+Proyek ini menggunakan pola **Layer-First** yang dikombinasikan dengan pemisahan halaman berdasarkan *role* (`pelapor`, `admin`, `teknisi`) di dalam `screens/`. Seluruh file halaman penuh (`Scaffold`) di dalam `screens/` wajib menggunakan akhiran `_screen.dart`, sedangkan komponen aksi/UI khusus per *role* diletakkan di subfolder `widgets/` milik *role* terkait.
 
 ```text
 lib/
@@ -34,9 +34,9 @@ lib/
 ├── widgets/                                       # Komponen UI reusable yang dipakai lintas role / banyak halaman
 │   ├── bottom_navbar.dart                         # Navigasi bawah reusable lintas role dengan tombol aksi tengah
 │   ├── resolution_action_bar.dart                 # Tombol & dialog Konfirmasi Selesai / Belum Beres (Pelapor & Admin)
-│   ├── status_badge.dart                          # Label warna otomatis sesuai ReportStatus
+│   ├── status_badge.dart                          # StatusBadge, PriorityBadge, & helper warna status/prioritas
 │   ├── sla_indicator.dart                         # Indikator sisa waktu / keterlambatan batas SLA
-│   ├── report_card.dart                           # Kartu ringkasan laporan untuk daftar/list
+│   ├── report_card.dart                           # Kartu ringkasan laporan reusable (daftar, overdue SLA, & aktivitas)
 │   └── base64_image_viewer.dart                   # Komponen render gambar dari string Base64 + fallback error
 │
 └── screens/                                       # Seluruh halaman penuh (Scaffold) & sub-widget khusus role
@@ -63,10 +63,11 @@ lib/
     │
     ├── admin/                                     # Khusus Pengelola Fasilitas Kampus
     │   ├── widgets/
-    │   │   └── admin_report_actions.dart          # Dialog Tolak, Bottom Sheet Verifikasi/SLA & Pilih Teknisi + ResolutionActionBar
+    │   │   ├── admin_report_actions.dart          # Dialog Tolak, Bottom Sheet Verifikasi/SLA & Pilih Teknisi + ResolutionActionBar
+    │   │   └── dashboard_hero_illustration.dart   # Ilustrasi hero khusus header AdminDashboardScreen
     │   ├── admin_main_screen.dart                 # Shell utama dengan IndexedStack & BottomNavbar tab Admin
     │   ├── admin_dashboard_screen.dart            # Statistik tiket, monitoring kepatuhan SLA, & menu kelola
-    │   ├── kelola_laporan_screen.dart             # Daftar laporan masuk untuk verifikasi, tolak, & pilih teknisi
+    │   ├── kelola_laporan_screen.dart             # Daftar laporan masuk untuk filter & navigasi ke detail/verifikasi
     │   ├── kelola_aset_screen.dart                # Daftar master aset, filter lokasi & kategori, & pintasan QR
     │   ├── tambah_aset_screen.dart                # Form tambah aset satuan & batch multi-item (#) per ruangan
     │   ├── detail_aset_screen.dart                # Detail aset, stiker QR Code (Simpan/Bagikan), edit, hapus, & pintasan riwayat
@@ -103,18 +104,21 @@ Satu-satunya lapisan yang boleh memanggil `FirebaseFirestore`, `FirebaseAuth`, a
 
 * File di `screens/` cukup memanggil *singleton instance* dari `services/` (misalnya `ReportService.instance.streamReportsByPelapor(uid)`) dan menerima data yang sudah berbentuk `Model` atau `List<Model>`.
 
-
-
 ### `widgets/`
 
-Berisi komponen UI tanpa `Scaffold` yang digunakan di lebih dari satu halaman atau lintas role—contohnya `ReportCard` yang dipakai di daftar laporan semua role, `Base64ImageViewer` untuk render foto, dan `ResolutionActionBar` untuk tombol serta dialog **Konfirmasi Selesai / Belum Beres** yang dipakai bersama oleh Pelapor dan Admin.
+Berisi komponen UI tanpa `Scaffold` yang digunakan di lebih dari satu halaman atau lintas role:
+
+* **`status_badge.dart`:** Menyediakan `StatusBadge`, `PriorityBadge`, `ReportBadgeChip`, serta helper warna terpusat untuk `ReportStatus` dan `ReportPriority`.
+* **`report_card.dart`:** Kartu ringkasan laporan reusable untuk daftar tiket semua role (`ReportCard`), peringatan *Overdue SLA* (`ReportCard.overdue`), dan aktivitas terbaru (`ReportCard.activity`).
+* **`resolution_action_bar.dart`:** Tombol serta dialog **Konfirmasi Selesai / Belum Beres** yang dipakai bersama oleh Pelapor dan Admin.
+* **`bottom_navbar.dart`**, **`sla_indicator.dart`**, & **`base64_image_viewer.dart`:** Navigasi bawah lintas role, indikator SLA, dan tampilan gambar Base64.
 
 ### `screens/`
 
 Berisi tampilan halaman penuh (`Scaffold`). Dikelompokkan berdasarkan aktor pengguna agar setiap anggota tim bisa fokus mengerjakan foldernya masing-masing tanpa saling menimpa file.
 
 * **Pola Shell `*MainScreen` & `IndexedStack`:** Setiap role memiliki satu halaman induk (`PelaporMainScreen`, `AdminMainScreen`, dan `TeknisiMainScreen`) yang memegang `Scaffold`, `BottomNavbar`, dan `IndexedStack`. Keempat halaman tab utama (*Beranda*, *Riwayat/Tiket/Tugas*, *Notifikasi*, *Profil*) **tidak memasang `bottomNavigationBar` sendiri** agar navbar tetap diam di tempat (tidak ikut berkedip/tergeser) saat berpindah tab dan `ProfileScreen` dapat dipakai bersama lintas role tanpa duplikasi kode.
-* **Pola Pemisahan Aksi `DetailLaporanScreen` per Role:** Halaman `screens/shared/detail_laporan_screen.dart` hanya menangani struktur konten yang seragam untuk semua role (header aset, status & SLA, foto sebelum/sesudah dengan *zoom*, tombol riwayat aset, dan timeline status). Seluruh tombol aksi *sticky bottom bar* beserta modal/dialog khususnya dipisahkan ke `screens/<role>/widgets/*_report_actions.dart` (`pelapor_report_actions.dart`, `admin_report_actions.dart`, `teknisi_report_actions.dart`) agar file utama tetap ringkas dan minim *merge conflict* saat tiap penanggung jawab role menyambungkan aksi ke `ReportService`.
+* **Pola Pemisahan Sub-Widget & Aksi per Role (`screens/<role>/widgets/`):** Halaman `screens/shared/detail_laporan_screen.dart` hanya menangani struktur konten yang seragam untuk semua role (header aset, status & SLA, foto sebelum/sesudah dengan *zoom*, tombol riwayat aset, dan timeline status). Seluruh tombol aksi *sticky bottom bar* beserta modal/dialog khususnya dipisahkan ke `screens/<role>/widgets/*_report_actions.dart` (`pelapor_report_actions.dart`, `admin_report_actions.dart`, `teknisi_report_actions.dart`), dan sub-widget visual khusus satu role (seperti `dashboard_hero_illustration.dart`) juga diletakkan di subfolder `widgets/` milik role terkait agar file utama tetap ringkas dan minim *merge conflict*.
 * **Pemindai QR Lintas Role (`screens/shared/scan_qr_screen.dart`):** Satu halaman pemindai kamera bersama yang mendukung mode pemindaian berdasarkan peran pemanggil (Pelapor memindai `ASSET:<id>` untuk melapor, Admin memindai `USER:<uid>` untuk aktivasi teknisi maupun `ASSET:<id>` untuk cek histori aset, dan Teknisi memindai `ASSET:<id>` untuk mengakses riwayat & tiket fasilitas di lapangan).
 
 ## 3. Alur Inti & Skenario Lintas Role
@@ -188,8 +192,8 @@ Proyek ini menggunakan **4 koleksi sejajar (*root collections*)** tanpa *subcoll
 
 1. **Penamaan File & Variabel:**
    * Nama file halaman penuh wajib `snake_case`, menyertakan peran/fungsinya, dan berakhiran `_screen.dart` untuk seluruh halaman di `screens/` (contoh: `pelapor_home_screen.dart`, `history_aset_screen.dart`, `detail_aset_screen.dart`).
-   * Komponen sub-UI khusus role yang berada di `screens/<role>/widgets/` **tidak** memakai akhiran `_screen.dart`, melainkan akhiran sesuai fungsinya (contoh: `admin_report_actions.dart`, `pelapor_report_actions.dart`, `teknisi_report_actions.dart`).
-   * Nama *class* wajib `PascalCase` sesuai nama file (contoh: `PelaporHomeScreen`, `HistoryAssetScreen`, `AdminReportActions`).
+   * Komponen sub-UI khusus role yang berada di `screens/<role>/widgets/` **tidak** memakai akhiran `_screen.dart`, melainkan akhiran sesuai fungsinya (contoh: `admin_report_actions.dart`, `pelapor_report_actions.dart`, `teknisi_report_actions.dart`, `dashboard_hero_illustration.dart`).
+   * Nama *class* wajib `PascalCase` sesuai nama file (contoh: `PelaporHomeScreen`, `HistoryAssetScreen`, `AdminReportActions`, `ReportCard`).
 2. **Alur Branch & Commit:**
    * Jangan *push* fitur setengah jadi langsung ke `main`.
    * Buat *branch* baru dari `main` sesuai tugas: `feature/pelapor-scan-qr`, `feature/admin-verifikasi`, `fix/login-error`, atau `chore/update-docs`.

@@ -6,9 +6,10 @@ import 'package:tubes_pemob/models/report_model.dart';
 import 'package:tubes_pemob/models/user_model.dart';
 import 'package:tubes_pemob/screens/shared/detail_laporan_screen.dart';
 import 'package:tubes_pemob/services/report_service.dart';
+import 'package:tubes_pemob/widgets/report_card.dart';
 
 class KelolaLaporanScreen extends StatefulWidget {
-  /// Opsional: tampilkan tombol kembali jika dibuka lewat `Navigator.push`
+  /// Tampilkan tombol kembali jika dibuka lewat `Navigator.push`
   /// (biarkan `false` saat dipakai sebagai tab di `AdminMainScreen`).
   final bool showBackButton;
 
@@ -53,10 +54,9 @@ class _KelolaLaporanScreenState extends State<KelolaLaporanScreen> {
     final trimmed = assetLokasi.trim();
     if (trimmed.isEmpty) return '';
     final separatorIndex = trimmed.indexOf(' - ');
-    if (separatorIndex != -1) {
-      return trimmed.substring(0, separatorIndex).trim();
-    }
-    return trimmed;
+    return separatorIndex != -1
+        ? trimmed.substring(0, separatorIndex).trim()
+        : trimmed;
   }
 
   List<String> _buildBuildingOptions(List<ReportModel> reports) {
@@ -145,46 +145,6 @@ class _KelolaLaporanScreenState extends State<KelolaLaporanScreen> {
         ),
       ),
     );
-  }
-
-  String _formatDate(DateTime date) {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'Mei',
-      'Jun',
-      'Jul',
-      'Agu',
-      'Sep',
-      'Okt',
-      'Nov',
-      'Des',
-    ];
-    final day = date.day.toString().padLeft(2, '0');
-    final month = months[date.month - 1];
-    final hour = date.hour.toString().padLeft(2, '0');
-    final minute = date.minute.toString().padLeft(2, '0');
-    return '$day $month ${date.year}, $hour:$minute';
-  }
-
-  String _slaShortText(ReportModel report) {
-    final deadline = report.deadlineAt;
-    if (deadline == null || report.isClosed) return '';
-
-    final now = DateTime.now();
-    if (report.isOverdue) {
-      final diff = now.difference(deadline);
-      if (diff.inDays >= 1) return 'Lewat ${diff.inDays}h';
-      if (diff.inHours >= 1) return 'Lewat ${diff.inHours}j';
-      return 'Overdue';
-    }
-
-    final diff = deadline.difference(now);
-    if (diff.inDays >= 1) return 'SLA ${diff.inDays}h';
-    if (diff.inHours >= 1) return 'SLA ${diff.inHours}j';
-    return 'SLA <1j';
   }
 
   @override
@@ -306,13 +266,11 @@ class _KelolaLaporanScreenState extends State<KelolaLaporanScreen> {
                             ),
                             itemCount: filteredReports.length,
                             separatorBuilder: (_, __) =>
-                                const SizedBox(height: 12),
+                                const SizedBox(height: 10),
                             itemBuilder: (context, index) {
                               final report = filteredReports[index];
-                              return _AdminReportCard(
+                              return ReportCard(
                                 report: report,
-                                formattedDate: _formatDate(report.createdAt),
-                                slaShortText: _slaShortText(report),
                                 onTap: () => _openReportDetail(report),
                               );
                             },
@@ -715,299 +673,6 @@ class _KelolaLaporanScreenState extends State<KelolaLaporanScreen> {
               ),
             ],
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _AdminReportCard extends StatelessWidget {
-  final ReportModel report;
-  final String formattedDate;
-  final String slaShortText;
-  final VoidCallback onTap;
-
-  const _AdminReportCard({
-    required this.report,
-    required this.formattedDate,
-    required this.slaShortText,
-    required this.onTap,
-  });
-
-  ({Color bg, Color text}) _statusColors(ReportStatus status) {
-    switch (status) {
-      case ReportStatus.reported:
-        return (bg: AppColors.inputFill, text: AppColors.textSecondary);
-      case ReportStatus.verified:
-      case ReportStatus.assigned:
-        return (bg: AppColors.statusDoneBg, text: AppColors.primaryBlue);
-      case ReportStatus.inProgress:
-        return (
-          bg: AppColors.statusProcessBg,
-          text: AppColors.statusProcessText,
-        );
-      case ReportStatus.resolved:
-        return (
-          bg: AppColors.statusSuccessBg,
-          text: AppColors.statusSuccessText,
-        );
-      case ReportStatus.rejected:
-        return (
-          bg: AppColors.statusRejectedBg,
-          text: AppColors.statusRejectedText,
-        );
-    }
-  }
-
-  ({Color bg, Color text}) _priorityColors(ReportPriority priority) {
-    switch (priority) {
-      case ReportPriority.tinggi:
-        return (
-          bg: AppColors.statusRejectedBg,
-          text: AppColors.statusRejectedText,
-        );
-      case ReportPriority.sedang:
-        return (
-          bg: AppColors.statusProcessBg,
-          text: AppColors.statusProcessText,
-        );
-      case ReportPriority.rendah:
-        return (
-          bg: AppColors.statusSuccessBg,
-          text: AppColors.statusSuccessText,
-        );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final statusStyle = _statusColors(report.status);
-    final hasTeknisi =
-        report.teknisiNama != null && report.teknisiNama!.trim().isNotEmpty;
-
-    return Material(
-      color: AppColors.white,
-      borderRadius: BorderRadius.circular(18),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: Container(
-          padding: const EdgeInsets.all(15),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: report.isOverdue
-                  ? AppColors.statusRejectedText.withValues(alpha: 0.35)
-                  : const Color(0xFFE8EEF6),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF0F172A).withValues(alpha: 0.03),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Baris Badge: Status, Prioritas, Overdue, Konfirmasi, Belum Terdaftar
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: [
-                        _BadgeChip(
-                          label: report.status.label,
-                          bgColor: statusStyle.bg,
-                          textColor: statusStyle.text,
-                        ),
-                        if (report.prioritas != null)
-                          _BadgeChip(
-                            label: report.prioritas!.label,
-                            bgColor: _priorityColors(report.prioritas!).bg,
-                            textColor: _priorityColors(report.prioritas!).text,
-                          ),
-                        if (report.isOverdue)
-                          const _BadgeChip(
-                            label: 'Overdue SLA',
-                            bgColor: AppColors.statusRejectedBg,
-                            textColor: AppColors.statusRejectedText,
-                          ),
-                        if (!report.hasRegisteredAsset)
-                          const _BadgeChip(
-                            label: 'Belum Terdaftar',
-                            bgColor: AppColors.statusProcessBg,
-                            textColor: AppColors.statusProcessText,
-                          ),
-                        if (report.isConfirmed)
-                          const _BadgeChip(
-                            label: 'Terkonfirmasi',
-                            bgColor: AppColors.inputFill,
-                            textColor: AppColors.primaryBlue,
-                          )
-                        else if (report.isAwaitingConfirmation)
-                          const _BadgeChip(
-                            label: 'Menunggu Konfirmasi',
-                            bgColor: AppColors.statusProcessBg,
-                            textColor: AppColors.statusProcessText,
-                          ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  const Icon(
-                    Icons.chevron_right_rounded,
-                    size: 20,
-                    color: AppColors.textSecondary,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 11),
-
-              // Nama Aset & Lokasi
-              Text(
-                report.assetNama,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 14.5,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 3),
-              Row(
-                children: [
-                  const Icon(
-                    Icons.location_on_outlined,
-                    size: 14,
-                    color: AppColors.textSecondary,
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      report.assetLokasi,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ),
-                  if (slaShortText.isNotEmpty) ...[
-                    const SizedBox(width: 8),
-                    Icon(
-                      Icons.access_time_rounded,
-                      size: 13,
-                      color: report.isOverdue
-                          ? AppColors.statusRejectedText
-                          : AppColors.primaryBlue,
-                    ),
-                    const SizedBox(width: 3),
-                    Text(
-                      slaShortText,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: report.isOverdue
-                            ? AppColors.statusRejectedText
-                            : AppColors.primaryBlue,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-              const SizedBox(height: 8),
-
-              // Deskripsi singkat
-              Text(
-                report.deskripsi,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.textPrimary,
-                  height: 1.45,
-                ),
-              ),
-              const SizedBox(height: 11),
-              const Divider(color: AppColors.border, height: 1),
-              const SizedBox(height: 9),
-
-              // Footer: Pelapor • Teknisi & Tanggal
-              Row(
-                children: [
-                  const Icon(
-                    Icons.person_outline_rounded,
-                    size: 14,
-                    color: AppColors.textSecondary,
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      hasTeknisi
-                          ? '${report.pelaporNama} • ${report.teknisiNama}'
-                          : report.pelaporNama,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    formattedDate,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _BadgeChip extends StatelessWidget {
-  final String label;
-  final Color bgColor;
-  final Color textColor;
-
-  const _BadgeChip({
-    required this.label,
-    required this.bgColor,
-    required this.textColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        label,
-        style: GoogleFonts.plusJakartaSans(
-          fontSize: 10.5,
-          fontWeight: FontWeight.w700,
-          color: textColor,
         ),
       ),
     );

@@ -275,7 +275,12 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                                   : null,
                               onTap: () {
                                 setState(() {
-                                  if (_selectedBuilding?.toLowerCase() != building.toLowerCase()) {
+                                  if (_selectedBuilding?.toLowerCase() !=
+                                      building.toLowerCase()) {
+                                    if (_selectedAsset != null) {
+                                      _titleController.clear();
+                                      _detailLocationController.clear();
+                                    }
                                     _selectedAsset = null;
                                   }
                                   _selectedBuilding = building;
@@ -473,7 +478,13 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                               )
                             : null,
                         onTap: () {
-                          setState(() => _selectedAsset = null);
+                          setState(() {
+                            if (_selectedAsset != null) {
+                              _titleController.clear();
+                              _detailLocationController.clear();
+                            }
+                            _selectedAsset = null;
+                          });
                           Navigator.pop(context);
                         },
                       ),

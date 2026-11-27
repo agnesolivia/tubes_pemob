@@ -9,7 +9,7 @@ import 'package:tubes_pemob/models/technician_task_item.dart';
 import 'package:tubes_pemob/models/user_model.dart';
 import 'package:tubes_pemob/screens/admin/widgets/admin_report_actions.dart';
 import 'package:tubes_pemob/screens/pelapor/widgets/pelapor_report_actions.dart';
-import 'package:tubes_pemob/screens/shared/history_asset_screen.dart';
+import 'package:tubes_pemob/screens/shared/history_aset_screen.dart';
 import 'package:tubes_pemob/screens/teknisi/form_penyelesaian_screen.dart';
 import 'package:tubes_pemob/screens/teknisi/widgets/teknisi_report_actions.dart';
 import 'package:tubes_pemob/services/report_service.dart';
@@ -46,9 +46,9 @@ class DetailLaporanScreen extends StatefulWidget {
     this.onHistoryPressed,
     this.onCompletionSubmit,
   }) : assert(
-          reportId != null || initialReport != null || task != null,
-          'Minimal salah satu dari reportId, initialReport, atau task harus diisi.',
-        );
+         reportId != null || initialReport != null || task != null,
+         'Minimal salah satu dari reportId, initialReport, atau task harus diisi.',
+       );
 
   @override
   State<DetailLaporanScreen> createState() => _DetailLaporanScreenState();
@@ -101,8 +101,9 @@ class _DetailLaporanScreenState extends State<DetailLaporanScreen> {
   Uint8List? _decodeBase64(String? raw) {
     if (raw == null || raw.trim().isEmpty) return null;
     try {
-      final cleaned =
-          raw.contains(',') ? raw.split(',').last.trim() : raw.trim();
+      final cleaned = raw.contains(',')
+          ? raw.split(',').last.trim()
+          : raw.trim();
       return base64Decode(cleaned);
     } catch (_) {
       return null;
@@ -233,7 +234,10 @@ class _DetailLaporanScreenState extends State<DetailLaporanScreen> {
                     ),
                     IconButton(
                       onPressed: () => Navigator.pop(dialogContext),
-                      icon: const Icon(Icons.close_rounded, color: Colors.white),
+                      icon: const Icon(
+                        Icons.close_rounded,
+                        color: Colors.white,
+                      ),
                     ),
                   ],
                 ),
@@ -504,9 +508,12 @@ class _DetailLaporanScreenState extends State<DetailLaporanScreen> {
               ),
 
               // 7. HASIL PERBAIKAN (FOTO SESUDAH & CATATAN TEKNISI)
-              if (afterBytes != null ||
-                  (report.catatanTeknisi != null &&
-                      report.catatanTeknisi!.trim().isNotEmpty)) ...[
+              // Hanya tampil saat status resolved agar foto & catatan lama
+              // yang gagal tidak muncul ketika tiket sedang di-reopen.
+              if (report.status == ReportStatus.resolved &&
+                  (afterBytes != null ||
+                      (report.catatanTeknisi != null &&
+                          report.catatanTeknisi!.trim().isNotEmpty))) ...[
                 const SizedBox(height: 20),
                 _buildResolutionSection(
                   afterBytes: afterBytes,
@@ -646,17 +653,17 @@ class _DetailLaporanScreenState extends State<DetailLaporanScreen> {
     final slaBg = report.isOverdue
         ? AppColors.statusRejectedBg
         : report.status == ReportStatus.resolved
-            ? const Color(0xFFE1F7E9)
-            : report.deadlineAt == null
-                ? AppColors.inputFill
-                : const Color(0xFFFFE9E9);
+        ? const Color(0xFFE1F7E9)
+        : report.deadlineAt == null
+        ? AppColors.inputFill
+        : const Color(0xFFFFE9E9);
     final slaColor = report.isOverdue
         ? AppColors.statusRejectedText
         : report.status == ReportStatus.resolved
-            ? const Color(0xFF15803D)
-            : report.deadlineAt == null
-                ? AppColors.textSecondary
-                : const Color(0xFFDC2626);
+        ? const Color(0xFF15803D)
+        : report.deadlineAt == null
+        ? AppColors.textSecondary
+        : const Color(0xFFDC2626);
 
     return Container(
       padding: const EdgeInsets.all(13),
@@ -857,11 +864,6 @@ class _DetailLaporanScreenState extends State<DetailLaporanScreen> {
         _sectionTitle('Detail Laporan'),
         const SizedBox(height: 10),
         _detailRow(
-          icon: Icons.confirmation_number_outlined,
-          label: 'ID Laporan',
-          value: '#${report.id}',
-        ),
-        _detailRow(
           icon: Icons.calendar_today_outlined,
           label: 'Tanggal Lapor',
           value: _formatDate(report.createdAt),
@@ -993,11 +995,7 @@ class _DetailLaporanScreenState extends State<DetailLaporanScreen> {
       children: [
         _sectionTitle(title),
         const SizedBox(height: 11),
-        _buildPhotoContainer(
-          bytes: bytes,
-          title: title,
-          emptyText: emptyText,
-        ),
+        _buildPhotoContainer(bytes: bytes, title: title, emptyText: emptyText),
       ],
     );
   }

@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:tubes_pemob/constants/app_colors.dart';
 import 'package:tubes_pemob/models/user_model.dart';
-import 'package:tubes_pemob/screens/shared/history_asset_screen.dart';
+import 'package:tubes_pemob/screens/shared/history_aset_screen.dart';
 import 'package:tubes_pemob/services/asset_service.dart';
 import 'package:tubes_pemob/services/auth_service.dart';
 
@@ -247,7 +247,9 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
     }
 
     if (rawValue.startsWith(_assetPrefix)) {
-      await _showErrorAndResume('Ini adalah QR Aset, bukan QR Profil Pengguna.');
+      await _showErrorAndResume(
+        'Ini adalah QR Aset, bukan QR Profil Pengguna.',
+      );
       return;
     }
 
@@ -399,9 +401,7 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
               ),
               child: Text(
                 'Jadikan Teknisi',
-                style: GoogleFonts.plusJakartaSans(
-                  fontWeight: FontWeight.w700,
-                ),
+                style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
               ),
             ),
           ],
@@ -433,16 +433,16 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
   }
 
   String get _appBarTitle => switch (widget.mode) {
-        ScanQrMode.asset => 'Scan QR Aset',
-        ScanQrMode.user => 'Scan QR Pengguna',
-        ScanQrMode.all => 'Scan QR SnaFix',
-      };
+    ScanQrMode.asset => 'Scan QR Aset',
+    ScanQrMode.user => 'Scan QR Pengguna',
+    ScanQrMode.all => 'Scan QR SnaFix',
+  };
 
   String get _defaultHintText => switch (widget.mode) {
-        ScanQrMode.asset => 'Arahkan kamera ke stiker QR fasilitas kampus',
-        ScanQrMode.user => 'Arahkan kamera ke QR Profil pelapor',
-        ScanQrMode.all => 'Pindai QR Fasilitas kampus atau QR Profil pengguna',
-      };
+    ScanQrMode.asset => 'Arahkan kamera ke stiker QR fasilitas kampus',
+    ScanQrMode.user => 'Arahkan kamera ke QR Profil pelapor',
+    ScanQrMode.all => 'Pindai QR Fasilitas kampus atau QR Profil pengguna',
+  };
 
   @override
   Widget build(BuildContext context) {

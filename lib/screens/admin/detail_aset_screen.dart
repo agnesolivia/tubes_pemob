@@ -11,7 +11,7 @@ import 'package:tubes_pemob/constants/app_colors.dart';
 import 'package:tubes_pemob/models/asset_model.dart';
 import 'package:tubes_pemob/models/user_model.dart';
 import 'package:tubes_pemob/screens/admin/kelola_aset_screen.dart';
-import 'package:tubes_pemob/screens/shared/history_asset_screen.dart';
+import 'package:tubes_pemob/screens/shared/history_aset_screen.dart';
 import 'package:tubes_pemob/services/asset_service.dart';
 
 class DetailAsetScreen extends StatefulWidget {
@@ -82,10 +82,8 @@ class _DetailAsetScreenState extends State<DetailAsetScreen> {
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _EditAssetSheet(
-        asset: currentAsset,
-        allAssets: allAssets,
-      ),
+      builder: (_) =>
+          _EditAssetSheet(asset: currentAsset, allAssets: allAssets),
     );
 
     if (updated == true && mounted) {
@@ -137,9 +135,7 @@ class _DetailAsetScreenState extends State<DetailAsetScreen> {
               ),
               child: Text(
                 'Hapus',
-                style: GoogleFonts.plusJakartaSans(
-                  fontWeight: FontWeight.w700,
-                ),
+                style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
               ),
             ),
           ],
@@ -191,9 +187,10 @@ class _DetailAsetScreenState extends State<DetailAsetScreen> {
   }
 
   String _safeFileName(AssetModel asset) {
-    final sanitizedName = asset.nama
-        .trim()
-        .replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_');
+    final sanitizedName = asset.nama.trim().replaceAll(
+      RegExp(r'[^A-Za-z0-9_-]'),
+      '_',
+    );
     return 'QR_${sanitizedName}_${asset.id.substring(0, 5)}.png';
   }
 
@@ -610,9 +607,7 @@ class _DetailAsetScreenState extends State<DetailAsetScreen> {
           _detailRow(
             icon: Icons.meeting_room_outlined,
             label: 'Ruangan',
-            value: asset.hasRuangan
-                ? asset.ruangan
-                : 'Tidak ada (Area gedung)',
+            value: asset.hasRuangan ? asset.ruangan : 'Tidak ada (Area gedung)',
             isMuted: !asset.hasRuangan,
           ),
           const Divider(color: AppColors.border, height: 1),
@@ -655,8 +650,9 @@ class _DetailAsetScreenState extends State<DetailAsetScreen> {
                 fontSize: 12.5,
                 fontWeight: isMuted ? FontWeight.w500 : FontWeight.w700,
                 fontStyle: isMuted ? FontStyle.italic : FontStyle.normal,
-                color:
-                    isMuted ? AppColors.textSecondary : AppColors.textPrimary,
+                color: isMuted
+                    ? AppColors.textSecondary
+                    : AppColors.textPrimary,
               ),
             ),
           ),
@@ -670,10 +666,7 @@ class _EditAssetSheet extends StatefulWidget {
   final AssetModel asset;
   final List<AssetModel> allAssets;
 
-  const _EditAssetSheet({
-    required this.asset,
-    required this.allAssets,
-  });
+  const _EditAssetSheet({required this.asset, required this.allAssets});
 
   @override
   State<_EditAssetSheet> createState() => _EditAssetSheetState();
@@ -758,8 +751,9 @@ class _EditAssetSheetState extends State<_EditAssetSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final gedungOptions =
-        AssetService.instance.extractUniqueGedung(widget.allAssets);
+    final gedungOptions = AssetService.instance.extractUniqueGedung(
+      widget.allAssets,
+    );
     final currentGedung = _gedungController.text.trim();
     final ruanganOptions = currentGedung.isEmpty
         ? const <String>[]
@@ -885,8 +879,7 @@ class _EditAssetSheetState extends State<_EditAssetSheet> {
                       setState(() {});
                     },
                     onChanged: () {
-                      _lastGedung =
-                          _gedungController.text.trim().toLowerCase();
+                      _lastGedung = _gedungController.text.trim().toLowerCase();
                       setState(() {});
                     },
                   ),
@@ -1012,48 +1005,44 @@ class _EditAssetSheetState extends State<_EditAssetSheet> {
           onSelected: (selection) {
             onSelected?.call(selection);
           },
-          fieldViewBuilder: (
-            context,
-            fieldController,
-            fieldFocusNode,
-            onFieldSubmitted,
-          ) {
-            return TextFormField(
-              controller: fieldController,
-              focusNode: fieldFocusNode,
-              textCapitalization: TextCapitalization.words,
-              onChanged: (_) => onChanged?.call(),
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 12.5,
-                color: AppColors.textPrimary,
-              ),
-              decoration: _decoration(
-                hint: hint,
-                icon: icon,
-                suffixIcon: fieldController.text.isNotEmpty
-                    ? IconButton(
-                        onPressed: () {
-                          fieldController.clear();
-                          fieldFocusNode.requestFocus();
-                          onChanged?.call();
-                        },
-                        icon: const Icon(
-                          Icons.close_rounded,
-                          size: 18,
-                          color: AppColors.textSecondary,
-                        ),
-                      )
-                    : (suggestions.isNotEmpty
-                        ? const Icon(
-                            Icons.keyboard_arrow_down_rounded,
-                            color: AppColors.textSecondary,
-                            size: 20,
+          fieldViewBuilder:
+              (context, fieldController, fieldFocusNode, onFieldSubmitted) {
+                return TextFormField(
+                  controller: fieldController,
+                  focusNode: fieldFocusNode,
+                  textCapitalization: TextCapitalization.words,
+                  onChanged: (_) => onChanged?.call(),
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12.5,
+                    color: AppColors.textPrimary,
+                  ),
+                  decoration: _decoration(
+                    hint: hint,
+                    icon: icon,
+                    suffixIcon: fieldController.text.isNotEmpty
+                        ? IconButton(
+                            onPressed: () {
+                              fieldController.clear();
+                              fieldFocusNode.requestFocus();
+                              onChanged?.call();
+                            },
+                            icon: const Icon(
+                              Icons.close_rounded,
+                              size: 18,
+                              color: AppColors.textSecondary,
+                            ),
                           )
-                        : null),
-              ),
-              validator: validator,
-            );
-          },
+                        : (suggestions.isNotEmpty
+                              ? const Icon(
+                                  Icons.keyboard_arrow_down_rounded,
+                                  color: AppColors.textSecondary,
+                                  size: 20,
+                                )
+                              : null),
+                  ),
+                  validator: validator,
+                );
+              },
           optionsViewBuilder: (context, onOptionSelected, options) {
             return Align(
               alignment: openDirection == OptionsViewOpenDirection.up
@@ -1075,10 +1064,8 @@ class _EditAssetSheetState extends State<_EditAssetSheet> {
                     padding: const EdgeInsets.symmetric(vertical: 4),
                     shrinkWrap: true,
                     itemCount: options.length,
-                    separatorBuilder: (_, __) => const Divider(
-                      height: 1,
-                      color: AppColors.border,
-                    ),
+                    separatorBuilder: (_, __) =>
+                        const Divider(height: 1, color: AppColors.border),
                     itemBuilder: (context, index) {
                       final option = options.elementAt(index);
                       return InkWell(
@@ -1146,10 +1133,7 @@ class _EditAssetSheetState extends State<_EditAssetSheet> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(13),
-        borderSide: const BorderSide(
-          color: AppColors.primaryBlue,
-          width: 1.5,
-        ),
+        borderSide: const BorderSide(color: AppColors.primaryBlue, width: 1.5),
       ),
     );
   }

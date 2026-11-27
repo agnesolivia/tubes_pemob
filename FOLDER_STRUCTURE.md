@@ -49,7 +49,7 @@ lib/
     ├── shared/                                    # Halaman lintas role (dipakai 2 atau 3 role sekaligus)
     │   ├── scan_qr_screen.dart                    # Pemindai kamera QR Code lintas role (ASSET:<id> & USER:<uid>)
     │   ├── detail_laporan_screen.dart             # Struktur inti detail tiket lintas role (memanggil *_report_actions sesuai role)
-    │   ├── history_asset_screen.dart              # Info aset/ruangan, filter, & rekam jejak kerusakan real-time
+    │   ├── history_aset_screen.dart               # Info aset/ruangan, filter, & rekam jejak kerusakan real-time
     │   ├── notification_screen.dart               # Daftar notifikasi real-time lintas role
     │   └── profile_screen.dart                    # Profil akun, edit nama & foto, QR Code profil (USER:<uid>), & logout
     │
@@ -147,10 +147,10 @@ Saat Admin memverifikasi tiket dan memilih prioritas, sistem otomatis mengisi fi
 
 ```text
 pelapor_home_screen
-  ├──► [Scan QR]      ──► shared/scan_qr_screen ──► history_asset_screen ──► form_pengaduan_screen (aset terisi)
+  ├──► [Scan QR]      ──► shared/scan_qr_screen ──► history_aset_screen ──► form_pengaduan_screen (aset terisi)
   └──► [Lapor Manual] ─────────────────────────────────────────────────────► form_pengaduan_screen (pilih dropdown)
 
-admin/detail_aset_screen ──► [Riwayat Kerusakan Aset] ──► history_asset_screen ◄──► detail_laporan_screen
+admin/detail_aset_screen ──► [Riwayat Kerusakan Aset] ──► history_aset_screen ◄──► detail_laporan_screen
                                                                (fromAssetHistory: true mencegah loop stack)
 ```
 
@@ -187,7 +187,7 @@ Proyek ini menggunakan **4 koleksi sejajar (*root collections*)** tanpa *subcoll
 ## 5. Aturan Kolaborasi & Git Tim
 
 1. **Penamaan File & Variabel:**
-   * Nama file halaman penuh wajib `snake_case`, menyertakan peran/fungsinya, dan berakhiran `_screen.dart` untuk seluruh halaman di `screens/` (contoh: `pelapor_home_screen.dart`, `history_asset_screen.dart`, `detail_aset_screen.dart`).
+   * Nama file halaman penuh wajib `snake_case`, menyertakan peran/fungsinya, dan berakhiran `_screen.dart` untuk seluruh halaman di `screens/` (contoh: `pelapor_home_screen.dart`, `history_aset_screen.dart`, `detail_aset_screen.dart`).
    * Komponen sub-UI khusus role yang berada di `screens/<role>/widgets/` **tidak** memakai akhiran `_screen.dart`, melainkan akhiran sesuai fungsinya (contoh: `admin_report_actions.dart`, `pelapor_report_actions.dart`, `teknisi_report_actions.dart`).
    * Nama *class* wajib `PascalCase` sesuai nama file (contoh: `PelaporHomeScreen`, `HistoryAssetScreen`, `AdminReportActions`).
 2. **Alur Branch & Commit:**

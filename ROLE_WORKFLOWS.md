@@ -68,7 +68,7 @@ Satu halaman bersama untuk melihat detail tiket (`ReportModel`), berisi informas
 
   * **Pencegahan Loop Stack:** `DetailLaporanScreen` menerima parameter opsional `bool fromAssetHistory = false`. Apabila halaman detail dibuka dari `HistoryAssetScreen`, kirim `fromAssetHistory: true` sehingga saat pengguna mengetuk tombol **Lihat Riwayat Aset**, aplikasi langsung memanggil `Navigator.pop(context)` untuk kembali ke halaman riwayat sebelumnya tanpa menumpuk stack (`Riwayat` $\rightarrow$ `Detail` $\rightarrow$ `Riwayat`). Jika dibuka dari halaman lain (`HistoryLaporanScreen`, `NotificationScreen`, `KelolaLaporanScreen`, atau `DaftarTugasScreen`), biarkan default `false` agar tetap membuka `HistoryAssetScreen` baru.
 
-### D. Riwayat Aset / Ruangan (`history_asset_screen.dart`)
+### D. Riwayat Aset / Ruangan (`history_aset_screen.dart`)
 
 Halaman ini menerima parameter `assetId` yang bersifat *nullable* (`String?`), `initialAsset` opsional, `userRole`, beserta data *fallback* (`fallbackNama` dan `fallbackLokasi`) untuk menangani dua skenario berikut:
 
@@ -399,7 +399,7 @@ Agar seluruh anggota tim bisa mengerjakan tugas secara bersamaan tanpa saling me
 
 * [x] `screens/shared/detail_laporan_screen.dart` (Struktur inti detail tiket lintas role, *zoom* foto, timeline status, & anti-loop `fromAssetHistory` selesai; tombol aksi per role dipisah ke `screens/<role>/widgets/*_report_actions.dart` dalam mode *UI-only*)
 
-* [x] `screens/shared/history_asset_screen.dart` (Tersambung Firestore *real-time*, filter status, navigasi ke `DetailLaporanScreen` & `TambahAsetScreen` *pre-filled*; sisa `// TODO` sambung tombol Pelapor ke `FormPengaduanScreen`)
+* [x] `screens/shared/history_aset_screen.dart` (Tersambung Firestore *real-time*, filter status, navigasi ke `DetailLaporanScreen` & `TambahAsetScreen` *pre-filled*; sisa `// TODO` sambung tombol Pelapor ke `FormPengaduanScreen`)
 
 * [ ] `screens/shared/notification_screen.dart` (Daftar notifikasi *real-time* & tandai sudah dibaca)
 

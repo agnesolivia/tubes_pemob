@@ -31,6 +31,7 @@ class KelolaAsetScreen extends StatefulWidget {
 
 class _KelolaAsetScreenState extends State<KelolaAsetScreen> {
   final TextEditingController _searchController = TextEditingController();
+  late final Stream<List<AssetModel>> _assetsStream;
 
   String _selectedBuilding = 'Semua Gedung';
   String _selectedRoom = 'Semua Ruangan';
@@ -45,6 +46,12 @@ class _KelolaAsetScreenState extends State<KelolaAsetScreen> {
     'Kelistrikan',
     'Lainnya',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _assetsStream = AssetService.instance.streamAllAssets();
+  }
 
   @override
   void dispose() {
@@ -218,14 +225,23 @@ class _KelolaAsetScreenState extends State<KelolaAsetScreen> {
             icon: const Icon(Icons.arrow_back_rounded),
             onPressed: () => Navigator.pop(context),
           ),
-          actions: [
-            IconButton(
-              onPressed: _openTambahAset,
-              tooltip: 'Tambah Aset',
-              icon: const Icon(Icons.add_rounded, size: 28),
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: _openTambahAset,
+          backgroundColor: AppColors.primaryBlue,
+          foregroundColor: AppColors.white,
+          elevation: 3,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          icon: const Icon(Icons.add_rounded, size: 22),
+          label: Text(
+            'Tambah Aset',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
             ),
-            const SizedBox(width: 6),
-          ],
+          ),
         ),
         body: SafeArea(
           top: false,
@@ -236,7 +252,7 @@ class _KelolaAsetScreenState extends State<KelolaAsetScreen> {
               borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
             ),
             child: StreamBuilder<List<AssetModel>>(
-              stream: AssetService.instance.streamAllAssets(),
+              stream: _assetsStream,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting &&
                     !snapshot.hasData) {
@@ -334,7 +350,7 @@ class _KelolaAsetScreenState extends State<KelolaAsetScreen> {
                                 20,
                                 4,
                                 20,
-                                26,
+                                96,
                               ),
                               itemCount: filteredAssets.length,
                               separatorBuilder: (_, __) =>
@@ -629,7 +645,7 @@ class _KelolaAsetScreenState extends State<KelolaAsetScreen> {
   Widget _buildEmptyState({required bool isFiltering}) {
     return Center(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(26),
+        padding: const EdgeInsets.fromLTRB(26, 26, 26, 96),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -672,8 +688,8 @@ class _KelolaAsetScreenState extends State<KelolaAsetScreen> {
                 height: 1.5,
               ),
             ),
-            const SizedBox(height: 20),
-            if (isFiltering)
+            if (isFiltering) ...[
+              const SizedBox(height: 20),
               OutlinedButton.icon(
                 onPressed: _resetAllFilters,
                 icon: const Icon(Icons.restart_alt_rounded, size: 18),
@@ -695,31 +711,8 @@ class _KelolaAsetScreenState extends State<KelolaAsetScreen> {
                     borderRadius: BorderRadius.circular(25),
                   ),
                 ),
-              )
-            else
-              ElevatedButton.icon(
-                onPressed: _openTambahAset,
-                icon: const Icon(Icons.add_rounded, size: 20),
-                label: Text(
-                  'Tambah Aset',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryBlue,
-                  foregroundColor: AppColors.white,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 22,
-                    vertical: 12,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(25),
-                  ),
-                ),
               ),
+            ],
           ],
         ),
       ),

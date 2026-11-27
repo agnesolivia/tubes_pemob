@@ -127,6 +127,7 @@ class AuthService {
       if (firebaseUser != null) {
         final docRef = _usersRef.doc(firebaseUser.uid);
         final docSnapshot = await docRef.get();
+        final googlePhotoUrl = firebaseUser.photoURL?.trim();
 
         if (!docSnapshot.exists) {
           final fallbackName = (firebaseUser.displayName != null &&
@@ -140,9 +141,24 @@ class AuthService {
             email: firebaseUser.email ?? '',
             role: UserRole.pelapor,
             createdAt: DateTime.now(),
+            photoUrl: (googlePhotoUrl != null && googlePhotoUrl.isNotEmpty)
+                ? googlePhotoUrl
+                : null,
           );
 
           await docRef.set(newUser.toMap());
+        } else {
+          // Backfill photoUrl untuk akun Google lama yang belum memiliki field photoUrl
+          // (tidak menimpa jika user sudah upload photoBase64 atau pernah menghapus foto).
+          final data = docSnapshot.data() as Map<String, dynamic>? ?? {};
+          final existingBase64 = (data['photoBase64'] as String?)?.trim() ?? '';
+          final hasPhotoUrlField = data.containsKey('photoUrl');
+          if (existingBase64.isEmpty &&
+              !hasPhotoUrlField &&
+              googlePhotoUrl != null &&
+              googlePhotoUrl.isNotEmpty) {
+            await docRef.update({'photoUrl': googlePhotoUrl});
+          }
         }
       }
 
@@ -189,6 +205,8 @@ class AuthService {
     if (photoBase64 == null || photoBase64.isEmpty) {
       await _usersRef.doc(uid).update({
         'photoBase64': FieldValue.delete(),
+        // Simpan string kosong agar foto Google tidak kembali otomatis saat login ulang
+        'photoUrl': '',
       });
       try {
         await _firebaseAuth.currentUser?.updatePhotoURL(null);

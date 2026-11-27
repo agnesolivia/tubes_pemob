@@ -159,8 +159,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   },
                 ),
                 if ((user.photoBase64?.isNotEmpty ?? false) ||
-                    (AuthService.instance.currentUser?.photoURL?.isNotEmpty ??
-                        false)) ...[
+                    (user.photoUrl?.isNotEmpty ?? false)) ...[
                   const Divider(height: 1, color: Color(0xFFF1F5F9)),
                   ListTile(
                     contentPadding: const EdgeInsets.symmetric(horizontal: 4),
@@ -705,7 +704,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       );
                     }
 
-                    final photoUrl = AuthService.instance.currentUser?.photoURL;
+                    final photoUrl = user.photoUrl;
                     if (photoUrl != null && photoUrl.isNotEmpty) {
                       return ClipOval(
                         child: Image.network(

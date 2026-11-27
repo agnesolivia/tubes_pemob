@@ -24,6 +24,7 @@ class UserModel {
   final UserRole role;
   final DateTime createdAt;
   final String? photoBase64;
+  final String? photoUrl;
 
   const UserModel({
     required this.uid,
@@ -32,6 +33,7 @@ class UserModel {
     this.role = UserRole.pelapor,
     required this.createdAt,
     this.photoBase64,
+    this.photoUrl,
   });
 
   bool get isPelapor => role == UserRole.pelapor;
@@ -40,13 +42,18 @@ class UserModel {
 
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>? ?? {};
+    final rawBase64 = (data['photoBase64'] as String?)?.trim();
+    final rawUrl = (data['photoUrl'] as String?)?.trim();
+
     return UserModel(
       uid: doc.id,
       nama: data['nama'] as String? ?? '',
       email: data['email'] as String? ?? '',
       role: UserRole.fromString(data['role'] as String?),
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      photoBase64: data['photoBase64'] as String?,
+      photoBase64:
+          (rawBase64 != null && rawBase64.isNotEmpty) ? rawBase64 : null,
+      photoUrl: (rawUrl != null && rawUrl.isNotEmpty) ? rawUrl : null,
     );
   }
 
@@ -56,7 +63,9 @@ class UserModel {
       'email': email,
       'role': role.value,
       'createdAt': Timestamp.fromDate(createdAt),
-      if (photoBase64 != null) 'photoBase64': photoBase64,
+      if (photoBase64 != null && photoBase64!.isNotEmpty)
+        'photoBase64': photoBase64,
+      if (photoUrl != null && photoUrl!.isNotEmpty) 'photoUrl': photoUrl,
     };
   }
 
@@ -67,6 +76,7 @@ class UserModel {
     UserRole? role,
     DateTime? createdAt,
     String? photoBase64,
+    String? photoUrl,
   }) {
     return UserModel(
       uid: uid ?? this.uid,
@@ -75,6 +85,7 @@ class UserModel {
       role: role ?? this.role,
       createdAt: createdAt ?? this.createdAt,
       photoBase64: photoBase64 ?? this.photoBase64,
+      photoUrl: photoUrl ?? this.photoUrl,
     );
   }
 }

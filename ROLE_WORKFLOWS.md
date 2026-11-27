@@ -422,6 +422,8 @@ Agar seluruh anggota tim bisa mengerjakan tugas secara bersamaan tanpa saling me
 
 * [x] `screens/admin/widgets/dashboard_hero_illustration.dart` (Sub-widget ilustrasi hero khusus `AdminDashboardScreen`)
 
+* [x] `screens/admin/widgets/teknisi_cards.dart` & `teknisi_sheets.dart` (Sub-widget kartu, avatar, & *bottom sheet* khusus `KelolaTeknisiScreen`)
+
 * [x] `screens/admin/admin_main_screen.dart` (*Shell* utama dengan `IndexedStack`, `BottomNavbar`, & tab `KelolaLaporanScreen`; sisa ganti placeholder tab Notifikasi)
 
 * [x] `screens/admin/admin_dashboard_screen.dart` (Tersambung `ReportService`: statistik tiket, daftar *Overdue SLA*, & aktivitas terbaru via `ReportCard`)
@@ -434,7 +436,7 @@ Agar seluruh anggota tim bisa mengerjakan tugas secara bersamaan tanpa saling me
 
 * [x] `screens/admin/detail_aset_screen.dart` (Detail aset, edit/hapus data dengan `Autocomplete` lokasi, simpan/bagikan stiker QR Code `ASSET:<id>` berlabel `asset.nama`, & pintasan **Riwayat Kerusakan Aset**)
 
-* [ ] `screens/admin/kelola_teknisi_screen.dart` (*UI-only selesai:* daftar teknisi, pintasan Scan QR Profil, & cabut akses; siap disambungkan ke `AuthService` & `ReportService`)
+* [x] `screens/admin/kelola_teknisi_screen.dart` (Tersambung `AuthService` & `ReportService`: daftar teknisi, beban tiket aktif, ubah role `pelapor` $\leftrightarrow$ `teknisi` via Search Email/Nama atau Scan QR Profil, & cabut akses syarat 0 tiket aktif)
 
 ### Jalur F — Modul Teknisi (`screens/teknisi/`)
 

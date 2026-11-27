@@ -64,7 +64,9 @@ lib/
     ├── admin/                                     # Khusus Pengelola Fasilitas Kampus
     │   ├── widgets/
     │   │   ├── admin_report_actions.dart          # Dialog Tolak, Bottom Sheet Verifikasi/SLA & Pilih Teknisi + ResolutionActionBar
-    │   │   └── dashboard_hero_illustration.dart   # Ilustrasi hero khusus header AdminDashboardScreen
+    │   │   ├── dashboard_hero_illustration.dart   # Ilustrasi hero khusus header AdminDashboardScreen
+    │   │   ├── teknisi_cards.dart                 # Avatar pengguna, kartu teknisi, & kartu kandidat pelapor
+    │   │   └── teknisi_sheets.dart                # Bottom sheet detail/cabut akses & konfirmasi aktivasi teknisi
     │   ├── admin_main_screen.dart                 # Shell utama dengan IndexedStack & BottomNavbar tab Admin
     │   ├── admin_dashboard_screen.dart            # Statistik tiket, monitoring kepatuhan SLA, & menu kelola
     │   ├── kelola_laporan_screen.dart             # Daftar laporan masuk untuk filter & navigasi ke detail/verifikasi
@@ -118,7 +120,7 @@ Berisi komponen UI tanpa `Scaffold` yang digunakan di lebih dari satu halaman at
 Berisi tampilan halaman penuh (`Scaffold`). Dikelompokkan berdasarkan aktor pengguna agar setiap anggota tim bisa fokus mengerjakan foldernya masing-masing tanpa saling menimpa file.
 
 * **Pola Shell `*MainScreen` & `IndexedStack`:** Setiap role memiliki satu halaman induk (`PelaporMainScreen`, `AdminMainScreen`, dan `TeknisiMainScreen`) yang memegang `Scaffold`, `BottomNavbar`, dan `IndexedStack`. Keempat halaman tab utama (*Beranda*, *Riwayat/Tiket/Tugas*, *Notifikasi*, *Profil*) **tidak memasang `bottomNavigationBar` sendiri** agar navbar tetap diam di tempat (tidak ikut berkedip/tergeser) saat berpindah tab dan `ProfileScreen` dapat dipakai bersama lintas role tanpa duplikasi kode.
-* **Pola Pemisahan Sub-Widget & Aksi per Role (`screens/<role>/widgets/`):** Halaman `screens/shared/detail_laporan_screen.dart` hanya menangani struktur konten yang seragam untuk semua role (header aset, status & SLA, foto sebelum/sesudah dengan *zoom*, tombol riwayat aset, dan timeline status). Seluruh tombol aksi *sticky bottom bar* beserta modal/dialog khususnya dipisahkan ke `screens/<role>/widgets/*_report_actions.dart` (`pelapor_report_actions.dart`, `admin_report_actions.dart`, `teknisi_report_actions.dart`), dan sub-widget visual khusus satu role (seperti `dashboard_hero_illustration.dart`) juga diletakkan di subfolder `widgets/` milik role terkait agar file utama tetap ringkas dan minim *merge conflict*.
+* **Pola Pemisahan Sub-Widget & Aksi per Role (`screens/<role>/widgets/`):** Halaman `screens/shared/detail_laporan_screen.dart` hanya menangani struktur konten yang seragam untuk semua role (header aset, status & SLA, foto sebelum/sesudah dengan *zoom*, tombol riwayat aset, dan timeline status). Seluruh tombol aksi *sticky bottom bar* beserta modal/dialog khususnya dipisahkan ke `screens/<role>/widgets/*_report_actions.dart` (`pelapor_report_actions.dart`, `admin_report_actions.dart`, `teknisi_report_actions.dart`). Sub-widget khusus satu role (seperti `dashboard_hero_illustration.dart`, `teknisi_cards.dart`, dan `teknisi_sheets.dart`) juga diletakkan di subfolder `widgets/` milik role terkait agar file halaman utama tetap ringkas dan minim *merge conflict*.
 * **Pemindai QR Lintas Role (`screens/shared/scan_qr_screen.dart`):** Satu halaman pemindai kamera bersama yang mendukung mode pemindaian berdasarkan peran pemanggil (Pelapor memindai `ASSET:<id>` untuk melapor, Admin memindai `USER:<uid>` untuk aktivasi teknisi maupun `ASSET:<id>` untuk cek histori aset, dan Teknisi memindai `ASSET:<id>` untuk mengakses riwayat & tiket fasilitas di lapangan).
 
 ## 3. Alur Inti & Skenario Lintas Role
@@ -179,7 +181,7 @@ Proyek ini menggunakan **4 koleksi sejajar (*root collections*)** tanpa *subcoll
 > **Aturan ID Dokumen (`doc.id` Murni):** Seluruh koleksi tidak menyimpan ulang field ID di dalam isi dokumen; `fromFirestore` langsung mengambilnya dari `doc.id`. Koleksi `users` wajib disimpan menggunakan `.doc(uid).set(...)`, sedangkan koleksi `assets`, `reports`, dan `notifications` menggunakan **Auto-ID Firestore** (`.doc()` / `.add(...)`).
 
 1. **`users`** *(Document ID = `uid` dari Firebase Auth)*
-   * `nama`, `email`, `role` (`'pelapor'` | `'admin'` | `'teknisi'`), `photoBase64` *(opsional, Base64 < 250 KB)*, `createdAt`.
+   * `nama`, `email`, `role` (`'pelapor'` | `'admin'` | `'teknisi'`), `photoBase64` *(opsional, Base64 < 250 KB)*, `photoUrl` *(opsional, URL foto bawaan Google Sign-In)*, `createdAt`.
 2. **`assets`** *(Document ID = Auto-generated Firestore ID; payload QR di-generate dengan prefix `'ASSET:<doc.id>'`)*
    * `nama` *(unik secara case-insensitive per kombinasi `gedung` + `ruangan`, misal `'Kursi#01'`)*, `kategori`, `gedung`, `ruangan`, `createdAt`.
 3. **`reports`** *(Document ID = Auto-generated)*
@@ -192,7 +194,7 @@ Proyek ini menggunakan **4 koleksi sejajar (*root collections*)** tanpa *subcoll
 
 1. **Penamaan File & Variabel:**
    * Nama file halaman penuh wajib `snake_case`, menyertakan peran/fungsinya, dan berakhiran `_screen.dart` untuk seluruh halaman di `screens/` (contoh: `pelapor_home_screen.dart`, `history_aset_screen.dart`, `detail_aset_screen.dart`).
-   * Komponen sub-UI khusus role yang berada di `screens/<role>/widgets/` **tidak** memakai akhiran `_screen.dart`, melainkan akhiran sesuai fungsinya (contoh: `admin_report_actions.dart`, `pelapor_report_actions.dart`, `teknisi_report_actions.dart`, `dashboard_hero_illustration.dart`).
+   * Komponen sub-UI khusus role yang berada di `screens/<role>/widgets/` **tidak** memakai akhiran `_screen.dart`, melainkan akhiran sesuai fungsinya (contoh: `admin_report_actions.dart`, `pelapor_report_actions.dart`, `teknisi_report_actions.dart`, `dashboard_hero_illustration.dart`, `teknisi_cards.dart`, `teknisi_sheets.dart`).
    * Nama *class* wajib `PascalCase` sesuai nama file (contoh: `PelaporHomeScreen`, `HistoryAssetScreen`, `AdminReportActions`, `ReportCard`).
 2. **Alur Branch & Commit:**
    * Jangan *push* fitur setengah jadi langsung ke `main`.

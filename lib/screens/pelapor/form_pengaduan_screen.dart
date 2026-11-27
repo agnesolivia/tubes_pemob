@@ -1136,7 +1136,7 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                                             ? _selectedAsset!.nama
                                             : (_selectedBuilding == null
                                                 ? 'Pilih gedung terlebih dahulu'
-                                                : 'Fasilitas Lainnya / Pilih aset terdaftar'),
+                                                : 'Fasilitas Lainnya'),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: GoogleFonts.plusJakartaSans(

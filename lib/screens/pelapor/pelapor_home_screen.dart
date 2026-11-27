@@ -550,6 +550,7 @@ class PelaporHomeScreen extends StatelessWidget {
                                             completedSegments: prog.step,
                                             totalSegments: 5,
                                             feedbackText: latestNote,
+                                            fotoSebelum: report.fotoSebelum,
                                           ),
                                         );
                                       }),
@@ -579,6 +580,7 @@ class _SummaryStatusCard extends StatelessWidget {
   final Color badgeTextColor;
   final String count;
   final String subtitle;
+
 
   const _SummaryStatusCard({
     required this.badgeText,
@@ -661,6 +663,7 @@ class _ActiveReportCard extends StatelessWidget {
   final int completedSegments;
   final int totalSegments;
   final String feedbackText;
+  final String fotoSebelum;
 
   const _ActiveReportCard({
     required this.ticketId,
@@ -672,6 +675,7 @@ class _ActiveReportCard extends StatelessWidget {
     required this.completedSegments,
     required this.totalSegments,
     required this.feedbackText,
+    required this.fotoSebelum,
   });
 
   @override
@@ -697,17 +701,42 @@ class _ActiveReportCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Kotak Ikon AC
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF3F7FF),
-                  borderRadius: BorderRadius.circular(13),
-                  border: Border.all(color: const Color(0xFFDCE7FA)),
-                ),
-                alignment: Alignment.center,
-                child: const _AcFacilityIcon(),
+              // Foto Sebelum Kerusakan
+              Builder(
+                builder: (_) {
+                  final photoBytes =
+                      StorageService.instance.base64ToBytes(fotoSebelum);
+                  return ClipRRect(
+                    borderRadius: BorderRadius.circular(13),
+                    child: Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF3F7FF),
+                        borderRadius: BorderRadius.circular(13),
+                        border: Border.all(color: const Color(0xFFDCE7FA)),
+                      ),
+                      alignment: Alignment.center,
+                      child: photoBytes != null
+                          ? Image.memory(
+                              photoBytes,
+                              width: 48,
+                              height: 48,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Icon(
+                                Icons.broken_image_outlined,
+                                color: AppColors.primaryBlue,
+                                size: 22,
+                              ),
+                            )
+                          : const Icon(
+                              Icons.image_outlined,
+                              color: AppColors.primaryBlue,
+                              size: 22,
+                            ),
+                    ),
+                  );
+                },
               ),
               const SizedBox(width: 12),
 
@@ -898,54 +927,4 @@ class _ActiveReportCard extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Ikon AC Split untuk kartu laporan aktif
-class _AcFacilityIcon extends StatelessWidget {
-  const _AcFacilityIcon();
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      size: const Size(24, 24),
-      painter: _AcIconPainter(),
-    );
-  }
-}
-
-class _AcIconPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = AppColors.primaryBlue
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.7
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-
-    // Bodi unit AC atas
-    final bodyRect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(2, 4, size.width - 4, 10),
-      const Radius.circular(3),
-    );
-    canvas.drawRRect(bodyRect, paint);
-
-    // Garis kisi ventilasi
-    canvas.drawLine(
-      const Offset(5, 11),
-      Offset(size.width - 5, 11),
-      paint,
-    );
-
-    // 3 gelombang hembusan udara di bawah AC
-    for (final x in [7.5, 12.0, 16.5]) {
-      final wavePath = Path()
-        ..moveTo(x, 16)
-        ..quadraticBezierTo(x - 1.5, 18, x, 20);
-      canvas.drawPath(wavePath, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

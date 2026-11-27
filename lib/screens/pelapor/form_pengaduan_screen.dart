@@ -12,6 +12,7 @@ import 'package:tubes_pemob/services/report_service.dart';
 import 'package:tubes_pemob/services/storage_service.dart';
 import 'package:tubes_pemob/models/report_model.dart';
 import 'package:tubes_pemob/services/asset_service.dart';
+import 'package:tubes_pemob/screens/shared/history_aset_screen.dart';
 
 class CreateReportScreen extends StatefulWidget {
   final AssetModel? selectedAsset;
@@ -507,6 +508,22 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
     );
   }
 
+  void _openSelectedAssetHistory() {
+    final asset = _selectedAsset;
+    if (asset == null) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => HistoryAssetScreen(
+          assetId: asset.id,
+          initialAsset: asset,
+          fallbackNama: asset.nama,
+          fallbackLokasi: asset.lokasiLengkap,
+          userRole: UserRole.pelapor,
+        ),
+      ),
+    );
+  }
+
   Future<void> _onSubmitReport() async {
     if (_uploadedPhotos.isEmpty ||
         _titleController.text.trim().isEmpty ||
@@ -978,16 +995,58 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
 
                             const SizedBox(height: 18),
 
-                            // 4b. Pilih Aset di Gedung Tersebut (dari Firestore `assets` atau Fasilitas Lainnya)
-                            Text(
-                              'Aset / Fasilitas di Gedung Ini',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 13.5,
-                                fontWeight: FontWeight.w700,
-                                color: const Color(0xFF0A0D14),
-                              ),
+                          // 4b. Pilih Aset di Gedung Tersebut (dari Firestore `assets` atau Fasilitas Lainnya)
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    'Aset / Fasilitas',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 13.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFF0A0D14),
+                                    ),
+                                  ),
+                                ),
+                                if (_selectedAsset != null)
+                                  InkWell(
+                                    onTap: _openSelectedAssetHistory,
+                                    borderRadius: BorderRadius.circular(20),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFEAF2FF),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(
+                                            Icons.history_rounded,
+                                            size: 14,
+                                            color: AppColors.primaryBlue,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            'Riwayat Aset',
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontSize: 11.5,
+                                              fontWeight: FontWeight.w700,
+                                              color: AppColors.primaryBlue,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
                             const SizedBox(height: 8),
+
                             InkWell(
                               onTap: _showAssetPicker,
                               borderRadius: BorderRadius.circular(28),
@@ -1037,6 +1096,7 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                                 ),
                               ),
                             ),
+
                             if (_selectedAsset != null)
                               StreamBuilder<List<ReportModel>>(
                                 stream: ReportService.instance

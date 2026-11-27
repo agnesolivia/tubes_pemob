@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:tubes_pemob/constants/app_colors.dart';
-import 'package:tubes_pemob/models/asset_model.dart';
 import 'package:tubes_pemob/models/user_model.dart';
-import 'package:tubes_pemob/screens/pelapor/form_pengaduan_screen.dart';
-import 'package:tubes_pemob/screens/teknisi/daftar_tugas_screen.dart';
+import 'package:tubes_pemob/screens/shared/history_asset_screen.dart';
 import 'package:tubes_pemob/services/asset_service.dart';
 import 'package:tubes_pemob/services/auth_service.dart';
 
@@ -221,18 +219,19 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
         return;
       }
 
-      // TODO: Arahkan seluruh role ke HistoryAssetScreen(asset: asset)
-      // setelah halaman lib/screens/shared/history_asset_screen.dart selesai dibuat.
-      if (widget.role == UserRole.pelapor) {
-        await Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (_) => CreateReportScreen(selectedAsset: asset),
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => HistoryAssetScreen(
+            assetId: asset.id,
+            initialAsset: asset,
+            fallbackNama: asset.nama,
+            fallbackLokasi: asset.lokasiLengkap,
+            userRole: widget.role,
           ),
-        );
-        return;
-      }
+        ),
+      );
 
-      await _showAssetQuickPreviewSheet(asset);
+      // Nyalakan kamera kembali saat pengguna menekan Back dari HistoryAssetScreen
       _resumeScanner();
     } catch (e) {
       await _showErrorAndResume('Gagal memuat data aset: $e');
@@ -431,154 +430,6 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
     } catch (e) {
       await _showErrorAndResume('Gagal memproses QR pengguna: $e');
     }
-  }
-
-  Future<void> _showAssetQuickPreviewSheet(AssetModel asset) async {
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: AppColors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (sheetContext) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(22, 12, 22, 22),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFCBD5E1),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE6EFFF),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.inventory_2_outlined,
-                        color: AppColors.primaryBlue,
-                        size: 22,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            asset.nama,
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 16.5,
-                              fontWeight: FontWeight.w800,
-                              color: const Color(0xFF0F172A),
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '${asset.gedung} • ${asset.ruangan}',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 12.5,
-                              color: const Color(0xFF64748B),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE3EEFF),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    'Kategori: ${asset.kategori}',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.primaryBlue,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 18),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.pop(sheetContext),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
-                        child: Text(
-                          'Scan Lagi',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ),
-                    if (widget.role == UserRole.teknisi) ...[
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () {
-                            Navigator.pop(sheetContext);
-                            final uid =
-                                AuthService.instance.currentUser?.uid ?? '';
-                            Navigator.of(context).pushReplacement(
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    DaftarTugasScreen(currentUserUid: uid),
-                              ),
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primaryBlue,
-                            foregroundColor: AppColors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                          ),
-                          child: Text(
-                            'Buka Daftar Tugas',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
   }
 
   String get _appBarTitle => switch (widget.mode) {

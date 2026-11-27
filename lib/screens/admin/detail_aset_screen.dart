@@ -73,12 +73,19 @@ class _DetailAsetScreenState extends State<DetailAsetScreen> {
     return '$day $month $year, $hour:$minute';
   }
 
-  Future<void> _openEditSheet(AssetModel currentAsset) async {
+  Future<void> _openEditSheet(
+    AssetModel currentAsset,
+    List<AssetModel> allAssets,
+  ) async {
     final updated = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _EditAssetSheet(asset: currentAsset),
+      builder: (_) => _EditAssetSheet(
+        asset: currentAsset,
+        allAssets: allAssets,
+      ),
     );
 
     if (updated == true && mounted) {
@@ -265,12 +272,12 @@ class _DetailAsetScreenState extends State<DetailAsetScreen> {
     return StreamBuilder<List<AssetModel>>(
       stream: AssetService.instance.streamAllAssets(),
       builder: (context, snapshot) {
+        final allAssets = snapshot.data ?? const <AssetModel>[];
         // Ambil versi terbaru aset jika baru saja di-edit
-        final currentAsset = snapshot.data?.firstWhere(
-              (item) => item.id == widget.asset.id,
-              orElse: () => widget.asset,
-            ) ??
-            widget.asset;
+        final currentAsset = allAssets.firstWhere(
+          (item) => item.id == widget.asset.id,
+          orElse: () => widget.asset,
+        );
 
         final qrPayload = 'ASSET:${currentAsset.id}';
 
@@ -297,7 +304,7 @@ class _DetailAsetScreenState extends State<DetailAsetScreen> {
               ),
               actions: [
                 IconButton(
-                  onPressed: () => _openEditSheet(currentAsset),
+                  onPressed: () => _openEditSheet(currentAsset, allAssets),
                   tooltip: 'Ubah Aset',
                   icon: const Icon(Icons.edit_outlined, size: 22),
                 ),
@@ -661,8 +668,12 @@ class _DetailAsetScreenState extends State<DetailAsetScreen> {
 
 class _EditAssetSheet extends StatefulWidget {
   final AssetModel asset;
+  final List<AssetModel> allAssets;
 
-  const _EditAssetSheet({required this.asset});
+  const _EditAssetSheet({
+    required this.asset,
+    required this.allAssets,
+  });
 
   @override
   State<_EditAssetSheet> createState() => _EditAssetSheetState();
@@ -674,8 +685,13 @@ class _EditAssetSheetState extends State<_EditAssetSheet> {
   late final TextEditingController _namaController;
   late final TextEditingController _gedungController;
   late final TextEditingController _ruanganController;
+  late final FocusNode _gedungFocusNode;
+  late final FocusNode _ruanganFocusNode;
+
   late String _selectedCategory;
+  late String _lastGedung;
   bool _isSaving = false;
+  String? _errorMessage;
 
   static const List<String> _categories = [
     'Elektronik',
@@ -691,6 +707,9 @@ class _EditAssetSheetState extends State<_EditAssetSheet> {
     _namaController = TextEditingController(text: widget.asset.nama);
     _gedungController = TextEditingController(text: widget.asset.gedung);
     _ruanganController = TextEditingController(text: widget.asset.ruangan);
+    _gedungFocusNode = FocusNode();
+    _ruanganFocusNode = FocusNode();
+    _lastGedung = widget.asset.gedung.trim().toLowerCase();
     _selectedCategory = _categories.contains(widget.asset.kategori)
         ? widget.asset.kategori
         : 'Lainnya';
@@ -701,6 +720,8 @@ class _EditAssetSheetState extends State<_EditAssetSheet> {
     _namaController.dispose();
     _gedungController.dispose();
     _ruanganController.dispose();
+    _gedungFocusNode.dispose();
+    _ruanganFocusNode.dispose();
     super.dispose();
   }
 
@@ -708,7 +729,10 @@ class _EditAssetSheetState extends State<_EditAssetSheet> {
     if (_isSaving) return;
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isSaving = true);
+    setState(() {
+      _isSaving = true;
+      _errorMessage = null;
+    });
 
     try {
       final updatedAsset = widget.asset.copyWith(
@@ -724,18 +748,7 @@ class _EditAssetSheetState extends State<_EditAssetSheet> {
     } catch (e) {
       if (!mounted) return;
       final cleanMsg = e.toString().replaceFirst('Exception: ', '');
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Text(
-              cleanMsg,
-              style: GoogleFonts.plusJakartaSans(fontSize: 12),
-            ),
-            backgroundColor: AppColors.statusRejectedText,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+      setState(() => _errorMessage = cleanMsg);
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);
@@ -745,171 +758,354 @@ class _EditAssetSheetState extends State<_EditAssetSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final gedungOptions =
+        AssetService.instance.extractUniqueGedung(widget.allAssets);
+    final currentGedung = _gedungController.text.trim();
+    final ruanganOptions = currentGedung.isEmpty
+        ? const <String>[]
+        : AssetService.instance.extractUniqueRuangan(
+            widget.allAssets,
+            currentGedung,
+          );
+
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
       child: Container(
         constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.85,
+          maxHeight: MediaQuery.of(context).size.height * 0.88,
         ),
         decoration: const BoxDecoration(
           color: AppColors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(22, 16, 22, 26),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 42,
-                    height: 5,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFDCE3ED),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Ubah Data Aset',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.textPrimary,
-                        ),
+        child: SafeArea(
+          top: false,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(22, 16, 22, 20),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 42,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFDCE3ED),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.close_rounded),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                _label('Nama Aset'),
-                const SizedBox(height: 6),
-                TextFormField(
-                  controller: _namaController,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 12.5,
-                    color: AppColors.textPrimary,
                   ),
-                  decoration: _decoration(
-                    hint: 'Masukkan nama aset',
-                    icon: Icons.inventory_2_outlined,
-                  ),
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Wajib diisi.' : null,
-                ),
-                const SizedBox(height: 14),
-
-                _label('Kategori'),
-                const SizedBox(height: 6),
-                DropdownButtonFormField<String>(
-                  initialValue: _selectedCategory,
-                  isExpanded: true,
-                  decoration: _decoration(
-                    hint: 'Pilih kategori',
-                    icon: Icons.category_outlined,
-                  ),
-                  items: _categories.map((cat) {
-                    return DropdownMenuItem<String>(
-                      value: cat,
-                      child: Text(
-                        cat,
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 12.5,
-                          color: AppColors.textPrimary,
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Ubah Data Aset',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.textPrimary,
+                          ),
                         ),
                       ),
-                    );
-                  }).toList(),
-                  onChanged: (val) {
-                    if (val != null) setState(() => _selectedCategory = val);
-                  },
-                ),
-                const SizedBox(height: 14),
-
-                _label('Gedung'),
-                const SizedBox(height: 6),
-                TextFormField(
-                  controller: _gedungController,
-                  textCapitalization: TextCapitalization.words,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 12.5,
-                    color: AppColors.textPrimary,
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close_rounded),
+                      ),
+                    ],
                   ),
-                  decoration: _decoration(
-                    hint: 'Contoh: Gedung A',
+                  const SizedBox(height: 16),
+
+                  _label('Nama Aset'),
+                  const SizedBox(height: 6),
+                  TextFormField(
+                    controller: _namaController,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 12.5,
+                      color: AppColors.textPrimary,
+                    ),
+                    decoration: _decoration(
+                      hint: 'Masukkan nama aset',
+                      icon: Icons.inventory_2_outlined,
+                    ),
+                    validator: (v) =>
+                        (v == null || v.trim().isEmpty) ? 'Wajib diisi.' : null,
+                  ),
+                  const SizedBox(height: 14),
+
+                  _label('Kategori'),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<String>(
+                    initialValue: _selectedCategory,
+                    isExpanded: true,
+                    decoration: _decoration(
+                      hint: 'Pilih kategori',
+                      icon: Icons.category_outlined,
+                    ),
+                    items: _categories.map((cat) {
+                      return DropdownMenuItem<String>(
+                        value: cat,
+                        child: Text(
+                          cat,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12.5,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) setState(() => _selectedCategory = val);
+                    },
+                  ),
+                  const SizedBox(height: 14),
+
+                  _label('Gedung'),
+                  const SizedBox(height: 6),
+                  _buildAutocompleteField(
+                    controller: _gedungController,
+                    focusNode: _gedungFocusNode,
+                    hint: 'Pilih atau ketik nama gedung',
                     icon: Icons.apartment_rounded,
+                    suggestions: gedungOptions,
+                    openDirection: OptionsViewOpenDirection.down,
+                    validator: (v) =>
+                        (v == null || v.trim().isEmpty) ? 'Wajib diisi.' : null,
+                    onSelected: (selection) {
+                      final normalized = selection.trim().toLowerCase();
+                      if (normalized != _lastGedung) {
+                        _ruanganController.clear();
+                        _lastGedung = normalized;
+                      }
+                      setState(() {});
+                    },
+                    onChanged: () {
+                      _lastGedung =
+                          _gedungController.text.trim().toLowerCase();
+                      setState(() {});
+                    },
                   ),
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Wajib diisi.' : null,
-                ),
-                const SizedBox(height: 14),
+                  const SizedBox(height: 14),
 
-                _label('Ruangan (Opsional)'),
-                const SizedBox(height: 6),
-                TextFormField(
-                  controller: _ruanganController,
-                  textCapitalization: TextCapitalization.words,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 12.5,
-                    color: AppColors.textPrimary,
-                  ),
-                  decoration: _decoration(
+                  _label('Ruangan (Opsional)'),
+                  const SizedBox(height: 6),
+                  _buildAutocompleteField(
+                    controller: _ruanganController,
+                    focusNode: _ruanganFocusNode,
                     hint: 'Kosongkan jika berada di area gedung',
                     icon: Icons.meeting_room_outlined,
+                    suggestions: ruanganOptions,
+                    openDirection: OptionsViewOpenDirection.up,
+                    onSelected: (_) => setState(() {}),
+                    onChanged: () => setState(() {}),
                   ),
-                ),
-                const SizedBox(height: 22),
 
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _isSaving ? null : _saveChanges,
-                    icon: _isSaving
-                        ? const SizedBox(
-                            width: 17,
-                            height: 17,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
+                  if (_errorMessage != null) ...[
+                    const SizedBox(height: 14),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.statusRejectedBg,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.error_outline_rounded,
+                            size: 18,
+                            color: AppColors.statusRejectedText,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _errorMessage!,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.statusRejectedText,
+                              ),
                             ),
-                          )
-                        : const Icon(Icons.check_rounded),
-                    label: Text(
-                      _isSaving ? 'Menyimpan...' : 'Simpan Perubahan',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w700,
+                          ),
+                        ],
                       ),
                     ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryBlue,
-                      foregroundColor: AppColors.white,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
+                  ],
+                  const SizedBox(height: 22),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _isSaving ? null : _saveChanges,
+                      icon: _isSaving
+                          ? const SizedBox(
+                              width: 17,
+                              height: 17,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Icon(Icons.check_rounded),
+                      label: Text(
+                        _isSaving ? 'Menyimpan...' : 'Simpan Perubahan',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryBlue,
+                        foregroundColor: AppColors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildAutocompleteField({
+    required TextEditingController controller,
+    required FocusNode focusNode,
+    required String hint,
+    required IconData icon,
+    required List<String> suggestions,
+    required OptionsViewOpenDirection openDirection,
+    String? Function(String?)? validator,
+    ValueChanged<String>? onSelected,
+    VoidCallback? onChanged,
+  }) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return RawAutocomplete<String>(
+          textEditingController: controller,
+          focusNode: focusNode,
+          optionsViewOpenDirection: openDirection,
+          optionsBuilder: (TextEditingValue textEditingValue) {
+            if (suggestions.isEmpty) return const Iterable<String>.empty();
+            final query = textEditingValue.text.trim().toLowerCase();
+            // Jika kosong atau masih sama persis dengan opsi yang ada,
+            // tampilkan semua saran agar Admin mudah ganti lokasi
+            if (query.isEmpty ||
+                suggestions.any((item) => item.toLowerCase() == query)) {
+              return suggestions;
+            }
+            return suggestions.where(
+              (item) => item.toLowerCase().contains(query),
+            );
+          },
+          onSelected: (selection) {
+            onSelected?.call(selection);
+          },
+          fieldViewBuilder: (
+            context,
+            fieldController,
+            fieldFocusNode,
+            onFieldSubmitted,
+          ) {
+            return TextFormField(
+              controller: fieldController,
+              focusNode: fieldFocusNode,
+              textCapitalization: TextCapitalization.words,
+              onChanged: (_) => onChanged?.call(),
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12.5,
+                color: AppColors.textPrimary,
+              ),
+              decoration: _decoration(
+                hint: hint,
+                icon: icon,
+                suffixIcon: fieldController.text.isNotEmpty
+                    ? IconButton(
+                        onPressed: () {
+                          fieldController.clear();
+                          fieldFocusNode.requestFocus();
+                          onChanged?.call();
+                        },
+                        icon: const Icon(
+                          Icons.close_rounded,
+                          size: 18,
+                          color: AppColors.textSecondary,
+                        ),
+                      )
+                    : (suggestions.isNotEmpty
+                        ? const Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            color: AppColors.textSecondary,
+                            size: 20,
+                          )
+                        : null),
+              ),
+              validator: validator,
+            );
+          },
+          optionsViewBuilder: (context, onOptionSelected, options) {
+            return Align(
+              alignment: openDirection == OptionsViewOpenDirection.up
+                  ? Alignment.bottomLeft
+                  : Alignment.topLeft,
+              child: Material(
+                elevation: 6,
+                color: AppColors.white,
+                borderRadius: BorderRadius.circular(13),
+                shadowColor: const Color(0xFF0F172A).withValues(alpha: 0.14),
+                child: Container(
+                  width: constraints.maxWidth,
+                  constraints: const BoxConstraints(maxHeight: 170),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(13),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: ListView.separated(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    shrinkWrap: true,
+                    itemCount: options.length,
+                    separatorBuilder: (_, __) => const Divider(
+                      height: 1,
+                      color: AppColors.border,
+                    ),
+                    itemBuilder: (context, index) {
+                      final option = options.elementAt(index);
+                      return InkWell(
+                        onTap: () => onOptionSelected(option),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 11,
+                          ),
+                          child: Text(
+                            option,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -927,6 +1123,7 @@ class _EditAssetSheetState extends State<_EditAssetSheet> {
   InputDecoration _decoration({
     required String hint,
     required IconData icon,
+    Widget? suffixIcon,
   }) {
     return InputDecoration(
       hintText: hint,
@@ -935,6 +1132,7 @@ class _EditAssetSheetState extends State<_EditAssetSheet> {
         color: AppColors.textSecondary,
       ),
       prefixIcon: Icon(icon, size: 19, color: AppColors.textSecondary),
+      suffixIcon: suffixIcon,
       filled: true,
       fillColor: const Color(0xFFF7F9FD),
       contentPadding: const EdgeInsets.symmetric(horizontal: 13, vertical: 13),

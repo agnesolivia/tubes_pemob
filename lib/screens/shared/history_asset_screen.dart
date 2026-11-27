@@ -7,6 +7,7 @@ import 'package:tubes_pemob/models/report_model.dart';
 import 'package:tubes_pemob/models/user_model.dart';
 import 'package:tubes_pemob/screens/admin/kelola_aset_screen.dart';
 import 'package:tubes_pemob/screens/admin/tambah_aset_screen.dart';
+import 'package:tubes_pemob/screens/pelapor/form_pengaduan_screen.dart';
 import 'package:tubes_pemob/screens/shared/detail_laporan_screen.dart';
 import 'package:tubes_pemob/services/asset_service.dart';
 import 'package:tubes_pemob/services/report_service.dart';
@@ -158,19 +159,13 @@ class _HistoryAssetScreenState extends State<HistoryAssetScreen> {
     );
   }
 
-  void _showPlaceholder(String message) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(
-            message,
-            style: GoogleFonts.plusJakartaSans(fontSize: 12),
-          ),
-          backgroundColor: AppColors.primaryBlue,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+  void _openFormPengaduan(AssetModel asset) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CreateReportScreen(selectedAsset: asset),
+      ),
+    );
   }
 
   @override
@@ -221,7 +216,10 @@ class _HistoryAssetScreenState extends State<HistoryAssetScreen> {
               );
             },
           ),
-          bottomNavigationBar: _buildBottomBar(resolvedAsset),
+          bottomNavigationBar: _buildBottomBar(
+            resolvedAsset,
+            isAssetLoading: isAssetLoading,
+          ),
         );
       },
     );
@@ -1038,12 +1036,17 @@ class _HistoryAssetScreenState extends State<HistoryAssetScreen> {
   }
 
   // Tombol bawah hanya tampil untuk Pelapor saat melihat aset terdaftar (alur Scan QR -> Lapor)
-  Widget? _buildBottomBar(AssetModel? resolvedAsset) {
+  Widget? _buildBottomBar(
+    AssetModel? resolvedAsset, {
+    required bool isAssetLoading,
+  }) {
     if (!_isRegisteredAsset || widget.userRole != UserRole.pelapor) {
       return null;
     }
 
-    final displayNama = _resolveNama(resolvedAsset);
+    if (resolvedAsset == null && !isAssetLoading) {
+      return null;
+    }
 
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
@@ -1056,15 +1059,14 @@ class _HistoryAssetScreenState extends State<HistoryAssetScreen> {
         child: SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
-            onPressed: () {
-              // TODO: Sambungkan ke FormPengaduanScreen(selectedAsset: resolvedAsset)
-              _showPlaceholder(
-                'Membuka Form Pengaduan untuk "$displayNama" (FormPengaduanScreen belum disambungkan).',
-              );
-            },
+            onPressed: resolvedAsset == null
+                ? null
+                : () => _openFormPengaduan(resolvedAsset),
             icon: const Icon(Icons.report_problem_outlined, size: 20),
             label: Text(
-              'Buat Laporan untuk Aset Ini',
+              resolvedAsset == null
+                  ? 'Memuat Data Aset...'
+                  : 'Buat Laporan untuk Aset Ini',
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 13.5,
                 fontWeight: FontWeight.w700,

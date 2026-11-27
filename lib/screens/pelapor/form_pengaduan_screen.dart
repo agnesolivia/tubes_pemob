@@ -306,7 +306,22 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
     }
 
     String searchQuery = '';
+    String? selectedRoom; // null = Semua, '' = Area Umum / Tanpa Ruangan
     final buildingAssets = _assetsInSelectedBuilding;
+
+    // Kumpulkan daftar ruangan unik (case-insensitive) di gedung terpilih
+    final seenRooms = <String>{};
+    final roomOptions = <String>[];
+    bool hasAreaUmum = false;
+    for (final a in buildingAssets) {
+      final r = a.ruangan.trim();
+      if (r.isEmpty) {
+        hasAreaUmum = true;
+      } else if (seenRooms.add(r.toLowerCase())) {
+        roomOptions.add(r);
+      }
+    }
+    roomOptions.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
 
     showModalBottomSheet(
       context: context,
@@ -320,6 +335,14 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
           builder: (context, setModalState) {
             final q = searchQuery.trim().toLowerCase();
             final filtered = buildingAssets.where((a) {
+              if (selectedRoom != null) {
+                final r = a.ruangan.trim();
+                if (selectedRoom == '' && r.isNotEmpty) return false;
+                if (selectedRoom != '' &&
+                    r.toLowerCase() != selectedRoom!.toLowerCase()) {
+                  return false;
+                }
+              }
               if (q.isEmpty) return true;
               final ruangLabel =
                   a.ruangan.trim().isEmpty ? 'area umum' : a.ruangan.toLowerCase();
@@ -385,6 +408,40 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                           ),
                         ),
                       ),
+
+                      if (roomOptions.isNotEmpty || hasAreaUmum) ...[
+                        const SizedBox(height: 10),
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              _buildRoomFilterChip(
+                                label: 'Semua',
+                                isSelected: selectedRoom == null,
+                                onTap: () =>
+                                    setModalState(() => selectedRoom = null),
+                              ),
+                              if (hasAreaUmum)
+                                _buildRoomFilterChip(
+                                  label: 'Area Umum / Tanpa Ruangan',
+                                  isSelected: selectedRoom == '',
+                                  onTap: () =>
+                                      setModalState(() => selectedRoom = ''),
+                                ),
+                              ...roomOptions.map(
+                                (room) => _buildRoomFilterChip(
+                                  label: room,
+                                  isSelected: selectedRoom?.toLowerCase() ==
+                                      room.toLowerCase(),
+                                  onTap: () =>
+                                      setModalState(() => selectedRoom = room),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+
                       const SizedBox(height: 10),
                       // Opsi Resmi: Fasilitas Lainnya / Tidak Terdaftar (assetId: null)
                       ListTile(
@@ -772,7 +829,7 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                                             ),
                                             const SizedBox(height: 3),
                                             Text(
-                                              'PNG, JPG or PDF (max. 800x400px)',
+                                              'JPG atau PNG',
                                               style:
                                                   GoogleFonts.plusJakartaSans(
                                                     fontSize: 10.5,
@@ -936,6 +993,7 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                             const SizedBox(height: 8),
                             TextFormField(
                               controller: _titleController,
+                              readOnly: _selectedAsset != null,
                               style: _inputTextStyle(),
                               decoration: _pillInputDecoration(
                                 hintText: 'Masukkan judul kerusakan',
@@ -1140,6 +1198,7 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                             const SizedBox(height: 8),
                             TextFormField(
                               controller: _detailLocationController,
+                              readOnly: _selectedAsset != null,
                               style: _inputTextStyle(),
                               decoration: _pillInputDecoration(
                                 hintText: 'Lantai, nama ruangan',
@@ -1154,7 +1213,7 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                             TextFormField(
                               controller: _descriptionController,
                               maxLines: 4,
-                              maxLength: 100,
+                              maxLength: 300,
                               onChanged: (_) => setState(() {}),
                               style: _inputTextStyle(),
                               decoration: InputDecoration(
@@ -1189,7 +1248,7 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                             Align(
                               alignment: Alignment.centerRight,
                               child: Text(
-                                '${_descriptionController.text.length}/100',
+                                '${_descriptionController.text.length}/300',
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w500,
@@ -1374,6 +1433,34 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
       fontSize: 13.5,
       fontWeight: FontWeight.w500,
       color: const Color(0xFF0A0D14),
+    );
+  }
+
+  Widget _buildRoomFilterChip({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.primaryBlue : const Color(0xFFF1F5F9),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            label,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+              color: isSelected ? AppColors.white : const Color(0xFF475569),
+            ),
+          ),
+        ),
+      ),
     );
   }
 

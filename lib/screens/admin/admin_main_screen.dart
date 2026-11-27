@@ -44,7 +44,7 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
         index: _selectedIndex,
         children: [
           AdminDashboardScreen(onSwitchTab: _onTabSelected),
-          const _AdminTiketTabScreen(),
+          const KelolaLaporanScreen(),
           // TODO: Ganti dengan const NotificationScreen() setelah screens/shared/notification_screen.dart dibuat
           const _AdminNotifikasiPlaceholderScreen(),
           const ProfileScreen(),
@@ -55,110 +55,6 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
         selectedIndex: _selectedIndex,
         onItemTapped: _onTabSelected,
         onCenterPressed: _onScanQrPressed,
-      ),
-    );
-  }
-}
-
-class _AdminTiketTabScreen extends StatelessWidget {
-  const _AdminTiketTabScreen();
-
-  void _openSampleKelolaLaporan(BuildContext context) {
-    final sampleReport = KelolaLaporanData(
-      id: 'SNF-2026-001',
-      title: 'AC Ruang Kelas D-204 Tidak Dingin',
-      location: 'Gedung D • Ruang D-204',
-      description: 'AC hanya mengeluarkan angin dan meneteskan air.',
-      reporterName: 'Mahasiswa Kampus',
-      reporterRole: 'Pelapor',
-      createdAt: DateTime.now(),
-      icon: Icons.ac_unit_rounded,
-      status: ReportStatus.reported,
-    );
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => KelolaLaporanScreen(
-          report: sampleReport,
-          technicians: const ['Budi Santoso', 'Andi Pratama'],
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.primaryBlue,
-      body: Column(
-        children: [
-          SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
-              child: Center(
-                child: Text(
-                  'Daftar Tiket Laporan',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.white,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          Expanded(
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 110),
-              decoration: const BoxDecoration(
-                color: AppColors.background,
-                borderRadius: BorderRadius.vertical(
-                  top: Radius.circular(28),
-                ),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Halaman daftar semua tiket belum dibuat.\nGunakan tombol di bawah untuk menguji rute Kelola Laporan:',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 13,
-                      color: AppColors.textSecondary,
-                      height: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    onPressed: () => _openSampleKelolaLaporan(context),
-                    icon: const Icon(Icons.assignment_turned_in_rounded),
-                    label: Text(
-                      'Buka Kelola Laporan',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryBlue,
-                      foregroundColor: AppColors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 13,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

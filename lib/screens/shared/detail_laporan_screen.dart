@@ -654,16 +654,16 @@ class _DetailLaporanScreenState extends State<DetailLaporanScreen> {
         ? AppColors.statusRejectedBg
         : report.status == ReportStatus.resolved
         ? const Color(0xFFE1F7E9)
-        : report.deadlineAt == null
+        : report.deadlineAt == null || report.status == ReportStatus.rejected
         ? AppColors.inputFill
-        : const Color(0xFFFFE9E9);
+        : const Color(0xFFEAF2FF);
     final slaColor = report.isOverdue
         ? AppColors.statusRejectedText
         : report.status == ReportStatus.resolved
         ? const Color(0xFF15803D)
-        : report.deadlineAt == null
+        : report.deadlineAt == null || report.status == ReportStatus.rejected
         ? AppColors.textSecondary
-        : const Color(0xFFDC2626);
+        : AppColors.primaryBlue;
 
     return Container(
       padding: const EdgeInsets.all(13),

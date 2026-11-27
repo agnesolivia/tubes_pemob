@@ -101,7 +101,8 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
       _selectedAsset = asset;
       _titleController.text = asset.nama;
       _selectedBuilding = asset.gedung;
-      _detailLocationController.text = asset.ruangan;
+      _detailLocationController.text =
+          asset.ruangan.trim().isEmpty ? 'Area Umum' : asset.ruangan;
     }
     _assetsSub = AssetService.instance.streamAllAssets().listen((assets) {
       if (mounted) setState(() => _allAssets = assets);
@@ -319,8 +320,10 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
             final q = searchQuery.trim().toLowerCase();
             final filtered = buildingAssets.where((a) {
               if (q.isEmpty) return true;
+              final ruangLabel =
+                  a.ruangan.trim().isEmpty ? 'area umum' : a.ruangan.toLowerCase();
               return a.nama.toLowerCase().contains(q) ||
-                  a.ruangan.toLowerCase().contains(q) ||
+                  ruangLabel.contains(q) ||
                   a.kategori.toLowerCase().contains(q);
             }).toList();
 
@@ -465,7 +468,7 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                                       ),
                                     ),
                                     subtitle: Text(
-                                      '${asset.ruangan} • ${asset.kategori}',
+                                    '${asset.ruangan.trim().isEmpty ? 'Area Umum' : asset.ruangan} • ${asset.kategori}',
                                       style: GoogleFonts.plusJakartaSans(
                                         fontSize: 11.5,
                                         color: const Color(0xFF64748B),
@@ -483,7 +486,9 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                                         _selectedAsset = asset;
                                         _titleController.text = asset.nama;
                                         _detailLocationController.text =
-                                            asset.ruangan;
+                                          asset.ruangan.trim().isEmpty
+                                              ? 'Area Umum'
+                                              : asset.ruangan;
                                       });
                                       Navigator.pop(context);
                                     },
@@ -506,7 +511,8 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
     if (_uploadedPhotos.isEmpty ||
         _titleController.text.trim().isEmpty ||
         _selectedBuilding == null ||
-        _detailLocationController.text.trim().isEmpty ||
+        (_selectedAsset == null &&
+            _detailLocationController.text.trim().isEmpty) ||
         _descriptionController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

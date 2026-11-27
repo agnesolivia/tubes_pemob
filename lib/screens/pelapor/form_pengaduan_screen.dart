@@ -32,15 +32,6 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
       []; // Menyimpan string Base64 hasil kompresi
   bool _isSubmitting = false;
 
-  final List<String> _categories = const [
-    'Meja & Kursi',
-    'Listrik',
-    'Air & Toilet',
-    'AC & Kipas',
-    'Proyektor & LCD',
-    'Lainnya',
-  ];
-
   // Daftar Gedung di Universitas Sumatera Utara (USU)
   final List<String> _usuBuildings = const [
     'Gedung Fasilkom-TI (Gedung A)',
@@ -72,7 +63,6 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
     'Gelanggang Mahasiswa USU',
   ];
 
-  String? _selectedCategory;
   String? _selectedBuilding;
   AssetModel? _selectedAsset;
   List<AssetModel> _allAssets = [];
@@ -112,9 +102,6 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
       _titleController.text = asset.nama;
       _selectedBuilding = asset.gedung;
       _detailLocationController.text = asset.ruangan;
-      if (_categories.contains(asset.kategori)) {
-        _selectedCategory = asset.kategori;
-      }
     }
     _assetsSub = AssetService.instance.streamAllAssets().listen((assets) {
       if (mounted) setState(() => _allAssets = assets);
@@ -497,10 +484,6 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                                         _titleController.text = asset.nama;
                                         _detailLocationController.text =
                                             asset.ruangan;
-                                        if (_categories
-                                            .contains(asset.kategori)) {
-                                          _selectedCategory = asset.kategori;
-                                        }
                                       });
                                       Navigator.pop(context);
                                     },
@@ -522,7 +505,6 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
   Future<void> _onSubmitReport() async {
     if (_uploadedPhotos.isEmpty ||
         _titleController.text.trim().isEmpty ||
-        _selectedCategory == null ||
         _selectedBuilding == null ||
         _detailLocationController.text.trim().isEmpty ||
         _descriptionController.text.trim().isEmpty) {
@@ -935,56 +917,6 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                               decoration: _pillInputDecoration(
                                 hintText: 'Masukkan judul kerusakan',
                               ),
-                            ),
-
-                            const SizedBox(height: 18),
-
-                            // 3. Kategori (Chips Pill)
-                            _buildRequiredLabel('Kategori'),
-                            const SizedBox(height: 10),
-                            Wrap(
-                              spacing: 10,
-                              runSpacing: 10,
-                              children: _categories.map((category) {
-                                final isSelected =
-                                    _selectedCategory == category;
-                                return GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      _selectedCategory = category;
-                                    });
-                                  },
-                                  child: AnimatedContainer(
-                                    duration: const Duration(milliseconds: 180),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 9,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: isSelected
-                                          ? AppColors.primaryBlue
-                                          : AppColors.white,
-                                      borderRadius: BorderRadius.circular(24),
-                                      border: Border.all(
-                                        color: isSelected
-                                            ? AppColors.primaryBlue
-                                            : const Color(0xFFCBD5E1),
-                                        width: 1,
-                                      ),
-                                    ),
-                                    child: Text(
-                                      category,
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 12.5,
-                                        fontWeight: FontWeight.w600,
-                                        color: isSelected
-                                            ? AppColors.white
-                                            : const Color(0xFF1E293B),
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
                             ),
 
                             const SizedBox(height: 18),

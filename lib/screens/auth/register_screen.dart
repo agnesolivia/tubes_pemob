@@ -41,6 +41,60 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
+  void _onFieldChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController.addListener(_onFieldChanged);
+    _emailController.addListener(_onFieldChanged);
+    _passwordController.addListener(_onFieldChanged);
+    _confirmPasswordController.addListener(_onFieldChanged);
+  }
+
+  String? _validateName(String? value) {
+    final text = value?.trim() ?? '';
+    if (text.isEmpty) return 'Nama lengkap wajib diisi.';
+    if (text.length < 5) return 'Nama lengkap minimal 5 karakter.';
+    if (text.length > 60) return 'Nama lengkap maksimal 60 karakter.';
+    final nameRegex = RegExp(r"^[a-zA-ZÀ-ÿ\s\.\'\-]+$");
+    if (!nameRegex.hasMatch(text)) {
+      return 'Nama hanya boleh berisi huruf dan spasi.';
+    }
+    return null;
+  }
+
+  String? _validateEmail(String? value) {
+    final text = value?.trim() ?? '';
+    if (text.isEmpty) return 'Email wajib diisi.';
+    final emailRegex = RegExp(r'^[\w\.\-]+@([\w\-]+\.)+[\w\-]{2,}$');
+    if (!emailRegex.hasMatch(text)) return 'Format email tidak valid.';
+    return null;
+  }
+
+  String? _validatePassword(String? value) {
+    final text = value ?? '';
+    if (text.isEmpty) return 'Kata sandi wajib diisi.';
+    if (text.length < 8) return 'Kata sandi minimal 8 karakter.';
+    return null;
+  }
+
+  String? _validateConfirmPassword(String? value) {
+    final text = value ?? '';
+    if (text.isEmpty) return 'Konfirmasi kata sandi wajib diisi.';
+    if (text != _passwordController.text) {
+      return 'Konfirmasi kata sandi tidak cocok.';
+    }
+    return null;
+  }
+
+  bool get _isFormValid =>
+      _validateName(_nameController.text) == null &&
+      _validateEmail(_emailController.text) == null &&
+      _validatePassword(_passwordController.text) == null &&
+      _validateConfirmPassword(_confirmPasswordController.text) == null;
 
   @override
   void dispose() {
@@ -218,12 +272,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     autovalidateMode: AutovalidateMode.onUserInteraction,
                                     textCapitalization: TextCapitalization.words,
                                     style: _inputTextStyle(),
-                                    validator: (value) {
-                                      final text = value?.trim() ?? '';
-                                      if (text.isEmpty) return 'Nama lengkap wajib diisi.';
-                                      if (text.length < 3) return 'Nama minimal 3 karakter.';
-                                      return null;
-                                    },
+                                    validator: _validateName,
                                     decoration: _pillInputDecoration(
                                       hintText: 'Masukkan nama lengkap',
                                     ),
@@ -239,13 +288,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     autovalidateMode: AutovalidateMode.onUserInteraction,
                                     keyboardType: TextInputType.emailAddress,
                                     style: _inputTextStyle(),
-                                    validator: (value) {
-                                      final text = value?.trim() ?? '';
-                                      if (text.isEmpty) return 'Email wajib diisi.';
-                                      final emailRegex = RegExp(r'^[\w\.\-]+@([\w\-]+\.)+[\w\-]{2,}$');
-                                      if (!emailRegex.hasMatch(text)) return 'Format email tidak valid.';
-                                      return null;
-                                    },
+                                    validator: _validateEmail,
                                     decoration: _pillInputDecoration(
                                       hintText: 'nama@gmail.com',
                                     ),
@@ -266,12 +309,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                         _confirmPasswordFieldKey.currentState?.validate();
                                       }
                                     },
-                                    validator: (value) {
-                                      final text = value ?? '';
-                                      if (text.isEmpty) return 'Kata sandi wajib diisi.';
-                                      if (text.length < 8) return 'Kata sandi minimal 8 karakter.';
-                                      return null;
-                                    },
+                                    validator: _validatePassword,
                                     decoration: _pillInputDecoration(
                                       hintText: 'Minimal 8 karakter',
                                       suffixIcon: Padding(
@@ -305,14 +343,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     autovalidateMode: AutovalidateMode.onUserInteraction,
                                     obscureText: _obscureConfirmPassword,
                                     style: _inputTextStyle(),
-                                    validator: (value) {
-                                      final text = value ?? '';
-                                      if (text.isEmpty) return 'Konfirmasi kata sandi wajib diisi.';
-                                      if (text != _passwordController.text) {
-                                        return 'Konfirmasi kata sandi tidak cocok.';
-                                      }
-                                      return null;
-                                    },
+                                    validator: _validateConfirmPassword,
                                     decoration: _pillInputDecoration(
                                       hintText: 'Masukkan kata sandi',
                                       suffixIcon: Padding(
@@ -344,25 +375,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     height: 52,
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(30),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: AppColors.primaryBlue
-                                              .withValues(alpha: 0.25),
-                                          blurRadius: 14,
-                                          offset: const Offset(0, 6),
-                                        ),
-                                      ],
+                                      boxShadow: _isFormValid
+                                          ? [
+                                              BoxShadow(
+                                                color: AppColors.primaryBlue
+                                                    .withValues(alpha: 0.25),
+                                                blurRadius: 14,
+                                                offset: const Offset(0, 6),
+                                              ),
+                                            ]
+                                          : [],
                                     ),
                                     child: ElevatedButton(
-                                      onPressed: _isAnyLoading ? null : _onRegisterPressed,
+                                      onPressed: (_isAnyLoading || !_isFormValid)
+                                          ? null
+                                          : _onRegisterPressed,
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: AppColors.primaryBlue,
                                         foregroundColor: AppColors.white,
+                                        disabledBackgroundColor:
+                                            const Color(0xFFCBD5E1),
+                                        disabledForegroundColor:
+                                            AppColors.white,
                                         elevation: 0,
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(30),
+                                          borderRadius:
+                                              BorderRadius.circular(30),
                                         ),
                                       ),
+
                                       child: _isEmailLoading
                                     ? const SizedBox(
                                         width: 22,

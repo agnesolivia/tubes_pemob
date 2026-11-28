@@ -40,6 +40,9 @@ class UserModel {
   bool get isAdmin => role == UserRole.admin;
   bool get isTeknisi => role == UserRole.teknisi;
 
+  /// Versi lowercase dari nama untuk mendukung pencarian prefix di Firestore.
+  String get nameLower => nama.trim().toLowerCase();
+
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>? ?? {};
     final rawBase64 = (data['photoBase64'] as String?)?.trim();
@@ -51,16 +54,18 @@ class UserModel {
       email: data['email'] as String? ?? '',
       role: UserRole.fromString(data['role'] as String?),
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      photoBase64:
-          (rawBase64 != null && rawBase64.isNotEmpty) ? rawBase64 : null,
+      photoBase64: (rawBase64 != null && rawBase64.isNotEmpty)
+          ? rawBase64
+          : null,
       photoUrl: (rawUrl != null && rawUrl.isNotEmpty) ? rawUrl : null,
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
-      'nama': nama,
-      'email': email,
+      'nama': nama.trim(),
+      'nameLower': nameLower,
+      'email': email.trim().toLowerCase(),
       'role': role.value,
       'createdAt': Timestamp.fromDate(createdAt),
       if (photoBase64 != null && photoBase64!.isNotEmpty)

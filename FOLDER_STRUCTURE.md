@@ -181,7 +181,7 @@ Proyek ini menggunakan **4 koleksi sejajar (*root collections*)** tanpa *subcoll
 > **Aturan ID Dokumen (`doc.id` Murni):** Seluruh koleksi tidak menyimpan ulang field ID di dalam isi dokumen; `fromFirestore` langsung mengambilnya dari `doc.id`. Koleksi `users` wajib disimpan menggunakan `.doc(uid).set(...)`, sedangkan koleksi `assets`, `reports`, dan `notifications` menggunakan **Auto-ID Firestore** (`.doc()` / `.add(...)`).
 
 1. **`users`** *(Document ID = `uid` dari Firebase Auth)*
-   * `nama`, `email`, `role` (`'pelapor'` | `'admin'` | `'teknisi'`), `photoBase64` *(opsional, Base64 < 250 KB)*, `photoUrl` *(opsional, URL foto bawaan Google Sign-In)*, `createdAt`.
+   * `nama`, `nameLower` *(lowercase dari `nama` untuk prefix search)*, `email` *(disimpan lowercase)*, `role` (`'pelapor'` | `'admin'` | `'teknisi'`), `photoBase64` *(opsional, Base64 < 250 KB)*, `photoUrl` *(opsional, URL foto bawaan Google Sign-In)*, `createdAt`.
 2. **`assets`** *(Document ID = Auto-generated Firestore ID; payload QR di-generate dengan prefix `'ASSET:<doc.id>'`)*
    * `nama` *(unik secara case-insensitive per kombinasi `gedung` + `ruangan`, misal `'Kursi#01'`)*, `kategori`, `gedung`, `ruangan`, `createdAt`.
 3. **`reports`** *(Document ID = Auto-generated)*

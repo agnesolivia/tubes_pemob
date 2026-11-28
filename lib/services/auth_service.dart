@@ -12,8 +12,9 @@ class AuthService {
 
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
-  final CollectionReference _usersRef =
-      FirebaseFirestore.instance.collection('users');
+  final CollectionReference _usersRef = FirebaseFirestore.instance.collection(
+    'users',
+  );
 
   bool _isInitialized = false;
 
@@ -38,10 +39,44 @@ class AuthService {
     required String email,
     required String password,
   }) async {
-    return await _firebaseAuth.signInWithEmailAndPassword(
+    final credential = await _firebaseAuth.signInWithEmailAndPassword(
       email: email.trim(),
       password: password,
     );
+
+    // Backfill otomatis field `nameLower` & normalisasi `email` untuk akun lama
+    final uid = credential.user?.uid;
+    if (uid != null) {
+      try {
+        final docRef = _usersRef.doc(uid);
+        final docSnapshot = await docRef.get();
+        if (docSnapshot.exists) {
+          final data = docSnapshot.data() as Map<String, dynamic>? ?? {};
+          final updates = <String, dynamic>{};
+
+          final existingNama = (data['nama'] as String?)?.trim() ?? '';
+          final expectednameLower = existingNama.toLowerCase();
+          if (existingNama.isNotEmpty &&
+              data['nameLower'] != expectednameLower) {
+            updates['nameLower'] = expectednameLower;
+          }
+
+          final existingEmail = (data['email'] as String?)?.trim() ?? '';
+          final expectedEmail = existingEmail.toLowerCase();
+          if (existingEmail.isNotEmpty && existingEmail != expectedEmail) {
+            updates['email'] = expectedEmail;
+          }
+
+          if (updates.isNotEmpty) {
+            await docRef.update(updates);
+          }
+        }
+      } catch (_) {
+        // Jangan gagalkan login jika backfill gagal sementara
+      }
+    }
+
+    return credential;
   }
 
   /// Registrasi akun baru (Email & Password) + simpan profil ke Firestore + kirim email verifikasi
@@ -51,18 +86,21 @@ class AuthService {
     required String password,
     UserRole role = UserRole.pelapor,
   }) async {
+    final cleanEmail = email.trim().toLowerCase();
+    final cleanNama = nama.trim();
+
     final credential = await _firebaseAuth.createUserWithEmailAndPassword(
-      email: email.trim(),
+      email: cleanEmail,
       password: password,
     );
 
     final user = credential.user!;
-    await user.updateDisplayName(nama.trim());
+    await user.updateDisplayName(cleanNama);
 
     final newUser = UserModel(
       uid: user.uid,
-      nama: nama.trim(),
-      email: email.trim(),
+      nama: cleanNama,
+      email: cleanEmail,
       role: role,
       createdAt: DateTime.now(),
     );
@@ -103,8 +141,7 @@ class AuthService {
     await initialize();
 
     try {
-      final GoogleSignInAccount googleUser =
-          await _googleSignIn.authenticate();
+      final GoogleSignInAccount googleUser = await _googleSignIn.authenticate();
       final GoogleSignInAuthentication googleAuth = googleUser.authentication;
 
       final String? idToken = googleAuth.idToken;
@@ -120,8 +157,9 @@ class AuthService {
         idToken: idToken,
       );
 
-      final userCredential =
-          await _firebaseAuth.signInWithCredential(credential);
+      final userCredential = await _firebaseAuth.signInWithCredential(
+        credential,
+      );
       final firebaseUser = userCredential.user;
 
       if (firebaseUser != null) {
@@ -130,15 +168,19 @@ class AuthService {
         final googlePhotoUrl = firebaseUser.photoURL?.trim();
 
         if (!docSnapshot.exists) {
-          final fallbackName = (firebaseUser.displayName != null &&
+          final cleanEmail = (firebaseUser.email ?? '').trim().toLowerCase();
+          final fallbackName =
+              (firebaseUser.displayName != null &&
                   firebaseUser.displayName!.trim().isNotEmpty)
               ? firebaseUser.displayName!.trim()
-              : (firebaseUser.email?.split('@').first ?? 'Pengguna Kampus');
+              : (cleanEmail.isNotEmpty
+                    ? cleanEmail.split('@').first
+                    : 'Pengguna Kampus');
 
           final newUser = UserModel(
             uid: firebaseUser.uid,
             nama: fallbackName,
-            email: firebaseUser.email ?? '',
+            email: cleanEmail,
             role: UserRole.pelapor,
             createdAt: DateTime.now(),
             photoUrl: (googlePhotoUrl != null && googlePhotoUrl.isNotEmpty)
@@ -148,16 +190,35 @@ class AuthService {
 
           await docRef.set(newUser.toMap());
         } else {
-          // Backfill photoUrl untuk akun Google lama yang belum memiliki field photoUrl
-          // (tidak menimpa jika user sudah upload photoBase64 atau pernah menghapus foto).
+          // Backfill photoUrl & nameLower untuk akun Google lama
+          // (tidak menimpa foto jika user sudah upload photoBase64 atau pernah menghapus foto).
           final data = docSnapshot.data() as Map<String, dynamic>? ?? {};
+          final updates = <String, dynamic>{};
+
           final existingBase64 = (data['photoBase64'] as String?)?.trim() ?? '';
           final hasPhotoUrlField = data.containsKey('photoUrl');
           if (existingBase64.isEmpty &&
               !hasPhotoUrlField &&
               googlePhotoUrl != null &&
               googlePhotoUrl.isNotEmpty) {
-            await docRef.update({'photoUrl': googlePhotoUrl});
+            updates['photoUrl'] = googlePhotoUrl;
+          }
+
+          final existingNama = (data['nama'] as String?)?.trim() ?? '';
+          final expectednameLower = existingNama.toLowerCase();
+          if (existingNama.isNotEmpty &&
+              data['nameLower'] != expectednameLower) {
+            updates['nameLower'] = expectednameLower;
+          }
+
+          final existingEmail = (data['email'] as String?)?.trim() ?? '';
+          final expectedEmail = existingEmail.toLowerCase();
+          if (existingEmail.isNotEmpty && existingEmail != expectedEmail) {
+            updates['email'] = expectedEmail;
+          }
+
+          if (updates.isNotEmpty) {
+            await docRef.update(updates);
           }
         }
       }
@@ -186,15 +247,17 @@ class AuthService {
     });
   }
 
-  /// Update nama tampilan di halaman Profil
+  /// Update nama tampilan di halaman Profil beserta `nameLower` untuk pencarian
   Future<void> updateProfile({
     required String uid,
     required String nama,
   }) async {
+    final cleanNama = nama.trim();
     await _usersRef.doc(uid).update({
-      'nama': nama.trim(),
+      'nama': cleanNama,
+      'nameLower': cleanNama.toLowerCase(),
     });
-    await _firebaseAuth.currentUser?.updateDisplayName(nama.trim());
+    await _firebaseAuth.currentUser?.updateDisplayName(cleanNama);
   }
 
   /// Simpan atau hapus foto profil Base64 di Firestore `users/{uid}`
@@ -212,29 +275,84 @@ class AuthService {
         await _firebaseAuth.currentUser?.updatePhotoURL(null);
       } catch (_) {}
     } else {
-      await _usersRef.doc(uid).update({
-        'photoBase64': photoBase64,
-      });
+      await _usersRef.doc(uid).update({'photoBase64': photoBase64});
     }
   }
 
-  /// Stream seluruh pengguna terdaftar (untuk Admin mencari calon teknisi)
+  /// Stream seluruh pengguna terdaftar
   Stream<List<UserModel>> streamAllUsers() {
     return _usersRef.snapshots().map((snapshot) {
-      final users =
-          snapshot.docs.map((doc) => UserModel.fromFirestore(doc)).toList();
-      users.sort((a, b) => a.nama.toLowerCase().compareTo(b.nama.toLowerCase()));
+      final users = snapshot.docs
+          .map((doc) => UserModel.fromFirestore(doc))
+          .toList();
+      users.sort(
+        (a, b) => a.nama.toLowerCase().compareTo(b.nama.toLowerCase()),
+      );
       return users;
     });
   }
 
-  /// Stream daftar seluruh Teknisi (untuk Admin saat menugaskan tiket)
+  /// Stream daftar seluruh Teknisi (ringan, hanya role == 'teknisi')
   Stream<List<UserModel>> streamTechnicians() {
     return _usersRef
         .where('role', isEqualTo: UserRole.teknisi.value)
         .snapshots()
-        .map((snapshot) =>
-            snapshot.docs.map((doc) => UserModel.fromFirestore(doc)).toList());
+        .map((snapshot) {
+          final technicians = snapshot.docs
+              .map((doc) => UserModel.fromFirestore(doc))
+              .toList();
+          technicians.sort(
+            (a, b) => a.nama.toLowerCase().compareTo(b.nama.toLowerCase()),
+          );
+          return technicians;
+        });
+  }
+
+  /// Pencarian kandidat Pelapor on-demand via prefix `nameLower` & `email`
+  /// Menggunakan single-field index agar tidak memerlukan composite index Firestore.
+  Future<List<UserModel>> searchPelaporCandidates(
+    String query, {
+    int limit = 15,
+  }) async {
+    final cleanQuery = query.trim().toLowerCase();
+    if (cleanQuery.length < 2) return const [];
+
+    final endQuery = '$cleanQuery\uf8ff';
+    // Ambil sedikit buffer karena hasil masih disaring `user.isPelapor` di sisi client
+    final fetchLimit = limit + 5;
+
+    final futures = <Future<QuerySnapshot>>[
+      _usersRef
+          .orderBy('email')
+          .startAt([cleanQuery])
+          .endAt([endQuery])
+          .limit(fetchLimit)
+          .get(),
+      if (!cleanQuery.contains('@'))
+        _usersRef
+            .orderBy('nameLower')
+            .startAt([cleanQuery])
+            .endAt([endQuery])
+            .limit(fetchLimit)
+            .get(),
+    ];
+
+    final snapshots = await Future.wait(futures);
+    final Map<String, UserModel> uniquePelapor = {};
+
+    for (final snapshot in snapshots) {
+      for (final doc in snapshot.docs) {
+        final user = UserModel.fromFirestore(doc);
+        if (user.isPelapor) {
+          uniquePelapor[user.uid] = user;
+        }
+      }
+    }
+
+    final results = uniquePelapor.values.toList()
+      ..sort((a, b) => a.nama.toLowerCase().compareTo(b.nama.toLowerCase()));
+
+    return results.length > limit ? results.sublist(0, limit) : results;
   }
 
   /// Ubah role pengguna (misal: Admin mengangkat pelapor menjadi teknisi)
@@ -242,9 +360,7 @@ class AuthService {
     required String uid,
     required UserRole newRole,
   }) async {
-    await _usersRef.doc(uid).update({
-      'role': newRole.value,
-    });
+    await _usersRef.doc(uid).update({'role': newRole.value});
   }
 
   /// Kirim email reset kata sandi

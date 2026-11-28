@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -17,38 +19,52 @@ class KelolaTeknisiScreen extends StatefulWidget {
 }
 
 class _KelolaTeknisiScreenState extends State<KelolaTeknisiScreen> {
-  final TextEditingController _searchController = TextEditingController();
-  late final Stream<List<UserModel>> _usersStream;
+  final TextEditingController _techSearchController = TextEditingController();
+  final TextEditingController _candidateSearchController =
+      TextEditingController();
+
+  late final Stream<List<UserModel>> _techniciansStream;
   late final Stream<Map<String, int>> _taskCountsStream;
 
   static const String _filterAll = 'semua';
   static const String _filterAvailable = 'tersedia';
   static const String _filterBusy = 'bertugas';
+  static const int _minSearchLength = 2;
+  static const int _candidateSearchLimit = 15;
 
   int _selectedTabIndex = 0;
   String _selectedWorkloadFilter = _filterAll;
   bool _isProcessing = false;
 
+  // State pencarian kandidat on-demand (Tab 2)
+  Timer? _searchDebounce;
+  List<UserModel> _candidateResults = const [];
+  bool _isSearchingCandidates = false;
+  String? _candidateSearchError;
+  String _lastSearchedQuery = '';
+  int _searchRequestId = 0;
+
   @override
   void initState() {
     super.initState();
-    _usersStream = AuthService.instance.streamAllUsers();
+    _techniciansStream = AuthService.instance.streamTechnicians();
     _taskCountsStream =
         ReportService.instance.streamTechnicianActiveTaskCounts();
   }
 
   @override
   void dispose() {
-    _searchController.dispose();
+    _searchDebounce?.cancel();
+    _techSearchController.dispose();
+    _candidateSearchController.dispose();
     super.dispose();
   }
 
   void _onTabChanged(int index) {
     if (_selectedTabIndex == index) return;
+    FocusScope.of(context).unfocus();
     setState(() {
       _selectedTabIndex = index;
-      _searchController.clear();
-      _selectedWorkloadFilter = _filterAll;
     });
   }
 
@@ -78,7 +94,7 @@ class _KelolaTeknisiScreenState extends State<KelolaTeknisiScreen> {
     List<UserModel> allTechnicians,
     Map<String, int> taskCounts,
   ) {
-    final query = _searchController.text.trim().toLowerCase();
+    final query = _techSearchController.text.trim().toLowerCase();
     final list = allTechnicians.where((tech) {
       final activeCount = taskCounts[tech.uid] ?? 0;
       final matchesSearch = query.isEmpty ||
@@ -100,16 +116,73 @@ class _KelolaTeknisiScreenState extends State<KelolaTeknisiScreen> {
     return list;
   }
 
-  List<UserModel> _filterPelapor(List<UserModel> allPelapor) {
-    final query = _searchController.text.trim().toLowerCase();
-    if (query.isEmpty) return allPelapor;
-    return allPelapor
-        .where(
-          (u) =>
-              u.nama.toLowerCase().contains(query) ||
-              u.email.toLowerCase().contains(query),
-        )
-        .toList();
+  // ==========================================================
+  // PENCARIAN KANDIDAT PELAPOR ON-DEMAND (TAB 2)
+  // ==========================================================
+
+  void _onCandidateQueryChanged(String value) {
+    _searchDebounce?.cancel();
+    final trimmed = value.trim();
+
+    if (trimmed.length < _minSearchLength) {
+      _searchRequestId++;
+      setState(() {
+        _candidateResults = const [];
+        _isSearchingCandidates = false;
+        _candidateSearchError = null;
+        _lastSearchedQuery = '';
+      });
+      return;
+    }
+
+    setState(() {});
+    _searchDebounce = Timer(
+      const Duration(milliseconds: 400),
+      () => _searchCandidates(trimmed),
+    );
+  }
+
+  Future<void> _searchCandidates(String rawQuery) async {
+    final trimmed = rawQuery.trim();
+    if (trimmed.length < _minSearchLength) return;
+
+    final requestId = ++_searchRequestId;
+    setState(() {
+      _isSearchingCandidates = true;
+      _candidateSearchError = null;
+    });
+
+    try {
+      final results = await AuthService.instance.searchPelaporCandidates(
+        trimmed,
+        limit: _candidateSearchLimit,
+      );
+      if (!mounted || requestId != _searchRequestId) return;
+      setState(() {
+        _candidateResults = results;
+        _lastSearchedQuery = trimmed;
+        _isSearchingCandidates = false;
+      });
+    } catch (e) {
+      if (!mounted || requestId != _searchRequestId) return;
+      setState(() {
+        _candidateSearchError =
+            e.toString().replaceFirst('Exception: ', '');
+        _isSearchingCandidates = false;
+      });
+    }
+  }
+
+  void _clearCandidateSearch() {
+    _searchDebounce?.cancel();
+    _searchRequestId++;
+    _candidateSearchController.clear();
+    setState(() {
+      _candidateResults = const [];
+      _isSearchingCandidates = false;
+      _candidateSearchError = null;
+      _lastSearchedQuery = '';
+    });
   }
 
   // ==========================================================
@@ -173,7 +246,7 @@ class _KelolaTeknisiScreenState extends State<KelolaTeknisiScreen> {
         newRole: UserRole.teknisi,
       );
       if (!mounted) return;
-      _searchController.clear();
+      _clearCandidateSearch();
       setState(() => _selectedTabIndex = 0);
       _showMessage('${user.nama} berhasil diaktifkan sebagai Teknisi.');
     } catch (e) {
@@ -308,45 +381,12 @@ class _KelolaTeknisiScreenState extends State<KelolaTeknisiScreen> {
                 ),
                 const SizedBox(height: 16),
                 Expanded(
-                  child: StreamBuilder<List<UserModel>>(
-                    stream: _usersStream,
-                    builder: (context, userSnap) {
-                      if (userSnap.connectionState == ConnectionState.waiting &&
-                          !userSnap.hasData) {
-                        return const Center(
-                          child: CircularProgressIndicator(
-                            color: AppColors.primaryBlue,
-                          ),
-                        );
-                      }
-                      if (userSnap.hasError) {
-                        return _buildEmptyState(
-                          icon: Icons.error_outline_rounded,
-                          title: 'Gagal Memuat Data Pengguna',
-                          description: '${userSnap.error}',
-                        );
-                      }
-
-                      final allUsers = userSnap.data ?? const <UserModel>[];
-                      final allTechnicians =
-                          allUsers.where((u) => u.isTeknisi).toList();
-                      final allPelapor =
-                          allUsers.where((u) => u.isPelapor).toList();
-
-                      if (_selectedTabIndex == 1) {
-                        return _buildRegisterTab(allPelapor);
-                      }
-
-                      return StreamBuilder<Map<String, int>>(
-                        stream: _taskCountsStream,
-                        builder: (context, countSnap) {
-                          return _buildTechnicianTab(
-                            allTechnicians: allTechnicians,
-                            taskCounts: countSnap.data ?? const {},
-                          );
-                        },
-                      );
-                    },
+                  child: IndexedStack(
+                    index: _selectedTabIndex,
+                    children: [
+                      _buildTechnicianStreamTab(),
+                      _buildRegisterTab(),
+                    ],
                   ),
                 ),
               ],
@@ -414,6 +454,43 @@ class _KelolaTeknisiScreenState extends State<KelolaTeknisiScreen> {
     );
   }
 
+  // ==========================================================
+  // TAB 1: DAFTAR TEKNISI (STREAM KHUSUS ROLE TEKNISI)
+  // ==========================================================
+
+  Widget _buildTechnicianStreamTab() {
+    return StreamBuilder<List<UserModel>>(
+      stream: _techniciansStream,
+      builder: (context, techSnap) {
+        if (techSnap.connectionState == ConnectionState.waiting &&
+            !techSnap.hasData) {
+          return const Center(
+            child: CircularProgressIndicator(color: AppColors.primaryBlue),
+          );
+        }
+        if (techSnap.hasError) {
+          return _buildEmptyState(
+            icon: Icons.error_outline_rounded,
+            title: 'Gagal Memuat Daftar Teknisi',
+            description: '${techSnap.error}',
+          );
+        }
+
+        final allTechnicians = techSnap.data ?? const <UserModel>[];
+
+        return StreamBuilder<Map<String, int>>(
+          stream: _taskCountsStream,
+          builder: (context, countSnap) {
+            return _buildTechnicianTab(
+              allTechnicians: allTechnicians,
+              taskCounts: countSnap.data ?? const {},
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildTechnicianTab({
     required List<UserModel> allTechnicians,
     required Map<String, int> taskCounts,
@@ -437,7 +514,15 @@ class _KelolaTeknisiScreenState extends State<KelolaTeknisiScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: _buildSearchField('Cari nama atau email teknisi...'),
+          child: _buildSearchField(
+            controller: _techSearchController,
+            hint: 'Cari nama atau email teknisi...',
+            onChanged: (_) => setState(() {}),
+            onClear: () {
+              _techSearchController.clear();
+              setState(() {});
+            },
+          ),
         ),
         const SizedBox(height: 12),
         SizedBox(
@@ -543,64 +628,153 @@ class _KelolaTeknisiScreenState extends State<KelolaTeknisiScreen> {
     );
   }
 
-  Widget _buildRegisterTab(List<UserModel> allPelapor) {
-    final candidates = _filterPelapor(allPelapor);
+  // ==========================================================
+  // TAB 2: DAFTARKAN TEKNISI (SEARCH-ON-DEMAND + SCAN QR FAB)
+  // ==========================================================
+
+  Widget _buildRegisterTab() {
+    final trimmedQuery = _candidateSearchController.text.trim();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: _buildSearchField('Cari nama atau email pelapor...'),
-        ),
-        const SizedBox(height: 16),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Text(
-            'Kandidat Pelapor (${candidates.length})',
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
-              color: AppColors.textPrimary,
-            ),
+          child: _buildSearchField(
+            controller: _candidateSearchController,
+            hint: 'Ketik nama depan atau email pelapor...',
+            textInputAction: TextInputAction.search,
+            onChanged: _onCandidateQueryChanged,
+            onSubmitted: (value) {
+              _searchDebounce?.cancel();
+              _searchCandidates(value);
+            },
+            onClear: _clearCandidateSearch,
           ),
         ),
+        if (_lastSearchedQuery.isNotEmpty &&
+            !_isSearchingCandidates &&
+            _candidateSearchError == null) ...[
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Kandidat Pelapor (${_candidateResults.length})',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                if (_candidateResults.length >= _candidateSearchLimit)
+                  Text(
+                    'Maks. $_candidateSearchLimit hasil',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
         const SizedBox(height: 10),
         Expanded(
-          child: candidates.isEmpty
-              ? _buildEmptyState(
-                  icon: Icons.person_search_rounded,
-                  title: allPelapor.isEmpty
-                      ? 'Belum Ada Kandidat Pelapor'
-                      : 'Pengguna Tidak Ditemukan',
-                  description: allPelapor.isEmpty
-                      ? 'Pengguna baru yang mendaftar akan muncul di sini.'
-                      : 'Cari berdasarkan nama atau email, atau tekan tombol Scan QR di kanan bawah.',
-                )
-              : ListView.separated(
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 96),
-                  itemCount: candidates.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 10),
-                  itemBuilder: (context, index) {
-                    final user = candidates[index];
-                    return PelaporCandidateCard(
-                      user: user,
-                      onMakeTechnician: _isProcessing
-                          ? null
-                          : () => _promoteToTechnician(user),
-                    );
-                  },
-                ),
+          child: _buildRegisterTabBody(trimmedQuery),
         ),
       ],
     );
   }
 
-  Widget _buildSearchField(String hint) {
+  Widget _buildRegisterTabBody(String trimmedQuery) {
+    if (trimmedQuery.isEmpty) {
+      return _buildEmptyState(
+        icon: Icons.person_search_rounded,
+        title: 'Cari Kandidat Teknisi',
+        description:
+            'Ketik minimal $_minSearchLength huruf awal nama atau email pelapor, atau tekan tombol Scan QR di kanan bawah.',
+        extraBottomPadding: true,
+      );
+    }
+
+    if (trimmedQuery.length < _minSearchLength) {
+      return _buildEmptyState(
+        icon: Icons.keyboard_rounded,
+        title: 'Ketik Minimal $_minSearchLength Karakter',
+        description:
+            'Masukkan minimal $_minSearchLength huruf awal nama atau email untuk mencari akun pelapor.',
+        extraBottomPadding: true,
+      );
+    }
+
+    if (_isSearchingCandidates) {
+      return const Center(
+        child: CircularProgressIndicator(color: AppColors.primaryBlue),
+      );
+    }
+
+    if (_candidateSearchError != null) {
+      return _buildEmptyState(
+        icon: Icons.error_outline_rounded,
+        title: 'Gagal Mencari Pengguna',
+        description: _candidateSearchError!,
+        extraBottomPadding: true,
+      );
+    }
+
+    if (_lastSearchedQuery.isEmpty) {
+      return const Center(
+        child: CircularProgressIndicator(color: AppColors.primaryBlue),
+      );
+    }
+
+    if (_candidateResults.isEmpty) {
+      return _buildEmptyState(
+        icon: Icons.person_off_outlined,
+        title: 'Pelapor Tidak Ditemukan',
+        description:
+            'Tidak ada akun Pelapor yang diawali "$_lastSearchedQuery". Coba cari dengan email lengkap atau gunakan Scan QR.',
+        extraBottomPadding: true,
+      );
+    }
+
+    return ListView.separated(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 96),
+      itemCount: _candidateResults.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      itemBuilder: (context, index) {
+        final user = _candidateResults[index];
+        return PelaporCandidateCard(
+          user: user,
+          onMakeTechnician:
+              _isProcessing ? null : () => _promoteToTechnician(user),
+        );
+      },
+    );
+  }
+
+  // ==========================================================
+  // SHARED UI HELPERS
+  // ==========================================================
+
+  Widget _buildSearchField({
+    required TextEditingController controller,
+    required String hint,
+    required ValueChanged<String> onChanged,
+    required VoidCallback onClear,
+    ValueChanged<String>? onSubmitted,
+    TextInputAction textInputAction = TextInputAction.done,
+  }) {
     return TextField(
-      controller: _searchController,
-      onChanged: (_) => setState(() {}),
+      controller: controller,
+      onChanged: onChanged,
+      onSubmitted: onSubmitted,
+      textInputAction: textInputAction,
       style: GoogleFonts.plusJakartaSans(
         fontSize: 12.5,
         color: AppColors.textPrimary,
@@ -616,12 +790,9 @@ class _KelolaTeknisiScreenState extends State<KelolaTeknisiScreen> {
           color: AppColors.textSecondary,
           size: 20,
         ),
-        suffixIcon: _searchController.text.isNotEmpty
+        suffixIcon: controller.text.isNotEmpty
             ? IconButton(
-                onPressed: () {
-                  _searchController.clear();
-                  setState(() {});
-                },
+                onPressed: onClear,
                 icon: const Icon(Icons.close_rounded, size: 19),
               )
             : null,
@@ -654,6 +825,7 @@ class _KelolaTeknisiScreenState extends State<KelolaTeknisiScreen> {
     required IconData icon,
     required String title,
     required String description,
+    bool extraBottomPadding = false,
   }) {
     return Center(
       child: SingleChildScrollView(
@@ -661,7 +833,7 @@ class _KelolaTeknisiScreenState extends State<KelolaTeknisiScreen> {
           28,
           28,
           28,
-          _selectedTabIndex == 1 ? 96 : 28,
+          extraBottomPadding ? 96 : 28,
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

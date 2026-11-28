@@ -21,8 +21,9 @@ class AssetService {
 
   static const int maxBatchUnits = 500;
 
-  final CollectionReference _assetsRef =
-      FirebaseFirestore.instance.collection('assets');
+  final CollectionReference _assetsRef = FirebaseFirestore.instance.collection(
+    'assets',
+  );
 
   /// Cari satu aset berdasarkan Auto-ID hasil scan QR (setelah prefix 'ASSET:' dilepas).
   /// Mengembalikan null jika ID aset tidak terdaftar di database.
@@ -39,16 +40,19 @@ class AssetService {
   /// Diurutkan otomatis berdasarkan Gedung -> Ruangan -> Nama Aset.
   Stream<List<AssetModel>> streamAllAssets() {
     return _assetsRef.snapshots().map((snapshot) {
-      final assets =
-          snapshot.docs.map((doc) => AssetModel.fromFirestore(doc)).toList();
+      final assets = snapshot.docs
+          .map((doc) => AssetModel.fromFirestore(doc))
+          .toList();
 
       assets.sort((a, b) {
-        final gedungCmp =
-            a.gedung.toLowerCase().compareTo(b.gedung.toLowerCase());
+        final gedungCmp = a.gedung.toLowerCase().compareTo(
+          b.gedung.toLowerCase(),
+        );
         if (gedungCmp != 0) return gedungCmp;
 
-        final ruangCmp =
-            a.ruangan.toLowerCase().compareTo(b.ruangan.toLowerCase());
+        final ruangCmp = a.ruangan.toLowerCase().compareTo(
+          b.ruangan.toLowerCase(),
+        );
         if (ruangCmp != 0) return ruangCmp;
 
         return a.nama.toLowerCase().compareTo(b.nama.toLowerCase());
@@ -65,11 +69,7 @@ class AssetService {
       gedung: asset.gedung,
       ruangan: asset.ruangan,
       items: [
-        AssetBatchItem(
-          nama: asset.nama,
-          kategori: asset.kategori,
-          jumlah: 1,
-        ),
+        AssetBatchItem(nama: asset.nama, kategori: asset.kategori, jumlah: 1),
       ],
     );
     return created.first;
@@ -176,14 +176,12 @@ class AssetService {
 
       if (item.jumlah == 1) {
         // Mode satuan: karakter '#' diizinkan (misal menyisipkan ulang 'Kursi#02')
-        final namaLower = cleanNama.toLowerCase();
-        if (existingNamesLower.contains(namaLower)) {
-          throw Exception(
-            'Aset "$cleanNama" sudah terdaftar di $lokasiLabel.',
-          );
+        final nameLower = cleanNama.toLowerCase();
+        if (existingNamesLower.contains(nameLower)) {
+          throw Exception('Aset "$cleanNama" sudah terdaftar di $lokasiLabel.');
         }
 
-        existingNamesLower.add(namaLower);
+        existingNamesLower.add(nameLower);
 
         // Jika nama satuan memakai format '<Basis>#<Angka>', perbarui tracker Max
         final match = suffixPattern.firstMatch(cleanNama);
@@ -305,9 +303,7 @@ class AssetService {
       if (existingGedung.toLowerCase() == canonicalGedung.toLowerCase() &&
           existingRuangan.toLowerCase() == canonicalRuangan.toLowerCase() &&
           existingNama.toLowerCase() == cleanNama.toLowerCase()) {
-        throw Exception(
-          'Aset "$cleanNama" sudah terdaftar di $lokasiLabel.',
-        );
+        throw Exception('Aset "$cleanNama" sudah terdaftar di $lokasiLabel.');
       }
     }
 
@@ -361,9 +357,12 @@ class AssetService {
     final cleaned = input.trim().replaceAll(RegExp(r'\s+'), ' ');
     if (cleaned.isEmpty) return '';
 
-    return cleaned.split(' ').map((word) {
-      if (word.isEmpty) return '';
-      return '${word[0].toUpperCase()}${word.substring(1)}';
-    }).join(' ');
+    return cleaned
+        .split(' ')
+        .map((word) {
+          if (word.isEmpty) return '';
+          return '${word[0].toUpperCase()}${word.substring(1)}';
+        })
+        .join(' ');
   }
 }

@@ -1008,6 +1008,7 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                               style: _inputTextStyle(),
                               decoration: _pillInputDecoration(
                                 hintText: 'Masukkan judul kerusakan',
+                                isLocked: _selectedAsset != null,
                               ),
                             ),
 
@@ -1213,6 +1214,7 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                               style: _inputTextStyle(),
                               decoration: _pillInputDecoration(
                                 hintText: 'Lantai, nama ruangan',
+                                isLocked: _selectedAsset != null,
                               ),
                             ),
 
@@ -1475,7 +1477,10 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
     );
   }
 
-  InputDecoration _pillInputDecoration({required String hintText}) {
+  InputDecoration _pillInputDecoration({
+    required String hintText,
+    bool isLocked = false,
+  }) {
     return InputDecoration(
       hintText: hintText,
       hintStyle: GoogleFonts.plusJakartaSans(
@@ -1484,7 +1489,14 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
         color: const Color(0xFF8A94A6),
       ),
       filled: true,
-      fillColor: AppColors.inputFill,
+      fillColor: isLocked ? const Color(0xFFEEF2F6) : AppColors.inputFill,
+      suffixIcon: isLocked
+          ? const Icon(
+              Icons.lock_outline_rounded,
+              size: 18,
+              color: Color(0xFF94A3B8),
+            )
+          : null,
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(28),
@@ -1492,7 +1504,10 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(28),
-        borderSide: const BorderSide(color: AppColors.primaryBlue, width: 1.4),
+        borderSide: BorderSide(
+          color: isLocked ? const Color(0xFFD5DFEF) : AppColors.primaryBlue,
+          width: isLocked ? 1 : 1.4,
+        ),
       ),
     );
   }

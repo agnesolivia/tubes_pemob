@@ -21,6 +21,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _confirmPasswordController =
       TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  final GlobalKey<FormFieldState> _confirmPasswordFieldKey =
+    GlobalKey<FormFieldState>();
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
@@ -179,7 +181,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         padding: const EdgeInsets.fromLTRB(26, 28, 26, 24),
                           child: Form(
                             key: _formKey,
-                            autovalidateMode: AutovalidateMode.onUserInteraction,
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -214,6 +215,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   const SizedBox(height: 8),
                                   TextFormField(
                                     controller: _nameController,
+                                    autovalidateMode: AutovalidateMode.onUserInteraction,
                                     textCapitalization: TextCapitalization.words,
                                     style: _inputTextStyle(),
                                     validator: (value) {
@@ -234,6 +236,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   const SizedBox(height: 8),
                                   TextFormField(
                                     controller: _emailController,
+                                    autovalidateMode: AutovalidateMode.onUserInteraction,
                                     keyboardType: TextInputType.emailAddress,
                                     style: _inputTextStyle(),
                                     validator: (value) {
@@ -255,11 +258,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   const SizedBox(height: 8),
                                   TextFormField(
                                     controller: _passwordController,
+                                    autovalidateMode: AutovalidateMode.onUserInteraction,
                                     obscureText: _obscurePassword,
                                     style: _inputTextStyle(),
                                     onChanged: (_) {
                                       if (_confirmPasswordController.text.isNotEmpty) {
-                                        _formKey.currentState?.validate();
+                                        _confirmPasswordFieldKey.currentState?.validate();
                                       }
                                     },
                                     validator: (value) {
@@ -296,7 +300,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   _buildFieldLabel('Konfirmasi kata Sandi'),
                                   const SizedBox(height: 8),
                                   TextFormField(
+                                    key: _confirmPasswordFieldKey,
                                     controller: _confirmPasswordController,
+                                    autovalidateMode: AutovalidateMode.onUserInteraction,
                                     obscureText: _obscureConfirmPassword,
                                     style: _inputTextStyle(),
                                     validator: (value) {

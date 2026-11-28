@@ -6,6 +6,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:tubes_pemob/constants/app_colors.dart';
 import 'package:tubes_pemob/models/user_model.dart';
 import 'package:tubes_pemob/services/auth_service.dart';
+import 'package:tubes_pemob/services/notification_service.dart';
 import 'package:tubes_pemob/services/storage_service.dart';
 
 class _ProfileColors {
@@ -25,7 +26,6 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  bool _notifAktif = true;
   bool _isLoggingOut = false;
 
   String _getInitial(String nama) {
@@ -818,21 +818,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // PENGATURAN
   Widget _buildSettings(UserModel user) {
-    final (notifTitle, notifSubtitle) = switch (user.role) {
-      UserRole.pelapor => (
-        'Notifikasi Status Laporan',
-        'Update progres & feedback Admin',
-      ),
-      UserRole.teknisi => (
-        'Notifikasi Tugas Perbaikan',
-        'Update penugasan tiket baru',
-      ),
-      UserRole.admin => (
-        'Notifikasi Laporan Masuk',
-        'Update laporan baru & progres perbaikan',
-      ),
-    };
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -858,14 +843,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const Divider(height: 1, color: _ProfileColors.border),
               _settingTile(
                 icon: Icons.notifications_none,
-                title: notifTitle,
-                subtitle: notifSubtitle,
-                trailing: Switch(
-                  value: _notifAktif,
-                  activeThumbColor: AppColors.white,
-                  activeTrackColor: _ProfileColors.primary,
-                  onChanged: (value) {
-                    setState(() => _notifAktif = value);
+                title: 'Notifikasi Aplikasi',
+                subtitle: 'Pembaruan status laporan & penugasan',
+                trailing: ValueListenableBuilder<bool>(
+                  valueListenable:
+                      NotificationService.instance.foregroundAlertsEnabled,
+                  builder: (_, isEnabled, __) {
+                    return Switch(
+                      value: isEnabled,
+                      activeThumbColor: AppColors.white,
+                      activeTrackColor: _ProfileColors.primary,
+                      onChanged: (value) async {
+                        final ok = await NotificationService.instance
+                            .setForegroundAlertsEnabled(
+                          uid: user.uid,
+                          enabled: value,
+                        );
+                        if (!ok && mounted) {
+                          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                          _showSnackBar(
+                            'Izin notifikasi dinonaktifkan. Aktifkan di Pengaturan HP > Aplikasi > SnaFix.',
+                            isError: true,
+                          );
+                        }
+                      },
+                    );
                   },
                 ),
               ),

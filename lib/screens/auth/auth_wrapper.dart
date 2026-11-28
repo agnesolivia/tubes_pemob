@@ -8,6 +8,7 @@ import 'package:tubes_pemob/screens/auth/login_screen.dart';
 import 'package:tubes_pemob/screens/pelapor/pelapor_main_screen.dart';
 import 'package:tubes_pemob/screens/teknisi/teknisi_main_screen.dart';
 import 'package:tubes_pemob/services/auth_service.dart';
+import 'package:tubes_pemob/services/notification_service.dart';
 
 class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
@@ -19,6 +20,12 @@ class AuthWrapper extends StatefulWidget {
 class _AuthWrapperState extends State<AuthWrapper> {
   String? _cachedUid;
   Stream<UserModel?>? _userStream;
+
+  @override
+  void dispose() {
+    NotificationService.instance.stopForegroundListener();
+    super.dispose();
+  }
 
   Stream<UserModel?> _getUserStream(String uid) {
     if (_cachedUid != uid || _userStream == null) {
@@ -35,7 +42,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
       stream: FirebaseAuth.instance.userChanges(),
       builder: (context, authSnapshot) {
         if (authSnapshot.connectionState == ConnectionState.waiting &&
-          !authSnapshot.hasData) {
+            !authSnapshot.hasData) {
           return const _AuthLoadingScreen();
         }
 
@@ -43,11 +50,13 @@ class _AuthWrapperState extends State<AuthWrapper> {
         if (firebaseUser == null) {
           _cachedUid = null;
           _userStream = null;
+          NotificationService.instance.stopForegroundListener();
           return const LoginScreen();
         }
 
         // Gerbang wajib verifikasi email sebelum masuk ke halaman utama
         if (!firebaseUser.emailVerified) {
+          NotificationService.instance.stopForegroundListener();
           return EmailVerificationScreen(
             onVerified: () {
               if (mounted) setState(() {});
@@ -59,7 +68,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
           stream: _getUserStream(firebaseUser.uid),
           builder: (context, userSnapshot) {
             if (userSnapshot.connectionState == ConnectionState.waiting &&
-              !userSnapshot.hasData) {
+                !userSnapshot.hasData) {
               return const _AuthLoadingScreen();
             }
 
@@ -75,6 +84,12 @@ class _AuthWrapperState extends State<AuthWrapper> {
                 message: 'Menyiapkan profil akun...',
               );
             }
+
+            // Aktifkan listener banner notifikasi foreground sesuai akun & role aktif
+            NotificationService.instance.startForegroundListener(
+              uid: user.uid,
+              userRole: user.role,
+            );
 
             if (user.isAdmin) {
               return const AdminMainScreen();

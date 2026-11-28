@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../models/asset_model.dart';
 import '../models/report_model.dart';
 import '../models/user_model.dart';
@@ -46,6 +47,44 @@ class ReportService {
       timestamp: timestamp,
     );
     return FieldValue.arrayUnion([item.toMap()]);
+  }
+
+  /// Membungkus pengiriman notifikasi agar gangguan jaringan/write notifikasi
+  /// tidak memunculkan error palsu ke UI padahal status laporan sudah tersimpan.
+  Future<void> _safeSendNotification({
+    required String recipientId,
+    required String reportId,
+    required String title,
+    required String message,
+  }) async {
+    if (recipientId.trim().isEmpty) return;
+    try {
+      await _notifService.sendNotification(
+        recipientId: recipientId,
+        reportId: reportId,
+        title: title,
+        message: message,
+      );
+    } catch (e) {
+      debugPrint('Gagal mengirim notifikasi ke $recipientId: $e');
+    }
+  }
+
+  /// Membungkus pengiriman notifikasi broadcast ke seluruh Admin.
+  Future<void> _safeNotifyAllAdmins({
+    required String reportId,
+    required String title,
+    required String message,
+  }) async {
+    try {
+      await _notifService.notifyAllAdmins(
+        reportId: reportId,
+        title: title,
+        message: message,
+      );
+    } catch (e) {
+      debugPrint('Gagal mengirim notifikasi ke seluruh Admin: $e');
+    }
   }
 
   /// Menjalankan transisi status di dalam transaksi Firestore.
@@ -100,31 +139,43 @@ class ReportService {
     required String title,
     required String message,
   }) async {
+    final List<Future<void>> tasks = [];
+
     if (actor.isAdmin) {
       if (current.pelaporId.isNotEmpty && current.pelaporId != actor.uid) {
-        await _notifService.sendNotification(
-          recipientId: current.pelaporId,
-          reportId: current.id,
-          title: title,
-          message: message,
+        tasks.add(
+          _safeSendNotification(
+            recipientId: current.pelaporId,
+            reportId: current.id,
+            title: title,
+            message: message,
+          ),
         );
       }
     } else {
-      await _notifService.notifyAllAdmins(
-        reportId: current.id,
-        title: title,
-        message: message,
+      tasks.add(
+        _safeNotifyAllAdmins(
+          reportId: current.id,
+          title: title,
+          message: message,
+        ),
       );
     }
 
     final techId = current.teknisiId;
-    if (techId != null && techId.isNotEmpty) {
-      await _notifService.sendNotification(
-        recipientId: techId,
-        reportId: current.id,
-        title: title,
-        message: message,
+    if (techId != null && techId.isNotEmpty && techId != actor.uid) {
+      tasks.add(
+        _safeSendNotification(
+          recipientId: techId,
+          reportId: current.id,
+          title: title,
+          message: message,
+        ),
       );
+    }
+
+    if (tasks.isNotEmpty) {
+      await Future.wait(tasks);
     }
   }
 
@@ -254,7 +305,7 @@ class ReportService {
   /// Stream jumlah tiket aktif ('assigned' + 'in progress') per Teknisi.
   /// Pengganti toggle isAvailable agar Admin melihat beban kerja aktual tiap teknisi.
   /// Filter status dilakukan di server; hanya field teknisiId yang dibaca.
-  Stream<Map<String, int>> streamTechnicianActiveTaskCounts() {
+  Stream> streamTechnicianActiveTaskCounts() {
     return _reportsRef
         .where('status', whereIn: _technicianTaskStatusValues)
         .snapshots()
@@ -356,7 +407,7 @@ class ReportService {
 
     final docRef = await _reportsRef.add(newReport.toMap());
 
-    await _notifService.notifyAllAdmins(
+    await _safeNotifyAllAdmins(
       reportId: docRef.id,
       title: 'Laporan Kerusakan Baru',
       message:
@@ -523,28 +574,34 @@ class ReportService {
       },
     );
 
-    // Notifikasi ke Pelapor
-    await _notifService.sendNotification(
-      recipientId: current.pelaporId,
-      reportId: current.id,
-      title: hasTechnician
-          ? 'Laporan Diverifikasi & Ditugaskan'
-          : 'Laporan Diverifikasi',
-      message: hasTechnician
-          ? 'Laporan ${current.assetNama} diverifikasi dan sedang ditangani oleh teknisi ${teknisi.nama}.'
-          : 'Laporan ${current.assetNama} telah diverifikasi dengan prioritas ${prioritas.label}.',
-    );
+    final List<Future<void>> notifTasks = [
+      // Notifikasi ke Pelapor
+      _safeSendNotification(
+        recipientId: current.pelaporId,
+        reportId: current.id,
+        title: hasTechnician
+            ? 'Laporan Diverifikasi & Ditugaskan'
+            : 'Laporan Diverifikasi',
+        message: hasTechnician
+            ? 'Laporan ${current.assetNama} diverifikasi dan sedang ditangani oleh teknisi ${teknisi.nama}.'
+            : 'Laporan ${current.assetNama} telah diverifikasi dengan prioritas ${prioritas.label}.',
+      ),
+    ];
 
     // Notifikasi ke Teknisi jika langsung dipilih
     if (hasTechnician) {
-      await _notifService.sendNotification(
-        recipientId: teknisi.uid,
-        reportId: current.id,
-        title: 'Tugas Perbaikan Baru',
-        message:
-            'Anda ditugaskan memperbaiki ${current.assetNama} di ${current.assetLokasi} (Prioritas: ${prioritas.label}).',
+      notifTasks.add(
+        _safeSendNotification(
+          recipientId: teknisi.uid,
+          reportId: current.id,
+          title: 'Tugas Perbaikan Baru',
+          message:
+              'Anda ditugaskan memperbaiki ${current.assetNama} di ${current.assetLokasi} (Prioritas: ${prioritas.label}).',
+        ),
       );
     }
+
+    await Future.wait(notifTasks);
   }
 
   /// Tugaskan atau alihkan tugas ke Teknisi (untuk tiket 'verified', 'assigned', atau 'in progress').
@@ -593,34 +650,41 @@ class ReportService {
     );
 
     final previousTechId = current.teknisiId;
-    final isReassign = previousTechId != null && previousTechId != teknisi.uid;
+    final isReassign = previousTechId != null &&
+        previousTechId.isNotEmpty &&
+        previousTechId != teknisi.uid;
 
-    await _notifService.sendNotification(
-      recipientId: teknisi.uid,
-      reportId: current.id,
-      title: 'Tugas Perbaikan Baru',
-      message:
-          'Anda ditugaskan memperbaiki ${current.assetNama} di ${current.assetLokasi}.',
-    );
+    final List<Future<void>> notifTasks = [
+      _safeSendNotification(
+        recipientId: teknisi.uid,
+        reportId: current.id,
+        title: 'Tugas Perbaikan Baru',
+        message:
+            'Anda ditugaskan memperbaiki ${current.assetNama} di ${current.assetLokasi}.',
+      ),
+      _safeSendNotification(
+        recipientId: current.pelaporId,
+        reportId: current.id,
+        title: 'Teknisi Ditugaskan',
+        message:
+            'Teknisi ${teknisi.nama} telah ditugaskan menangani laporan ${current.assetNama}.',
+      ),
+    ];
 
     // Kabari teknisi lama bahwa tugas dialihkan
     if (isReassign) {
-      await _notifService.sendNotification(
-        recipientId: previousTechId,
-        reportId: current.id,
-        title: 'Tugas Dialihkan',
-        message:
-            'Tugas perbaikan ${current.assetNama} di ${current.assetLokasi} dialihkan ke ${teknisi.nama}.',
+      notifTasks.add(
+        _safeSendNotification(
+          recipientId: previousTechId,
+          reportId: current.id,
+          title: 'Tugas Dialihkan',
+          message:
+              'Tugas perbaikan ${current.assetNama} di ${current.assetLokasi} dialihkan ke ${teknisi.nama}.',
+        ),
       );
     }
 
-    await _notifService.sendNotification(
-      recipientId: current.pelaporId,
-      reportId: current.id,
-      title: 'Teknisi Ditugaskan',
-      message:
-          'Teknisi ${teknisi.nama} telah ditugaskan menangani laporan ${current.assetNama}.',
-    );
+    await Future.wait(notifTasks);
   }
 
   /// Tolak laporan oleh Admin dengan alasan wajib (hanya untuk tiket 'reported').
@@ -653,7 +717,7 @@ class ReportService {
       },
     );
 
-    await _notifService.sendNotification(
+    await _safeSendNotification(
       recipientId: current.pelaporId,
       reportId: current.id,
       title: 'Laporan Ditolak',
@@ -695,7 +759,7 @@ class ReportService {
       },
     );
 
-    await _notifService.sendNotification(
+    await _safeSendNotification(
       recipientId: current.pelaporId,
       reportId: current.id,
       title: 'Perbaikan Sedang Dikerjakan',
@@ -747,21 +811,22 @@ class ReportService {
       },
     );
 
-    // Notifikasi ke Pelapor
-    await _notifService.sendNotification(
-      recipientId: current.pelaporId,
-      reportId: current.id,
-      title: 'Fasilitas Selesai Diperbaiki',
-      message:
-          'Kerusakan ${current.assetNama} telah selesai diperbaiki oleh ${teknisi.nama}. Silakan cek hasil perbaikan.',
-    );
-
-    // Notifikasi ke seluruh Admin
-    await _notifService.notifyAllAdmins(
-      reportId: current.id,
-      title: 'Tugas Perbaikan Selesai',
-      message:
-          '${teknisi.nama} telah menyelesaikan perbaikan ${current.assetNama} (${current.assetLokasi}).',
-    );
+    await Future.wait([
+      // Notifikasi ke Pelapor
+      _safeSendNotification(
+        recipientId: current.pelaporId,
+        reportId: current.id,
+        title: 'Fasilitas Selesai Diperbaiki',
+        message:
+            'Kerusakan ${current.assetNama} telah selesai diperbaiki oleh ${teknisi.nama}. Silakan cek hasil perbaikan.',
+      ),
+      // Notifikasi ke seluruh Admin
+      _safeNotifyAllAdmins(
+        reportId: current.id,
+        title: 'Tugas Perbaikan Selesai',
+        message:
+            '${teknisi.nama} telah menyelesaikan perbaikan ${current.assetNama} (${current.assetLokasi}).',
+      ),
+    ]);
   }
 }

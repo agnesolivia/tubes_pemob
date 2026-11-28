@@ -425,7 +425,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
     );
   }
 
-  // HEADER (seragam dengan ProfileScreen, tanpa tombol back)
+  // HEADER (bersih tanpa tombol back maupun ikon done_all redundan)
   Widget _buildHeader(int unreadCount) {
     final subtitle = unreadCount > 0
         ? '$unreadCount notifikasi belum dibaca'

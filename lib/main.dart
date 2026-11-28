@@ -10,6 +10,7 @@ import 'screens/pelapor/history_laporan_screen.dart';
 import 'screens/teknisi/teknisi_main_screen.dart';
 import 'screens/shared/notification_screen.dart';
 import 'services/auth_service.dart';
+import 'services/notification_service.dart';
 import 'package:google_fonts/google_fonts.dart';
 // import 'utils/firestore_seeder.dart';
 
@@ -21,6 +22,7 @@ void main() async {
   );
 
   await AuthService.instance.initialize();
+  await NotificationService.instance.initializeLocalNotifications();
   // await FirestoreSeeder.seedAll();
   // await FirestoreSeeder.seedNotificationsFromExistingReports();
 
@@ -33,6 +35,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: NotificationService.navigatorKey,
       title: 'Pelaporan Fasilitas Kampus',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(

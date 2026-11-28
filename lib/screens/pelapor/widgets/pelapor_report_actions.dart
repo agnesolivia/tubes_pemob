@@ -6,7 +6,6 @@ import 'package:tubes_pemob/widgets/resolution_action_bar.dart';
 import 'package:tubes_pemob/services/report_service.dart';
 
 /// Bagian tombol aksi khusus role Pelapor pada `DetailLaporanScreen`.
-/// Mode saat ini masih UI-only (belum terhubung ke proses tulis Firestore).
 class PelaporReportActions extends StatelessWidget {
   final ReportModel report;
 
@@ -27,7 +26,11 @@ class PelaporReportActions extends StatelessWidget {
     this.onReopenReport,
   });
 
-  void _showPreviewSnackBar(BuildContext context, String message) {
+  void _showPreviewSnackBar(
+    BuildContext context,
+    String message, {
+    bool isError = false,
+  }) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
@@ -39,7 +42,8 @@ class PelaporReportActions extends StatelessWidget {
               fontWeight: FontWeight.w500,
             ),
           ),
-          backgroundColor: AppColors.primaryBlue,
+          backgroundColor:
+              isError ? AppColors.statusRejectedText : AppColors.primaryBlue,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -111,7 +115,11 @@ class PelaporReportActions extends StatelessWidget {
     } catch (e) {
       if (!context.mounted) return;
       final msg = e.toString().replaceFirst('Exception: ', '');
-      _showPreviewSnackBar(context, 'Gagal membatalkan: $msg');
+      _showPreviewSnackBar(
+        context,
+        'Gagal membatalkan: $msg',
+        isError: true,
+      );
     }
   }
 

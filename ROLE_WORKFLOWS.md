@@ -231,7 +231,6 @@ Agar seluruh anggota tim bisa mengerjakan tugas secara bersamaan tanpa saling me
 * [x] `widgets/bottom_navbar.dart` (Navigasi bawah reusable lintas role dengan tombol aksi tengah)
 * [x] `widgets/resolution_action_bar.dart` (Tombol & dialog Konfirmasi Selesai / Belum Beres bersama Pelapor & Admin — *tersambung ke `ReportService`*)
 * [x] `widgets/status_badge.dart` (`StatusBadge`, `PriorityBadge`, & helper warna status/prioritas)
-* [ ] `widgets/sla_indicator.dart` (Indikator sisa waktu / label *Overdue* berdasarkan `deadlineAt`)
 * [x] `widgets/report_card.dart` (Kartu ringkasan laporan reusable untuk daftar, *Overdue SLA*, & aktivitas terbaru)
 * [ ] `widgets/base64_image_viewer.dart` (Komponen render gambar dari string Base64 + tampilan saat error/kosong)
 

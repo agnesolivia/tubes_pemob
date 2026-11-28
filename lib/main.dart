@@ -22,6 +22,7 @@ void main() async {
 
   await AuthService.instance.initialize();
   // await FirestoreSeeder.seedAll();
+  // await FirestoreSeeder.seedNotificationsFromExistingReports();
 
   runApp(const MyApp());
 }

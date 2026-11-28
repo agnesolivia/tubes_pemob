@@ -44,7 +44,7 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
         children: [
           AdminDashboardScreen(onSwitchTab: _onTabSelected),
           const KelolaLaporanScreen(),
-          NotificationScreen(onBackToHome: () => _onTabSelected(0)),
+          const NotificationScreen(userRole: UserRole.admin),
           const ProfileScreen(),
         ],
       ),

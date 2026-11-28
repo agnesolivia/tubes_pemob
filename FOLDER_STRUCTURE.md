@@ -35,7 +35,6 @@ lib/
 │   ├── bottom_navbar.dart                         # Navigasi bawah reusable lintas role dengan tombol aksi tengah
 │   ├── resolution_action_bar.dart                 # Tombol & dialog Konfirmasi Selesai / Belum Beres (Pelapor & Admin)
 │   ├── status_badge.dart                          # StatusBadge, PriorityBadge, & helper warna status/prioritas
-│   ├── sla_indicator.dart                         # Indikator sisa waktu / keterlambatan batas SLA
 │   ├── report_card.dart                           # Kartu ringkasan laporan reusable (daftar, overdue SLA, & aktivitas)
 │   └── base64_image_viewer.dart                   # Komponen render gambar dari string Base64 + fallback error
 │
@@ -113,7 +112,7 @@ Berisi komponen UI tanpa `Scaffold` yang digunakan di lebih dari satu halaman at
 * **`status_badge.dart`:** Menyediakan `StatusBadge`, `PriorityBadge`, `ReportBadgeChip`, serta helper warna terpusat untuk `ReportStatus` dan `ReportPriority`.
 * **`report_card.dart`:** Kartu ringkasan laporan reusable untuk daftar tiket semua role (`ReportCard`), peringatan *Overdue SLA* (`ReportCard.overdue`), dan aktivitas terbaru (`ReportCard.activity`).
 * **`resolution_action_bar.dart`:** Tombol serta dialog **Konfirmasi Selesai / Belum Beres** yang dipakai bersama oleh Pelapor dan Admin.
-* **`bottom_navbar.dart`**, **`sla_indicator.dart`**, & **`base64_image_viewer.dart`:** Navigasi bawah lintas role, indikator SLA, dan tampilan gambar Base64.
+* **`bottom_navbar.dart`:** Navigasi bawah lintas role.
 
 ### `screens/`
 

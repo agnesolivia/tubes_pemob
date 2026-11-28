@@ -3,11 +3,12 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:tubes_pemob/constants/app_colors.dart';
 import 'package:tubes_pemob/models/user_model.dart';
 import 'package:tubes_pemob/screens/pelapor/history_laporan_screen.dart';
+import 'package:tubes_pemob/screens/shared/notification_screen.dart';
 import 'package:tubes_pemob/screens/shared/profile_screen.dart';
 import 'package:tubes_pemob/screens/shared/scan_qr_screen.dart';
-import 'package:tubes_pemob/screens/shared/notification_screen.dart';
 import 'package:tubes_pemob/screens/teknisi/daftar_tugas_screen.dart';
 import 'package:tubes_pemob/services/auth_service.dart';
+import 'package:tubes_pemob/services/notification_service.dart';
 
 class _NavItemData {
   final IconData icon;
@@ -19,7 +20,7 @@ class _NavItemData {
   });
 }
 
-class BottomNavbar extends StatelessWidget {
+class BottomNavbar extends StatefulWidget {
   final int selectedIndex;
   final UserRole role;
   final ValueChanged<int>? onItemTapped;
@@ -33,8 +34,39 @@ class BottomNavbar extends StatelessWidget {
     this.onCenterPressed,
   });
 
+  @override
+  State<BottomNavbar> createState() => _BottomNavbarState();
+}
+
+class _BottomNavbarState extends State<BottomNavbar> {
+  String? _currentUid;
+  Stream<int>? _unreadCountStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncUnreadStream();
+  }
+
+  @override
+  void didUpdateWidget(covariant BottomNavbar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncUnreadStream();
+  }
+
+  void _syncUnreadStream() {
+    final uid = AuthService.instance.currentUser?.uid;
+    if (uid == _currentUid && (_unreadCountStream != null || uid == null)) {
+      return;
+    }
+    _currentUid = uid;
+    _unreadCountStream = (uid != null && uid.isNotEmpty)
+        ? NotificationService.instance.streamUnreadCount(uid)
+        : null;
+  }
+
   List<_NavItemData> get _items {
-    final secondItem = switch (role) {
+    final secondItem = switch (widget.role) {
       UserRole.pelapor => const _NavItemData(
           icon: Icons.assignment_outlined,
           label: 'Riwayat',
@@ -63,24 +95,27 @@ class BottomNavbar extends StatelessWidget {
   IconData get _centerIcon => Icons.qr_code_scanner_rounded;
 
   void _handleDefaultTap(BuildContext context, int index) {
-    if (index == selectedIndex) return;
+    if (index == widget.selectedIndex) return;
 
     switch (index) {
       case 0:
         Navigator.of(context).popUntil((route) => route.isFirst);
         break;
       case 1:
-        if (role == UserRole.pelapor) {
+        if (widget.role == UserRole.pelapor) {
           _navigateToTab(context, const RiwayatLaporanPage());
-        } else if (role == UserRole.teknisi) {
+        } else if (widget.role == UserRole.teknisi) {
           final uid = AuthService.instance.currentUser?.uid ?? '';
           _navigateToTab(context, DaftarTugasScreen(currentUserUid: uid));
         } else {
-          _showUnavailableMessage(context, 'Halaman Daftar Tiket belum tersedia.');
+          _showUnavailableMessage(
+            context,
+            'Halaman Daftar Tiket belum tersedia.',
+          );
         }
         break;
       case 2:
-        _navigateToTab(context, const NotificationScreen());
+        _navigateToTab(context, NotificationScreen(userRole: widget.role));
         break;
       case 3:
         _navigateToTab(context, const ProfileScreen());
@@ -105,7 +140,7 @@ class BottomNavbar extends StatelessWidget {
 
   void _navigateToTab(BuildContext context, Widget destination) {
     final route = MaterialPageRoute(builder: (_) => destination);
-    if (selectedIndex == 0) {
+    if (widget.selectedIndex == 0) {
       Navigator.of(context).push(route);
     } else {
       Navigator.of(context).pushReplacement(route);
@@ -114,13 +149,13 @@ class BottomNavbar extends StatelessWidget {
 
   void _handleDefaultCenterPress(BuildContext context) {
     final scanMode =
-        role == UserRole.admin ? ScanQrMode.all : ScanQrMode.asset;
+        widget.role == UserRole.admin ? ScanQrMode.all : ScanQrMode.asset;
 
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => ScanQrScreen(
           mode: scanMode,
-          role: role,
+          role: widget.role,
         ),
       ),
     );
@@ -156,34 +191,41 @@ class BottomNavbar extends StatelessWidget {
                 _NavBarItem(
                   icon: items[0].icon,
                   label: items[0].label,
-                  isSelected: selectedIndex == 0,
-                  onTap: () => onItemTapped != null
-                      ? onItemTapped!(0)
+                  isSelected: widget.selectedIndex == 0,
+                  onTap: () => widget.onItemTapped != null
+                      ? widget.onItemTapped!(0)
                       : _handleDefaultTap(context, 0),
                 ),
                 _NavBarItem(
                   icon: items[1].icon,
                   label: items[1].label,
-                  isSelected: selectedIndex == 1,
-                  onTap: () => onItemTapped != null
-                      ? onItemTapped!(1)
+                  isSelected: widget.selectedIndex == 1,
+                  onTap: () => widget.onItemTapped != null
+                      ? widget.onItemTapped!(1)
                       : _handleDefaultTap(context, 1),
                 ),
                 const SizedBox(width: 64),
-                _NavBarItem(
-                  icon: items[2].icon,
-                  label: items[2].label,
-                  isSelected: selectedIndex == 2,
-                  onTap: () => onItemTapped != null
-                      ? onItemTapped!(2)
-                      : _handleDefaultTap(context, 2),
+                StreamBuilder<int>(
+                  stream: _unreadCountStream,
+                  builder: (context, snapshot) {
+                    final hasUnread = (snapshot.data ?? 0) > 0;
+                    return _NavBarItem(
+                      icon: items[2].icon,
+                      label: items[2].label,
+                      isSelected: widget.selectedIndex == 2,
+                      showBadgeDot: hasUnread,
+                      onTap: () => widget.onItemTapped != null
+                          ? widget.onItemTapped!(2)
+                          : _handleDefaultTap(context, 2),
+                    );
+                  },
                 ),
                 _NavBarItem(
                   icon: items[3].icon,
                   label: items[3].label,
-                  isSelected: selectedIndex == 3,
-                  onTap: () => onItemTapped != null
-                      ? onItemTapped!(3)
+                  isSelected: widget.selectedIndex == 3,
+                  onTap: () => widget.onItemTapped != null
+                      ? widget.onItemTapped!(3)
                       : _handleDefaultTap(context, 3),
                 ),
               ],
@@ -195,7 +237,7 @@ class BottomNavbar extends StatelessWidget {
               color: Colors.transparent,
               shape: const CircleBorder(),
               child: InkWell(
-                onTap: onCenterPressed ??
+                onTap: widget.onCenterPressed ??
                     () => _handleDefaultCenterPress(context),
                 customBorder: const CircleBorder(),
                 child: Container(
@@ -235,12 +277,14 @@ class _NavBarItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final bool isSelected;
+  final bool showBadgeDot;
   final VoidCallback onTap;
 
   const _NavBarItem({
     required this.icon,
     required this.label,
     required this.isSelected,
+    this.showBadgeDot = false,
     required this.onTap,
   });
 
@@ -257,7 +301,29 @@ class _NavBarItem extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: color, size: 23),
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(icon, color: color, size: 23),
+                if (showBadgeDot)
+                  Positioned(
+                    right: -1,
+                    top: -1,
+                    child: Container(
+                      width: 9,
+                      height: 9,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE53935),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppColors.white,
+                          width: 1.5,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
             const SizedBox(height: 3),
             Text(
               label,

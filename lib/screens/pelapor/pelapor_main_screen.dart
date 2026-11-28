@@ -41,7 +41,7 @@ class _PelaporMainScreenState extends State<PelaporMainScreen> {
         children: [
           PelaporHomeScreen(onSwitchTab: _onTabSelected),
           RiwayatLaporanPage(onBackToHome: () => _onTabSelected(0)),
-          NotificationScreen(onBackToHome: () => _onTabSelected(0)),
+          const NotificationScreen(userRole: UserRole.pelapor),
           const ProfileScreen(),
         ],
       ),

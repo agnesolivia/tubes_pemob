@@ -829,7 +829,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       UserRole.admin => (
         'Notifikasi Laporan Masuk',
-        'Update laporan baru & peringatan SLA',
+        'Update laporan baru & progres perbaikan',
       ),
     };
 

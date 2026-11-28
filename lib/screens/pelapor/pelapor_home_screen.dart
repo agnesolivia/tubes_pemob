@@ -5,6 +5,7 @@ import 'package:tubes_pemob/constants/app_colors.dart';
 import 'package:tubes_pemob/models/user_model.dart';
 import 'package:tubes_pemob/screens/pelapor/form_pengaduan_screen.dart';
 import 'package:tubes_pemob/screens/pelapor/history_laporan_screen.dart';
+import 'package:tubes_pemob/screens/shared/detail_laporan_screen.dart';
 import 'package:tubes_pemob/screens/shared/profile_screen.dart';
 import 'package:tubes_pemob/services/auth_service.dart';
 import 'package:tubes_pemob/models/report_model.dart';
@@ -540,17 +541,31 @@ class PelaporHomeScreen extends StatelessWidget {
                                         return Padding(
                                           padding:
                                               const EdgeInsets.only(bottom: 12),
-                                          child: _ActiveReportCard(
-                                            ticketId: '#$shortId',
-                                            statusText: report.status.label,
-                                            title: report.assetNama,
-                                            location: report.assetLokasi,
-                                            stageText: prog.stageText,
-                                            progressPercent: prog.percent,
-                                            completedSegments: prog.step,
-                                            totalSegments: 5,
-                                            feedbackText: latestNote,
-                                            fotoSebelum: report.fotoSebelum,
+                                          child: GestureDetector(
+                                            onTap: () {
+                                              Navigator.of(context).push(
+                                                MaterialPageRoute(
+                                                  builder: (_) =>
+                                                      DetailLaporanScreen(
+                                                    reportId: report.id,
+                                                    initialReport: report,
+                                                    userRole: UserRole.pelapor,
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                            child: _ActiveReportCard(
+                                              ticketId: '#$shortId',
+                                              statusText: report.status.label,
+                                              title: report.assetNama,
+                                              location: report.assetLokasi,
+                                              stageText: prog.stageText,
+                                              progressPercent: prog.percent,
+                                              completedSegments: prog.step,
+                                              totalSegments: 5,
+                                              feedbackText: latestNote,
+                                              fotoSebelum: report.fotoSebelum,
+                                            ),
                                           ),
                                         );
                                       }),

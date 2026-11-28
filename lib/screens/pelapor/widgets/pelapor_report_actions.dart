@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:tubes_pemob/constants/app_colors.dart';
 import 'package:tubes_pemob/models/report_model.dart';
 import 'package:tubes_pemob/widgets/resolution_action_bar.dart';
+import 'package:tubes_pemob/services/report_service.dart';
 
 /// Bagian tombol aksi khusus role Pelapor pada `DetailLaporanScreen`.
 /// Mode saat ini masih UI-only (belum terhubung ke proses tulis Firestore).
@@ -95,13 +96,22 @@ class PelaporReportActions extends StatelessWidget {
     if (confirmed != true || !context.mounted) return;
 
     if (onCancelReport != null) {
-      onCancelReport!();
-    } else {
-      // TODO: Sambungkan ke ReportService.instance.cancelReport(report.id)
+    onCancelReport!();
+    return;
+  }
+
+  try {
+    await ReportService.instance.cancelReport(report.id);
+    if (!context.mounted) return;
       _showPreviewSnackBar(
         context,
-        'UI Preview: Laporan "${report.assetNama}" dibatalkan.',
+        'Laporan "${report.assetNama}" berhasil dibatalkan.',
       );
+      Navigator.of(context).pop();
+    } catch (e) {
+      if (!context.mounted) return;
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      _showPreviewSnackBar(context, 'Gagal membatalkan: $msg');
     }
   }
 

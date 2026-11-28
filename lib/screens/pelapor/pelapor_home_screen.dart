@@ -443,7 +443,10 @@ class PelaporHomeScreen extends StatelessWidget {
                                             badgeTextColor:
                                                 const Color(0xFFA16207),
                                             count: '$menunggu',
-                                            subtitle: 'Menunggu verifikasi',
+                                            subtitle: 'Belum verifikasi',
+                                            onTap: () =>
+                                                _onViewAllReportsPressed(
+                                                  context),
                                           ),
                                         ),
                                         const SizedBox(width: 10),
@@ -456,6 +459,9 @@ class PelaporHomeScreen extends StatelessWidget {
                                                 const Color(0xFF15803D),
                                             count: '$diproses',
                                             subtitle: 'Sedang jalan',
+                                            onTap: () =>
+                                                _onViewAllReportsPressed(
+                                                  context),
                                           ),
                                         ),
                                         const SizedBox(width: 10),
@@ -468,6 +474,9 @@ class PelaporHomeScreen extends StatelessWidget {
                                                 const Color(0xFF1D4ED8),
                                             count: '$selesai',
                                             subtitle: 'Telah diperbaiki',
+                                            onTap: () =>
+                                                _onViewAllReportsPressed(
+                                                  context),
                                           ),
                                         ),
                                       ],
@@ -633,6 +642,7 @@ class _SummaryStatusCard extends StatelessWidget {
   final Color badgeTextColor;
   final String count;
   final String subtitle;
+  final VoidCallback? onTap;
 
 
   const _SummaryStatusCard({
@@ -641,65 +651,74 @@ class _SummaryStatusCard extends StatelessWidget {
     required this.badgeTextColor,
     required this.count,
     required this.subtitle,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFEBF0F7), width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            decoration: BoxDecoration(
-              color: badgeBgColor,
-              borderRadius: BorderRadius.circular(20),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFEBF0F7), width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
-            child: Text(
-              badgeText,
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: badgeTextColor,
+          ],
+        ),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: badgeBgColor,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  badgeText,
+                  maxLines: 1,
+                  softWrap: false,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: badgeTextColor,
+                  ),
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            count,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: const Color(0xFF0A0D14),
-            ),
-          ),
-          const SizedBox(height: 4),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              subtitle,
-              textAlign: TextAlign.center,
-              maxLines: 1,
+            const SizedBox(height: 10),
+            Text(
+              count,
               style: GoogleFonts.plusJakartaSans(
-                fontSize: 10.5,
-                fontWeight: FontWeight.w500,
-                color: const Color(0xFF7B8798),
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFF0A0D14),
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 4),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFF7B8798),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

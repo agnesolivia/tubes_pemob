@@ -9,13 +9,27 @@ import 'package:tubes_pemob/services/report_service.dart';
 import 'package:tubes_pemob/widgets/report_card.dart';
 
 class KelolaLaporanScreen extends StatefulWidget {
+  static const String allStatusKey = 'semua';
+  static const String overdueStatusKey = 'overdue';
+  static const String unregisteredStatusKey = 'unregistered';
+
   /// Tampilkan tombol kembali jika dibuka lewat `Navigator.push`
   /// (biarkan `false` saat dipakai sebagai tab di `AdminMainScreen`).
   final bool showBackButton;
 
+  /// Filter status awal yang diterapkan saat halaman dibuka atau saat
+  /// berpindah tab dari `AdminDashboardScreen` (misal `overdueStatusKey`).
+  final String? initialStatusFilter;
+
+  /// Penanda versi permintaan filter dari parent (`AdminMainScreen`) agar
+  /// perubahan filter tetap diterapkan walaupun widget berada di `IndexedStack`.
+  final int filterRequestVersion;
+
   const KelolaLaporanScreen({
     super.key,
     this.showBackButton = false,
+    this.initialStatusFilter,
+    this.filterRequestVersion = 0,
   });
 
   @override
@@ -26,9 +40,10 @@ class _KelolaLaporanScreenState extends State<KelolaLaporanScreen> {
   final TextEditingController _searchController = TextEditingController();
   late final Stream<List<ReportModel>> _reportsStream;
 
-  static const String _allStatusKey = 'semua';
-  static const String _overdueStatusKey = 'overdue';
-  static const String _unregisteredStatusKey = 'unregistered';
+  static const String _allStatusKey = KelolaLaporanScreen.allStatusKey;
+  static const String _overdueStatusKey = KelolaLaporanScreen.overdueStatusKey;
+  static const String _unregisteredStatusKey =
+      KelolaLaporanScreen.unregisteredStatusKey;
 
   static const String _allBuildingsLabel = 'Semua Gedung';
   static const String _allRoomsLabel = 'Semua Ruangan';
@@ -36,7 +51,7 @@ class _KelolaLaporanScreenState extends State<KelolaLaporanScreen> {
   static const String _allPrioritiesLabel = 'Semua Prioritas';
   static const String _noPriorityLabel = 'Belum Ditetapkan';
 
-  String _selectedStatusFilter = _allStatusKey;
+  late String _selectedStatusFilter;
   String _selectedBuilding = _allBuildingsLabel;
   String _selectedRoom = _allRoomsLabel;
   String _selectedPriority = _allPrioritiesLabel;
@@ -44,7 +59,21 @@ class _KelolaLaporanScreenState extends State<KelolaLaporanScreen> {
   @override
   void initState() {
     super.initState();
+    _selectedStatusFilter = widget.initialStatusFilter ?? _allStatusKey;
     _reportsStream = ReportService.instance.streamAllReports();
+  }
+
+  @override
+  void didUpdateWidget(covariant KelolaLaporanScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.filterRequestVersion != oldWidget.filterRequestVersion &&
+        widget.initialStatusFilter != null) {
+      _searchController.clear();
+      _selectedStatusFilter = widget.initialStatusFilter!;
+      _selectedBuilding = _allBuildingsLabel;
+      _selectedRoom = _allRoomsLabel;
+      _selectedPriority = _allPrioritiesLabel;
+    }
   }
 
   @override
@@ -602,8 +631,12 @@ class _KelolaLaporanScreenState extends State<KelolaLaporanScreen> {
         allReports.where((r) => !r.hasRegisteredAsset).length;
 
     final chips = <({String key, String label, bool isAlert})>[
-      (key: _allStatusKey, label: 'Semua (${allReports.length})', isAlert: false),
-      if (overdueCount > 0)
+      (
+        key: _allStatusKey,
+        label: 'Semua (${allReports.length})',
+        isAlert: false,
+      ),
+      if (overdueCount > 0 || _selectedStatusFilter == _overdueStatusKey)
         (
           key: _overdueStatusKey,
           label: 'Overdue ($overdueCount)',
@@ -617,7 +650,8 @@ class _KelolaLaporanScreenState extends State<KelolaLaporanScreen> {
           isAlert: false,
         );
       }),
-      if (unregisteredCount > 0)
+      if (unregisteredCount > 0 ||
+          _selectedStatusFilter == _unregisteredStatusKey)
         (
           key: _unregisteredStatusKey,
           label: 'Belum Terdaftar ($unregisteredCount)',

@@ -15,10 +15,12 @@ import 'package:tubes_pemob/widgets/report_card.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   final ValueChanged<int>? onSwitchTab;
+  final ValueChanged<String>? onOpenTicketsWithFilter;
 
   const AdminDashboardScreen({
     super.key,
     this.onSwitchTab,
+    this.onOpenTicketsWithFilter,
   });
 
   @override
@@ -55,7 +57,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  void _onViewAllTicketsPressed() {
+  void _openTickets({
+    String statusFilter = KelolaLaporanScreen.allStatusKey,
+  }) {
+    if (widget.onOpenTicketsWithFilter != null) {
+      widget.onOpenTicketsWithFilter!(statusFilter);
+      return;
+    }
     if (widget.onSwitchTab != null) {
       widget.onSwitchTab!(1);
       return;
@@ -63,7 +71,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => const KelolaLaporanScreen(showBackButton: true),
+        builder: (_) => KelolaLaporanScreen(
+          showBackButton: true,
+          initialStatusFilter: statusFilter,
+        ),
       ),
     );
   }
@@ -519,7 +530,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ),
             ),
             GestureDetector(
-              onTap: _onViewAllTicketsPressed,
+              onTap: () => _openTickets(),
               child: Text(
                 'Total $totalTickets Tiket',
                 style: GoogleFonts.plusJakartaSans(
@@ -542,7 +553,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 count: '$reportedCount',
                 periodLabel: 'Aktif',
                 icon: Icons.campaign_outlined,
-                onTap: _onViewAllTicketsPressed,
+                onTap: () =>
+                    _openTickets(statusFilter: ReportStatus.reported.value),
               ),
             ),
             const SizedBox(width: 10),
@@ -554,7 +566,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 count: '$processingCount',
                 periodLabel: 'Aktif',
                 icon: Icons.handyman_outlined,
-                onTap: _onViewAllTicketsPressed,
+                onTap: () => _openTickets(),
               ),
             ),
             const SizedBox(width: 10),
@@ -566,7 +578,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 count: '$resolvedRecentCount',
                 periodLabel: '$_resolvedWindowDays hari',
                 icon: Icons.check_circle_outline_rounded,
-                onTap: _onViewAllTicketsPressed,
+                onTap: () =>
+                    _openTickets(statusFilter: ReportStatus.resolved.value),
               ),
             ),
           ],
@@ -593,25 +606,50 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
                 const SizedBox(width: 7),
                 Text(
-                  'Peringatan Overdue SLA',
+                  'Overdue SLA',
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 15.5,
                     fontWeight: FontWeight.w800,
                     color: const Color(0xFF0A0D14),
                   ),
                 ),
+                if (overdueReports.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2.5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.statusRejectedBg,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '${overdueReports.length}',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFFDC2626),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
-            Text(
-              '${overdueReports.length} Tiket',
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w700,
-                color: overdueReports.isEmpty
-                    ? const Color(0xFF16A36A)
-                    : const Color(0xFFDC2626),
+            if (overdueReports.isNotEmpty)
+              GestureDetector(
+                onTap: () => _openTickets(
+                  statusFilter: KelolaLaporanScreen.overdueStatusKey,
+                ),
+                child: Text(
+                  'Lihat Semua',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primaryBlue,
+                  ),
+                ),
               ),
-            ),
           ],
         ),
         const SizedBox(height: 12),
@@ -624,7 +662,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             iconColor: Color(0xFF16A36A),
             backgroundColor: Color(0xFFF0FBF5),
           )
-        else ...[
+        else
           for (int i = 0; i < visibleOverdue.length; i++) ...[
             if (i > 0) const SizedBox(height: 10),
             ReportCard.overdue(
@@ -632,24 +670,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               onTap: () => _openReportDetail(visibleOverdue[i]),
             ),
           ],
-          if (overdueReports.length > visibleOverdue.length) ...[
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerRight,
-              child: GestureDetector(
-                onTap: _onViewAllTicketsPressed,
-                child: Text(
-                  '+${overdueReports.length - visibleOverdue.length} tiket overdue lainnya',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFFDC2626),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ],
       ],
     );
   }
@@ -670,7 +690,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ),
             ),
             GestureDetector(
-              onTap: _onViewAllTicketsPressed,
+              onTap: () => _openTickets(),
               child: Text(
                 'Lihat Semua',
                 style: GoogleFonts.plusJakartaSans(

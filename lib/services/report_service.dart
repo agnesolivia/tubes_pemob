@@ -305,7 +305,7 @@ class ReportService {
   /// Stream jumlah tiket aktif ('assigned' + 'in progress') per Teknisi.
   /// Pengganti toggle isAvailable agar Admin melihat beban kerja aktual tiap teknisi.
   /// Filter status dilakukan di server; hanya field teknisiId yang dibaca.
-  Stream> streamTechnicianActiveTaskCounts() {
+  Stream<Map<String, int>> streamTechnicianActiveTaskCounts() {
     return _reportsRef
         .where('status', whereIn: _technicianTaskStatusValues)
         .snapshots()
@@ -547,10 +547,8 @@ class ReportService {
 
     final now = DateTime.now();
     final deadline = now.add(Duration(hours: prioritas.slaHours));
-    final hasTechnician = teknisi != null;
-
     final nextStatus =
-        hasTechnician ? ReportStatus.assigned : ReportStatus.verified;
+        teknisi != null ? ReportStatus.assigned : ReportStatus.verified;
 
     final current = await _transition(
       reportId: report.id,
@@ -565,7 +563,7 @@ class ReportService {
         'teknisiNama': teknisi?.nama,
         'riwayatStatus': _historyUnion(
           status: nextStatus,
-          catatan: hasTechnician
+          catatan: teknisi != null
               ? 'Prioritas ${prioritas.label} • Teknisi: ${teknisi.nama}.'
               : 'Prioritas ${prioritas.label} • Menunggu penugasan teknisi.',
           updatedBy: adminNama,
@@ -579,17 +577,17 @@ class ReportService {
       _safeSendNotification(
         recipientId: current.pelaporId,
         reportId: current.id,
-        title: hasTechnician
+        title: teknisi != null
             ? 'Laporan Diverifikasi & Ditugaskan'
             : 'Laporan Diverifikasi',
-        message: hasTechnician
+        message: teknisi != null
             ? 'Laporan ${current.assetNama} diverifikasi dan sedang ditangani oleh teknisi ${teknisi.nama}.'
             : 'Laporan ${current.assetNama} telah diverifikasi dengan prioritas ${prioritas.label}.',
       ),
     ];
 
     // Notifikasi ke Teknisi jika langsung dipilih
-    if (hasTechnician) {
+    if (teknisi != null) {
       notifTasks.add(
         _safeSendNotification(
           recipientId: teknisi.uid,
@@ -650,9 +648,6 @@ class ReportService {
     );
 
     final previousTechId = current.teknisiId;
-    final isReassign = previousTechId != null &&
-        previousTechId.isNotEmpty &&
-        previousTechId != teknisi.uid;
 
     final List<Future<void>> notifTasks = [
       _safeSendNotification(
@@ -672,7 +667,9 @@ class ReportService {
     ];
 
     // Kabari teknisi lama bahwa tugas dialihkan
-    if (isReassign) {
+    if (previousTechId != null &&
+        previousTechId.isNotEmpty &&
+        previousTechId != teknisi.uid) {
       notifTasks.add(
         _safeSendNotification(
           recipientId: previousTechId,

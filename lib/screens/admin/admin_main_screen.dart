@@ -16,11 +16,21 @@ class AdminMainScreen extends StatefulWidget {
 
 class _AdminMainScreenState extends State<AdminMainScreen> {
   int _selectedIndex = 0;
+  String _ticketsStatusFilter = KelolaLaporanScreen.allStatusKey;
+  int _ticketsFilterVersion = 0;
 
   void _onTabSelected(int index) {
     if (_selectedIndex == index) return;
     setState(() {
       _selectedIndex = index;
+    });
+  }
+
+  void _openTicketsWithFilter(String statusFilter) {
+    setState(() {
+      _ticketsStatusFilter = statusFilter;
+      _ticketsFilterVersion++;
+      _selectedIndex = 1;
     });
   }
 
@@ -42,8 +52,14 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
       body: IndexedStack(
         index: _selectedIndex,
         children: [
-          AdminDashboardScreen(onSwitchTab: _onTabSelected),
-          const KelolaLaporanScreen(),
+          AdminDashboardScreen(
+            onSwitchTab: _onTabSelected,
+            onOpenTicketsWithFilter: _openTicketsWithFilter,
+          ),
+          KelolaLaporanScreen(
+            initialStatusFilter: _ticketsStatusFilter,
+            filterRequestVersion: _ticketsFilterVersion,
+          ),
           const NotificationScreen(userRole: UserRole.admin),
           const ProfileScreen(),
         ],

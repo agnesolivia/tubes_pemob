@@ -13,7 +13,7 @@ Dokumen ini berisi rincian **apa saja yang bisa dilakukan oleh masing-masing akt
   * Tersedia tombol **"Lupa Kata Sandi?"** yang memunculkan *pop-up dialog* input email untuk mengirimkan tautan reset password resmi dari Firebase Auth (`sendPasswordResetEmail()`).
 * **Auto-Routing Berbasis Verifikasi & Role (`auth_wrapper.dart`):**
   * Memantau status login Firebase Auth. Jika akun menggunakan Email/Password dan `emailVerified == false`, arahkan pengguna ke `EmailVerificationScreen` (berisi tombol cek ulang status verifikasi, kirim ulang email, dan logout).
-  * Jika email sudah terverifikasi, sistem membaca dokumen profil di koleksi `users` untuk mengarahkan pengguna secara otomatis ke halaman induk (`*MainScreen`) sesuai role-nya:
+  * Jika email sudah terverifikasi, sistem membaca dokumen profil di koleksi `users`, mengaktifkan listener notifikasi *foreground* (`NotificationService.instance.startForegroundListener`) sesuai `uid` dan `role` aktif (serta menghentikannya saat logout, belum verifikasi, atau `dispose`), lalu mengarahkan pengguna secara otomatis ke halaman induk (`*MainScreen`) sesuai role-nya:
     * `PelaporMainScreen` jika `user.isPelapor`
     * `AdminMainScreen` jika `user.isAdmin`
     * `TeknisiMainScreen` jika `user.isTeknisi`
@@ -57,16 +57,18 @@ Halaman ini menerima parameter `assetId` yang bersifat *nullable* (`String?`), `
    * Halaman tidak melakukan *query* ke koleksi `assets` maupun riwayat `reports`, melainkan menampilkan kartu informasi nama & lokasi fasilitas dari tiket dengan penanda **"Belum Terdaftar di Inventaris"**, disertai ilustrasi dan pesan penjelasan bahwa fasilitas dilaporkan secara manual sehingga belum memiliki rekam jejak unit.
    * **Khusus Admin (`user.isAdmin`):** Tepat di bawah pesan tersebut, tampilkan tombol aksi **"Daftarkan sebagai Aset Baru"** yang langsung membuka `TambahAsetScreen` dengan nama aset (`initialNama`) dan pemecahan lokasi `Gedung - Ruangan` (`initialGedung` & `initialRuangan` opsional) sudah terisi otomatis (*pre-filled*).
 
-### E. Notifikasi Dalam Aplikasi (`notification_screen.dart`)
+### E. Notifikasi Dalam Aplikasi & Foreground (`notification_screen.dart`)
 
-* Menampilkan daftar dokumen dari koleksi `notifications` milik `recipientId == currentUser.uid`, diurutkan dari yang terbaru.
-* Saat item notifikasi ditekan:
+* Menampilkan daftar dokumen dari koleksi `notifications` milik `recipientId == currentUser.uid`, diurutkan dari yang terbaru, dilengkapi filter **Semua / Belum Dibaca** serta aksi **Tandai semua dibaca**.
+* Jumlah notifikasi belum dibaca ditampilkan sebagai indikator *unread* secara *real-time* pada tab Notifikasi di `BottomNavbar`.
+* Saat aplikasi sedang aktif (*foreground*), listener di `NotificationService` menampilkan *heads-up banner* lokal (`flutter_local_notifications`) untuk setiap dokumen notifikasi baru yang masuk (melewati *snapshot* awal saat login agar tidak memicu *spam* notifikasi lama).
+* Saat item notifikasi (atau *foreground banner*) ditekan:
   1. Field `isRead` diperbarui menjadi `true`.
   2. Pengguna langsung diarahkan ke `DetailLaporanScreen` sesuai `reportId` yang tersimpan di notifikasi.
 
 ### F. Profil Pengguna (`profile_screen.dart`)
 
-* **Semua Role:** Melihat informasi akun (Nama, Email, Role), mengubah nama tampilan (otomatis memperbarui `nameLower`), mengubah/menghapus foto profil (`photoBase64` / `photoUrl` di `users/{uid}` dengan urutan prioritas `photoBase64` $\rightarrow$ `photoUrl` $\rightarrow$ inisial nama), menampilkan **QR Code Profil Akun** (`USER:${user.uid}` untuk keperluan aktivasi teknisi oleh Admin), dan tombol **Logout**. Halaman ini tidak memuat `bottomNavigationBar` sendiri sehingga dapat langsung disematkan ke dalam `IndexedStack` milik `PelaporMainScreen`, `AdminMainScreen`, maupun `TeknisiMainScreen`.
+* **Semua Role:** Melihat informasi akun (Nama, Email, Role), mengubah nama tampilan (otomatis memperbarui `nameLower`), mengubah/menghapus foto profil (`photoBase64` / `photoUrl` di `users/{uid}` dengan urutan prioritas `photoBase64` $\rightarrow$ `photoUrl` $\rightarrow$ inisial nama), mengatur preferensi **Notifikasi Aplikasi** (`notificationsEnabled` di `users/{uid}` yang terhubung dengan pemeriksaan izin notifikasi OS), menampilkan **QR Code Profil Akun** (`USER:${user.uid}` untuk keperluan aktivasi teknisi oleh Admin), dan tombol **Logout**. Halaman ini tidak memuat `bottomNavigationBar` sendiri sehingga dapat langsung disematkan ke dalam `IndexedStack` milik `PelaporMainScreen`, `AdminMainScreen`, maupun `TeknisiMainScreen`.
 
 ## 2. Alur Role: Pelapor (`screens/pelapor/`)
 
@@ -105,7 +107,7 @@ Aktor: Pengelola Sarana & Prasarana Kampus.
 
 1. **Navigasi Utama (`admin_main_screen.dart`) & Dashboard Pantauan (`admin_dashboard_screen.dart`):**
    * `AdminMainScreen` membungkus 4 halaman tab (`Beranda`, `Tiket`, `Notifikasi`, `Profil`) menggunakan `IndexedStack` dan 1 `BottomNavbar` permanen di bawah (dengan tombol tengah membuka `screens/shared/scan_qr_screen.dart` untuk memindai QR profil calon teknisi `USER:<uid>` maupun QR stiker aset `ASSET:<id>`).
-   * Di dashboard, Admin melihat statistik tiket berdasarkan status (`reported`, `verified`/`assigned`/`inProgress`, `resolved`), daftar peringatan tiket **Overdue SLA** (tiket belum `resolved` dan waktu sekarang sudah melewati `deadlineAt` / `report.isOverdue`), serta daftar **Aktivitas Terbaru** yang langsung membuka `DetailLaporanScreen` saat diketuk.
+   * Di dashboard, Admin melihat statistik tiket berdasarkan status (`reported`, `verified`/`assigned`/`inProgress`, `resolved`), daftar tiket **Overdue SLA** (tiket belum `resolved` dan waktu sekarang sudah melewati `deadlineAt` / `report.isOverdue`), serta daftar **Aktivitas Terbaru** yang langsung membuka `DetailLaporanScreen` saat diketuk. Pintasan dari ringkasan maupun seksi **Overdue SLA** dapat langsung berpindah ke tab `KelolaLaporanScreen` dengan filter status terkait sudah aktif.
 2. **Verifikasi, Penolakan & Penugasan (`kelola_laporan_screen.dart`, `detail_laporan_screen.dart`, & `admin_report_actions.dart`):**
    * Admin memfilter daftar seluruh laporan masuk berdasarkan status (termasuk `Overdue` dan `Belum Terdaftar` untuk `assetId == null`), gedung, ruangan (termasuk `Tanpa Ruangan`), dan tingkat prioritas.
    * **Penanganan Laporan Tanpa ID Aset (`assetId == null`):** Laporan yang dikirim lewat opsi *Fasilitas Lainnya* tetap masuk ke antrean `reported` secara normal. Admin dapat langsung memverifikasi dan menugaskan teknisi **tanpa wajib membuat data baru di `TambahAsetScreen`**. Jika objek tersebut merupakan unit inventaris yang sering dilaporkan dan perlu stiker QR, Admin dapat membuka **Lihat Riwayat Aset** dari `DetailLaporanScreen` lalu menekan tombol **"Daftarkan sebagai Aset Baru"** di dalam `HistoryAssetScreen`.
@@ -182,7 +184,8 @@ Aktor: Petugas Perbaikan Lapangan (Staf Internal Kampus).
    * Data `gedung` (wajib) dan `ruangan` (opsional, disimpan sebagai string kosong `''` jika aset tidak berada di dalam ruangan) tetap disimpan langsung di dalam dokumen koleksi `assets` tanpa membuat koleksi lokasi terpisah. Gunakan `asset.lokasiLengkap` agar format lokasi otomatis menjadi `Gedung - Ruangan` saat `ruangan` terisi, atau `Gedung` saja saat `ruangan` kosong.
    * Baik saat penyimpanan di `AssetService` maupun saat ekstraksi daftar pilihan unik di UI (`kelola_aset_screen.dart`, `tambah_aset_screen.dart`, dan `form_pengaduan_screen.dart`), perbandingan nilai `gedung` dan pasangan `(gedung, ruangan)` wajib dilakukan secara ***case-insensitive*** (mengabaikan perbedaan huruf besar/kecil dan spasi berlebih) agar pilihan pengguna bebas dari duplikat.
 5. **Pemicu Notifikasi (`NotificationModel`) & Audit `riwayatStatus`:**
-   * Pembuatan dokumen notifikasi dan penambahan log `StatusHistoryItem` pada array `riwayatStatus` dilakukan langsung di dalam *method* `ReportService` setiap kali status laporan berubah maupun saat tindakan **Konfirmasi Selesai** (`isConfirmed = true`) dan **Belum Beres** (*re-open* ke `assigned`) dijalankan—tidak perlu memakai Cloud Functions.
+   * Pembuatan dokumen notifikasi dan penambahan log `StatusHistoryItem` pada array `riwayatStatus` dilakukan langsung di dalam *method* `ReportService` setiap kali status laporan berubah maupun saat tindakan **Konfirmasi Selesai** (`isConfirmed = true`) dan **Belum Beres** (*re-open* ke `assigned`) dijalankan—berjalan penuh pada paket Firebase Spark tanpa Cloud Functions.
+   * Pengiriman notifikasi di `ReportService` dijalankan secara *best-effort* (dibungkus `try-catch` agar gangguan penulisan notifikasi tidak memunculkan error palsu setelah transaksi tiket berhasil) dan paralel (`Future.wait`), serta siap dikembangkan ke *push notification* FCM (*Firestore trigger* di Blaze) tanpa memengaruhi alur notifikasi *in-app*.
 6. **Gunakan Enum dari File Model (Jangan Hardcode String):**
    * `UserRole` (ada di `user_model.dart`): `UserRole.pelapor`, `UserRole.admin`, `UserRole.teknisi`
    * `ReportStatus` (ada di `report_model.dart`): `ReportStatus.reported`, `ReportStatus.verified`, `ReportStatus.assigned`, `ReportStatus.inProgress`, `ReportStatus.resolved`, `ReportStatus.rejected`
@@ -197,6 +200,9 @@ Aktor: Petugas Perbaikan Lapangan (Staf Internal Kampus).
    * Penambahan multi-item / massal di `AssetService` wajib dieksekusi dalam satu transaksi `WriteBatch` dengan total seluruh unit berada pada rentang **`1` hingga `500` dokumen** per submit.
    * Pemisah nomor urut batch (`#`) disematkan pada field **`nama`** (`<Nama Dasar>#01`), bukan pada `doc.id`. Karakter `#` hanya diizinkan pada input satuan (`Jumlah == 1` atau saat edit aset) untuk menyisipkan kembali nomor unit yang pernah terhapus di lokasi tersebut, dan **wajib ditolak** pada input massal (`Jumlah > 1`) agar sistem yang menghasilkan nomor urutnya secara otomatis.
    * Validasi keunikan `nama` bersifat *case-insensitive* per pasangan **`(gedung, ruangan)`** (termasuk `(gedung, '')` untuk aset tanpa ruangan; nama yang sama diizinkan jika gedung atau ruangannya berbeda), dan penomoran lanjutan batch berikutnya wajib dihitung dari **angka akhiran tertinggi (`Max + 1`)** pada kombinasi `(gedung, ruangan)` tersebut.
+9. **Konfigurasi Native Android untuk Notifikasi Foreground (`flutter_local_notifications`):**
+   * Membutuhkan izin `POST_NOTIFICATIONS` di `android/app/src/main/AndroidManifest.xml` (Android 13+) serta pengaktifan *core library desugaring* (`isCoreLibraryDesugaringEnabled = true` & `desugar_jdk_libs`) di `android/app/build.gradle.kts`.
+   * Setelah `git pull` yang mencakup perubahan dependensi/native ini, anggota tim wajib menjalankan `flutter pub get` dan melakukan *full rebuild* (`flutter run`), bukan sekadar *hot reload*.
 
 ## 6. Checklist Pengerjaan Tim (Paralel & Anti-Blocking)
 
@@ -221,14 +227,14 @@ Agar seluruh anggota tim bisa mengerjakan tugas secara bersamaan tanpa saling me
 * [x] `services/auth_service.dart` (Login, Register, Google Sign-In, verifikasi email, reset password, & kelola role)
 * [x] `services/storage_service.dart` (Ambil gambar, kompres < 250 KB, & encode/decode Base64)
 * [x] `services/asset_service.dart` (CRUD & batch multi-aset `#` per lokasi dengan `Max + 1`, dukungan ruangan opsional, validasi unik `(gedung, ruangan, nama)`, & lookup ID QR)
-* [x] `services/notification_service.dart` (Stream notifikasi real-time, hitung belum dibaca, & tandai sudah dibaca)
-* [x] `services/report_service.dart` (CRUD laporan, transisi status, hitung SLA, konfirmasi/`re-open`, & pemicu notifikasi)
+* [x] `services/notification_service.dart` (Stream notifikasi real-time, hitung belum dibaca, tandai dibaca, *foreground local notification*, & cek izin OS)
+* [x] `services/report_service.dart` (CRUD laporan, transisi status, hitung SLA, konfirmasi/`re-open`, & pemicu notifikasi *best-effort*)
 
 ### Jalur B — Komponen UI Reusable (`widgets/`)
 
 *Dapat dikerjakan sepenuhnya secara paralel tanpa menunggu koneksi Firebase.*
 
-* [x] `widgets/bottom_navbar.dart` (Navigasi bawah reusable lintas role dengan tombol aksi tengah)
+* [x] `widgets/bottom_navbar.dart` (Navigasi bawah reusable lintas role dengan tombol aksi tengah & indikator *unread* notifikasi)
 * [x] `widgets/resolution_action_bar.dart` (Tombol & dialog Konfirmasi Selesai / Belum Beres bersama Pelapor & Admin — *tersambung ke `ReportService`*)
 * [x] `widgets/status_badge.dart` (`StatusBadge`, `PriorityBadge`, & helper warna status/prioritas)
 * [x] `widgets/report_card.dart` (Kartu ringkasan laporan reusable untuk daftar, *Overdue SLA*, & aktivitas terbaru)
@@ -238,12 +244,12 @@ Agar seluruh anggota tim bisa mengerjakan tugas secara bersamaan tanpa saling me
 
 * [x] `screens/auth/login_screen.dart` (termasuk pop-up Lupa Kata Sandi) & `register_screen.dart`
 * [x] `screens/auth/email_verification_screen.dart` (Halaman tunggu verifikasi email & kirim ulang tautan)
-* [x] `screens/auth/auth_wrapper.dart` (*Auto-routing* sesuai verifikasi email & `user.role`)
-* [ ] `screens/shared/scan_qr_screen.dart` (Pemindai kamera QR lintas role & validasi prefix `ASSET:` / `USER:` — *mode `ASSET:` sudah terhubung ke `HistoryAssetScreen`*)
+* [x] `screens/auth/auth_wrapper.dart` (*Auto-routing* sesuai verifikasi email & `user.role`, serta siklus hidup listener notifikasi *foreground*)
+* [x] `screens/shared/scan_qr_screen.dart` (Pemindai kamera QR lintas role & validasi prefix `ASSET:` / `USER:`)
 * [x] `screens/shared/detail_laporan_screen.dart` (Struktur inti lintas role, *zoom* foto, timeline status, & anti-loop `fromAssetHistory`; aksi Admin & `ResolutionActionBar` sudah tersambung Firestore, aksi Pelapor & Teknisi siap disambungkan)
 * [x] `screens/shared/history_aset_screen.dart` (Tersambung Firestore *real-time*, filter status, navigasi ke `DetailLaporanScreen` & `TambahAsetScreen` *pre-filled*; sisa `// TODO` sambung tombol Pelapor ke `FormPengaduanScreen`)
-* [ ] `screens/shared/notification_screen.dart` (Daftar notifikasi *real-time* & tandai sudah dibaca)
-* [ ] `screens/shared/profile_screen.dart` (Info profil, edit nama & foto, QR Code profil `USER:<uid>`, & logout)
+* [x] `screens/shared/notification_screen.dart` (Daftar notifikasi *real-time*, filter belum dibaca, tandai dibaca, & navigasi ke `DetailLaporanScreen`)
+* [x] `screens/shared/profile_screen.dart` (Info profil, edit nama & foto, preferensi notifikasi + izin OS, QR Code profil `USER:<uid>`, & logout)
 
 ### Jalur D — Modul Pelapor (`screens/pelapor/`)
 
@@ -258,7 +264,7 @@ Agar seluruh anggota tim bisa mengerjakan tugas secara bersamaan tanpa saling me
 * [x] `screens/admin/widgets/admin_report_actions.dart` (Tersambung `ReportService` & `AuthService`: Dialog Tolak, *Modal Bottom Sheet* Verifikasi/SLA & Pilih/Alihkan Teknisi + `ResolutionActionBar`)
 * [x] `screens/admin/widgets/dashboard_hero_illustration.dart` (Sub-widget ilustrasi hero khusus `AdminDashboardScreen`)
 * [x] `screens/admin/widgets/teknisi_cards.dart` & `teknisi_sheets.dart` (Sub-widget kartu, avatar, & *bottom sheet* khusus `KelolaTeknisiScreen`)
-* [x] `screens/admin/admin_main_screen.dart` (*Shell* utama dengan `IndexedStack`, `BottomNavbar`, & tab `KelolaLaporanScreen`; sisa ganti placeholder tab Notifikasi)
+* [x] `screens/admin/admin_main_screen.dart` (*Shell* utama dengan `IndexedStack`, `BottomNavbar`, 4 tab tersambung penuh, & sinkronisasi filter status dari Dashboard)
 * [x] `screens/admin/admin_dashboard_screen.dart` (Tersambung `ReportService`: statistik tiket, daftar *Overdue SLA*, & aktivitas terbaru via `ReportCard`)
 * [x] `screens/admin/kelola_laporan_screen.dart` (Tersambung `ReportService`: filter status, gedung, ruangan, prioritas, & daftar tiket via `ReportCard`)
 * [x] `screens/admin/kelola_aset_screen.dart` (Daftar master aset, filter berjenjang Gedung/Ruangan/Kategori termasuk `Tanpa Ruangan`, & pintasan QR)

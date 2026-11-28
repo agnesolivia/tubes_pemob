@@ -8,7 +8,7 @@ Proyek ini menggunakan pola **Layer-First** yang dikombinasikan dengan pemisahan
 
 ```text
 lib/
-├── main.dart                                      # Entry point aplikasi, inisialisasi Firebase, & routing awal
+├── main.dart                                      # Entry point aplikasi, inisialisasi Firebase & notifikasi lokal, navigatorKey, & routing awal
 │
 ├── constants/                                     # Nilai konstan & konfigurasi global
 │   ├── app_colors.dart                            # Palet warna utama, status badge, & tema
@@ -24,15 +24,15 @@ lib/
 │   ├── auth_service.dart                          # Login, register, Google Sign-In, verifikasi email, reset password, & role
 │   ├── storage_service.dart                       # Kompresi foto lokal (< 250 KB) & konversi Base64 dua arah
 │   ├── asset_service.dart                         # CRUD & batch master data aset/ruangan, validasi unik per ruangan, & QR
-│   ├── report_service.dart                        # CRUD laporan, transisi status, hitung SLA, & log riwayat
-│   └── notification_service.dart                  # Stream notifikasi real-time & tandai notifikasi sudah dibaca
+│   ├── report_service.dart                        # CRUD laporan, transisi status, hitung SLA, log riwayat, & pemicu notifikasi
+│   └── notification_service.dart                  # Stream notifikasi real-time, listener foreground local notification, izin OS, & tandai dibaca
 │
 ├── utils/                                         # Utilitas bantu pengembangan (seeder data & akun uji)
 │   ├── account_seeder.dart                        # Seeder akun dummy via Gmail dot trick (role awal 'pelapor')
-│   └── firestore_seeder.dart                      # Seeder data dummy koleksi assets & reports
+│   └── firestore_seeder.dart                      # Seeder data dummy koleksi assets, reports, & notifications
 │
 ├── widgets/                                       # Komponen UI reusable yang dipakai lintas role / banyak halaman
-│   ├── bottom_navbar.dart                         # Navigasi bawah reusable lintas role dengan tombol aksi tengah
+│   ├── bottom_navbar.dart                         # Navigasi bawah reusable lintas role dengan tombol aksi tengah & indikator unread notifikasi
 │   ├── resolution_action_bar.dart                 # Tombol & dialog Konfirmasi Selesai / Belum Beres (Pelapor & Admin)
 │   ├── status_badge.dart                          # StatusBadge, PriorityBadge, & helper warna status/prioritas
 │   ├── report_card.dart                           # Kartu ringkasan laporan reusable (daftar, overdue SLA, & aktivitas)
@@ -40,7 +40,7 @@ lib/
 │
 └── screens/                                       # Seluruh halaman penuh (Scaffold) & sub-widget khusus role
     ├── auth/                                      # Alur sebelum masuk ke beranda role
-    │   ├── auth_wrapper.dart                      # Pengecek status login, verifikasi email, & routing sesuai role
+    │   ├── auth_wrapper.dart                      # Pengecek status login, verifikasi email, siklus listener notifikasi, & routing sesuai role
     │   ├── login_screen.dart                      # Halaman masuk (Email/Password, Google Sign-In, & pop-up Lupa Password)
     │   ├── register_screen.dart                   # Halaman daftar akun baru (default role: UserRole.pelapor)
     │   └── email_verification_screen.dart         # Halaman tunggu verifikasi email & kirim ulang tautan verifikasi
@@ -50,7 +50,7 @@ lib/
     │   ├── detail_laporan_screen.dart             # Struktur inti detail tiket lintas role (memanggil *_report_actions sesuai role)
     │   ├── history_aset_screen.dart               # Info aset/ruangan, filter, & rekam jejak kerusakan real-time
     │   ├── notification_screen.dart               # Daftar notifikasi real-time lintas role
-    │   └── profile_screen.dart                    # Profil akun, edit nama & foto, QR Code profil (USER:<uid>), & logout
+    │   └── profile_screen.dart                    # Profil akun, edit nama & foto, preferensi notifikasi, QR Code profil (USER:<uid>), & logout
     │
     ├── pelapor/                                   # Khusus Sivitas Akademika & Pengunjung Kampus
     │   ├── widgets/
@@ -112,7 +112,7 @@ Berisi komponen UI tanpa `Scaffold` yang digunakan di lebih dari satu halaman at
 * **`status_badge.dart`:** Menyediakan `StatusBadge`, `PriorityBadge`, `ReportBadgeChip`, serta helper warna terpusat untuk `ReportStatus` dan `ReportPriority`.
 * **`report_card.dart`:** Kartu ringkasan laporan reusable untuk daftar tiket semua role (`ReportCard`), peringatan *Overdue SLA* (`ReportCard.overdue`), dan aktivitas terbaru (`ReportCard.activity`).
 * **`resolution_action_bar.dart`:** Tombol serta dialog **Konfirmasi Selesai / Belum Beres** yang dipakai bersama oleh Pelapor dan Admin.
-* **`bottom_navbar.dart`:** Navigasi bawah lintas role.
+* **`bottom_navbar.dart`:** Navigasi bawah lintas role beserta indikator notifikasi belum dibaca (*unread*) secara *real-time*.
 
 ### `screens/`
 
@@ -164,14 +164,16 @@ admin/detail_aset_screen ──► [Riwayat Kerusakan Aset] ──► history_as
   * **QR Profil Akun:** Payload QR berisi `USER:<uid>` (ditampilkan di `profile_screen.dart` untuk dipindai Admin via `shared/scan_qr_screen.dart`).
 * **Anti-Loop Navigasi `HistoryAssetScreen` $\leftrightarrow$ `DetailLaporanScreen`:** Karena kartu di `HistoryAssetScreen` membuka `DetailLaporanScreen` dan `DetailLaporanScreen` memiliki tombol **Lihat Riwayat Aset**, gunakan parameter `fromAssetHistory: true` saat membuka detail dari halaman riwayat aset. Dengan begitu, mengetuk **Lihat Riwayat Aset** dari dalam detail akan langsung melakukan `Navigator.pop(context)` alih-alih menumpuk halaman baru.
 
-### D. Sistem Notifikasi Dalam Aplikasi (*In-App Notification*)
+### D. Sistem Notifikasi (*In-App & Foreground Local Notification*)
 
-Notifikasi dibangun menggunakan koleksi Firestore `notifications` secara *real-time* (tanpa memerlukan Cloud Functions atau Firebase Storage):
+Notifikasi dibangun secara *event-driven* menggunakan koleksi Firestore `notifications` secara *real-time* yang dipadukan dengan `flutter_local_notifications` untuk *banner pop-up* saat aplikasi aktif (sepenuhnya berjalan di paket Firebase Spark tanpa Cloud Functions):
 
-* **Pelapor** menerima notifikasi saat laporan diverifikasi/ditugaskan, ditolak (`rejected`), atau selesai diperbaiki (`resolved`).
-* **Teknisi** menerima notifikasi saat Admin menugaskan tiket baru kepadanya (`assigned`) maupun saat tiket dibuka kembali (*re-open*).
-* **Admin** menerima notifikasi saat laporan baru masuk (`reported`), saat Teknisi menandai tugas selesai (`resolved`), atau saat Pelapor mengajukan sanggahan (*re-open*).
-* Menekan item notifikasi di `notification_screen.dart` akan langsung membuka `detail_laporan_screen.dart` sesuai `reportId` terkait.
+* **Indikator & Banner Real-Time:** `BottomNavbar` memantau jumlah notifikasi *unread* per akun, sedangkan `NotificationService` memasang *foreground listener* (dikelola oleh `AuthWrapper`) yang menampilkan *heads-up banner* setiap kali ada dokumen notifikasi baru masuk saat aplikasi terbuka (melewati *snapshot* awal agar tidak memicu *spam* notifikasi lama).
+* **Penerima Notifikasi per Aksi:**
+  * **Pelapor** menerima notifikasi saat laporan diverifikasi/ditugaskan, ditugaskan/dialihkan teknisi, mulai dikerjakan (`inProgress`), ditolak (`rejected`), selesai diperbaiki (`resolved`), maupun saat Admin mengonfirmasi selesai atau mengajukan ulang (*re-open*).
+  * **Teknisi** menerima notifikasi saat Admin menugaskan tiket baru (`assigned`), saat tugas dialihkan ke teknisi lain, saat tiket dibuka kembali (*re-open*), atau saat hasil perbaikan dikonfirmasi selesai.
+  * **Admin** (seluruh akun dengan `role == 'admin'`, masing-masing dengan status `isRead` independen) menerima notifikasi saat laporan baru masuk (`reported`), saat Teknisi menandai tugas selesai (`resolved`), atau saat Pelapor mengonfirmasi selesai / mengajukan sanggahan (*re-open*).
+* **Navigasi Langsung:** Menekan item di `notification_screen.dart` maupun mengetuk *foreground banner* akan menandai `isRead = true` dan langsung membuka `detail_laporan_screen.dart` sesuai `reportId` terkait (via `NotificationService.navigatorKey`).
 
 ## 4. Desain Database Firestore (*Flat Collections*)
 
@@ -180,7 +182,7 @@ Proyek ini menggunakan **4 koleksi sejajar (*root collections*)** tanpa *subcoll
 > **Aturan ID Dokumen (`doc.id` Murni):** Seluruh koleksi tidak menyimpan ulang field ID di dalam isi dokumen; `fromFirestore` langsung mengambilnya dari `doc.id`. Koleksi `users` wajib disimpan menggunakan `.doc(uid).set(...)`, sedangkan koleksi `assets`, `reports`, dan `notifications` menggunakan **Auto-ID Firestore** (`.doc()` / `.add(...)`).
 
 1. **`users`** *(Document ID = `uid` dari Firebase Auth)*
-   * `nama`, `nameLower` *(lowercase dari `nama` untuk prefix search)*, `email` *(disimpan lowercase)*, `role` (`'pelapor'` | `'admin'` | `'teknisi'`), `photoBase64` *(opsional, Base64 < 250 KB)*, `photoUrl` *(opsional, URL foto bawaan Google Sign-In)*, `createdAt`.
+   * `nama`, `nameLower` *(lowercase dari `nama` untuk prefix search)*, `email` *(disimpan lowercase)*, `role` (`'pelapor'` | `'admin'` | `'teknisi'`), `photoBase64` *(opsional, Base64 < 250 KB)*, `photoUrl` *(opsional, URL foto bawaan Google Sign-In)*, `notificationsEnabled` *(opsional, `bool`, default `true` untuk preferensi notifikasi foreground)*, `createdAt`.
 2. **`assets`** *(Document ID = Auto-generated Firestore ID; payload QR di-generate dengan prefix `'ASSET:<doc.id>'`)*
    * `nama` *(unik secara case-insensitive per kombinasi `gedung` + `ruangan`, misal `'Kursi#01'`)*, `kategori`, `gedung`, `ruangan`, `createdAt`.
 3. **`reports`** *(Document ID = Auto-generated)*

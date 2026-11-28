@@ -13,6 +13,7 @@ import 'package:tubes_pemob/screens/shared/history_aset_screen.dart';
 import 'package:tubes_pemob/screens/teknisi/form_penyelesaian_screen.dart';
 import 'package:tubes_pemob/screens/teknisi/widgets/teknisi_report_actions.dart';
 import 'package:tubes_pemob/services/report_service.dart';
+import 'package:tubes_pemob/services/auth_service.dart';
 
 // ============================================================
 // DETAIL LAPORAN SCREEN (STRUKTUR INTI LINTAS ROLE — UI RINGKAS)
@@ -373,7 +374,11 @@ class _DetailLaporanScreenState extends State<DetailLaporanScreen> {
       case UserRole.teknisi:
         return TeknisiReportActions(status: report.status);
       case UserRole.pelapor:
-        return PelaporReportActions(report: report);
+        final currentUid = AuthService.instance.currentUser?.uid;
+        return PelaporReportActions(
+          report: report,
+          isReportOwner: currentUid != null && report.pelaporId == currentUid,
+        );
     }
   }
 

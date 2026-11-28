@@ -268,44 +268,52 @@ class _RiwayatLaporanPageState extends State<RiwayatLaporanPage> {
   // -------------------------------------------------------- FILTER CHIPS
 
   Widget _buildFilterChips() {
-    return SizedBox(
-      height: 38,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: _filters.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 8),
-        itemBuilder: (_, i) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: List.generate(_filters.length, (i) {
           final aktif = i == _filterIndex;
 
-          return GestureDetector(
-            onTap: () => setState(() => _filterIndex = i),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: aktif ? HistoryColors.primary : AppColors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: aktif ? HistoryColors.primary : HistoryColors.border,
-                ),
-              ),
-              child: Text(
-                _filters[i],
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 12.5,
-                  fontWeight: aktif ? FontWeight.w700 : FontWeight.w600,
-                  color: aktif ? AppColors.white : HistoryColors.textDark,
+          return Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(right: i == _filters.length - 1 ? 0 : 8),
+              child: GestureDetector(
+                onTap: () => setState(() => _filterIndex = i),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  height: 36,
+                  alignment: Alignment.center,
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  decoration: BoxDecoration(
+                    color: aktif ? HistoryColors.primary : AppColors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color:
+                          aktif ? HistoryColors.primary : HistoryColors.border,
+                    ),
+                  ),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      _filters[i],
+                      maxLines: 1,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12.5,
+                        fontWeight: aktif ? FontWeight.w700 : FontWeight.w600,
+                        color:
+                            aktif ? AppColors.white : HistoryColors.textDark,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
           );
-        },
+        }),
       ),
     );
   }
-
+  
   // --------------------------------------------------------- EMPTY STATE
 
   Widget _buildEmptyState() {

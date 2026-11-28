@@ -74,10 +74,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return null;
   }
 
+  bool get _hasMinLength => _passwordController.text.length >= 8;
+  bool get _hasUppercase => RegExp(r'[A-Z]').hasMatch(_passwordController.text);
+  bool get _hasLowercase => RegExp(r'[a-z]').hasMatch(_passwordController.text);
+  bool get _hasNumber => RegExp(r'[0-9]').hasMatch(_passwordController.text);
+  bool get _hasSymbol =>
+      RegExp(r'[^A-Za-z0-9\s]').hasMatch(_passwordController.text);
+
   String? _validatePassword(String? value) {
     final text = value ?? '';
     if (text.isEmpty) return 'Kata sandi wajib diisi.';
-    if (text.length < 8) return 'Kata sandi minimal 8 karakter.';
+    if (!_hasMinLength ||
+        !_hasUppercase ||
+        !_hasLowercase ||
+        !_hasNumber ||
+        !_hasSymbol) {
+      return 'Kata sandi belum memenuhi semua syarat.';
+    }
     return null;
   }
 
@@ -331,7 +344,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       ),
                                     ),
                                   ),
-
+                                  
+                                  if (_passwordController.text.isNotEmpty) ...[
+                                    const SizedBox(height: 10),
+                                    _buildPasswordChecklist(),
+                                  ],
                                   const SizedBox(height: 15),
 
                                   // 4. Label & Input Konfirmasi Kata Sandi
@@ -548,6 +565,83 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildPasswordChecklist() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF4F7FC),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFDCE7FA)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _buildCheckItem('Min. 8 karakter', _hasMinLength),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildCheckItem('Huruf besar (A-Z)', _hasUppercase),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _buildCheckItem('Huruf kecil (a-z)', _hasLowercase),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildCheckItem('Angka (0-9)', _hasNumber),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _buildCheckItem('Simbol (@#!\$)', _hasSymbol),
+              ),
+              const SizedBox(width: 8),
+              const Expanded(child: SizedBox.shrink()),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCheckItem(String label, bool isMet) {
+    final color = isMet ? const Color(0xFF16A34A) : const Color(0xFF64748B);
+    return Row(
+      children: [
+        Icon(
+          isMet
+              ? Icons.check_circle_rounded
+              : Icons.radio_button_unchecked_rounded,
+          size: 15,
+          color: color,
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 11.5,
+              fontWeight: isMet ? FontWeight.w700 : FontWeight.w500,
+              color: color,
+            ),
+          ),
+        ),
+      ],
     );
   }
 

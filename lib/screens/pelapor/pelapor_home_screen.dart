@@ -513,6 +513,29 @@ class PelaporHomeScreen extends StatelessWidget {
                                           child: CircularProgressIndicator(),
                                         ),
                                       )
+
+                                    else if (snapshot.hasError)
+                                      Container(
+                                        width: double.infinity,
+                                        padding: const EdgeInsets.all(20),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.white,
+                                          borderRadius:
+                                              BorderRadius.circular(18),
+                                          border: Border.all(
+                                            color: const Color(0xFFFECACA),
+                                          ),
+                                        ),
+                                        child: Text(
+                                          'Gagal memuat laporan. Periksa koneksi internetmu.',
+                                          textAlign: TextAlign.center,
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 13,
+                                            color: AppColors.statusRejectedText,
+                                          ),
+                                        ),
+                                      )
+
                                     else if (activeReports.isEmpty)
                                       Container(
                                         width: double.infinity,

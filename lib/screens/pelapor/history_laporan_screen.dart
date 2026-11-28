@@ -103,6 +103,22 @@ class _RiwayatLaporanPageState extends State<RiwayatLaporanPage> {
                                 );
                               }
 
+                              if (snapshot.hasError) {
+                                return const Center(
+                                  child: Padding(
+                                    padding: EdgeInsets.all(24),
+                                    child: Text(
+                                      'Gagal memuat riwayat laporan. Periksa koneksi internetmu.',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: Color(0xFFD93636),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }
+
                               final data = _filterReports(snapshot.data ?? []);
                               if (data.isEmpty) {
                                 return _buildEmptyState();
@@ -455,7 +471,14 @@ class _LaporanCard extends StatelessWidget {
                     height: 52,
                     color: const Color(0xFFE6EFFF),
                     child: imageBytes != null
-                        ? Image.memory(imageBytes, fit: BoxFit.cover)
+                        ? Image.memory(
+                          imageBytes,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const Icon(
+                            Icons.broken_image_outlined,
+                            color: HistoryColors.primary,
+                          ),
+                        )
                         : const Icon(
                             Icons.image_outlined,
                             color: HistoryColors.primary,

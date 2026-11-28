@@ -5,6 +5,7 @@ import 'package:tubes_pemob/models/user_model.dart';
 import 'package:tubes_pemob/screens/pelapor/history_laporan_screen.dart';
 import 'package:tubes_pemob/screens/shared/profile_screen.dart';
 import 'package:tubes_pemob/screens/shared/scan_qr_screen.dart';
+import 'package:tubes_pemob/screens/shared/notification_screen.dart';
 import 'package:tubes_pemob/screens/teknisi/daftar_tugas_screen.dart';
 import 'package:tubes_pemob/services/auth_service.dart';
 
@@ -79,7 +80,7 @@ class BottomNavbar extends StatelessWidget {
         }
         break;
       case 2:
-        _showUnavailableMessage(context, 'Halaman Notifikasi belum tersedia.');
+        _navigateToTab(context, const NotificationScreen());
         break;
       case 3:
         _navigateToTab(context, const ProfileScreen());

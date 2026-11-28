@@ -383,8 +383,17 @@ class PelaporHomeScreen extends StatelessWidget {
                                   .where(
                                       (r) => r.status == ReportStatus.resolved)
                                   .length;
-                              final activeReports =
-                                  reports.where((r) => !r.isClosed).toList();
+                              final activeReports = reports
+                                  .where((r) =>
+                                      !r.isClosed || r.isAwaitingConfirmation)
+                                  .toList()
+                                ..sort((a, b) {
+                                  if (a.isAwaitingConfirmation !=
+                                      b.isAwaitingConfirmation) {
+                                    return a.isAwaitingConfirmation ? -1 : 1;
+                                  }
+                                  return b.createdAt.compareTo(a.createdAt);
+                                });
 
                               return SingleChildScrollView(
                                 physics: const BouncingScrollPhysics(),
@@ -556,10 +565,16 @@ class PelaporHomeScreen extends StatelessWidget {
                                             },
                                             child: _ActiveReportCard(
                                               ticketId: '#$shortId',
-                                              statusText: report.status.label,
+                                              statusText:
+                                                report.isAwaitingConfirmation
+                                                    ? 'Perlu Konfirmasi'
+                                                    : report.status.label,
                                               title: report.assetNama,
                                               location: report.assetLokasi,
-                                              stageText: prog.stageText,
+                                              stageText:
+                                                  report.isAwaitingConfirmation
+                                                      ? 'Tahap 5/5: Selesai — Menunggu konfirmasimu'
+                                                      : prog.stageText,
                                               progressPercent: prog.percent,
                                               completedSegments: prog.step,
                                               totalSegments: 5,

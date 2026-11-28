@@ -498,7 +498,26 @@ class _LaporanCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                if (diproses)
+                if (report.isAwaitingConfirmation)
+                  const Row(
+                    children: [
+                      Icon(
+                        Icons.verified_outlined,
+                        size: 14,
+                        color: HistoryColors.primary,
+                      ),
+                      SizedBox(width: 6),
+                      Text(
+                        'Perlu konfirmasimu',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: HistoryColors.primary,
+                        ),
+                      ),
+                    ],
+                  )
+                else if (diproses)
                   Row(
                     children: [
                       const Icon(
